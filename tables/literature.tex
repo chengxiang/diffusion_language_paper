@@ -10,11 +10,12 @@ Method & Step-active & Terminal-only & Total & NFE & GSM8K & MATH500\\
 \midrule
 $\mathbb S$-FLM \citep{hyperspherical} & $\sim$163 & 0 & $\sim$163 & 1024 & 18.00$^\dagger$ & ---\\
 FMLM+ (Init) \citep{posterior} & $\sim$168 & 0 & $\sim$168 & 64 & 33.60$^\dagger$ & ---\\
+TESS 2 v0.1, FT \citep{tess2} & $\sim$7000 & 0 & $\sim$7000 & 100 & 66.60 & ---\\
 MLFM \citep{mlfm} & $\sim$1347 & 0 & $\sim$1347 & 256$^*$ & 31.24 & ---\\
 ELF-B + NFT & 90.44 & 156.52 & 680.94 & 65 & 42.16 & ---\\
 ELF-L + NFT & 638.15 & 157.05 & 1305.50 & 65 & 63.74 & 23.60\\
 \bottomrule
 \end{tabular}
 \vspace{2pt}
-\parbox{\linewidth}{\footnotesize $\mathbb S$-FLM's size is derived from its released configuration; FMLM+ reports its approximate size. MLFM has 1,028M frozen parameters plus 319M trainable adapters, counted before merging. Our 64 denoising steps require 65 backbone calls including terminal decoding; accuracies average eight seeds. A dash denotes an unreported result. These are published-protocol comparisons, with different supervision and output formats.}
+\parbox{\linewidth}{\footnotesize $\mathbb S$-FLM's size is derived from its released configuration; FMLM+ reports its approximate size. MLFM has 1,028M frozen parameters plus 319M trainable adapters, counted before merging. Our 64 denoising steps require 65 backbone calls including terminal decoding; accuracies average eight seeds. TESS 2 FT uses GSM8K-specific fine-tuning and eight-shot prompting. A dash denotes an unreported result. These are published-protocol comparisons, with different supervision and output formats.}
 \end{table}
