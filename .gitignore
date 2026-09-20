@@ -3,6 +3,7 @@ data/
 notes/
 scripts/
 vendor/
+.local/
 build/
 __pycache__/
 *.aux

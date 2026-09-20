@@ -1,8 +1,7 @@
 .PHONY: pdf tectonic clean
 
 pdf:
-	mkdir -p build
-	latexmk -pdf -interaction=nonstopmode -halt-on-error -outdir=build main.tex
+	bash build-paper.sh
 
 tectonic:
 	mkdir -p build

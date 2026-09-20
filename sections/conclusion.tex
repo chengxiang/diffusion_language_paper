@@ -1,2 +1,3 @@
+% !TEX root = ../main.tex
 \section{Conclusion}
 A continuous denoising model can generate useful mathematical reasoning traces when its latent representation and prompt interface are trained for the task. Teacher-trained, whitened multilayer features provide the target space; staged prompt imitation and downstream joint adaptation provide an efficient conditioning path. Reward-based fine-tuning improves single-sample accuracy, with stronger coverage and voting gains on MATH than on GSM8K. Inference remains a two-dimensional choice: how long to refine each answer and how many answers to draw. Evaluating both oracle success and an explicit answer selector exposes this tradeoff and gives a more informative picture than either a single step budget or pass@$k$ alone.

@@ -1,3 +1,4 @@
+% !TEX root = ../main.tex
 \section{Related work}
 \paragraph{Continuous and discrete language diffusion.}
 LLaDA demonstrates large-scale language modeling with discrete masking \citep{llada}. Continuous methods instead choose an embedding geometry and transport process. Hyperspherical flows use normalized latent directions \citep{hyperspherical}; masked language flows combine continuous trajectories with token masking and promotion \citep{mlfm}; posterior refinement equips flow maps with adaptive token refinement \citep{posterior}. Our work builds directly on ELF's contextual latent flow and shared decoder \citep{elf}, focusing on representations and conditional training for mathematical reasoning. We inherit its self-conditioning and SCCFG construction.

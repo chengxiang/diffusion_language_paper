@@ -1,0 +1,15 @@
+{
+    "latex-workshop.latex.recipes": [
+        {"name": "Paper (portable)", "tools": ["paper-build"]}
+    ],
+    "latex-workshop.latex.tools": [
+        {
+            "name": "paper-build",
+            "command": "bash",
+            "args": ["%DIR%/build-paper.sh"]
+        }
+    ],
+    "latex-workshop.latex.outDir": "%DIR%/build",
+    "latex-workshop.latex.search.rootFiles.include": ["main.tex"],
+    "latex-workshop.latex.clean.method": "glob"
+}
