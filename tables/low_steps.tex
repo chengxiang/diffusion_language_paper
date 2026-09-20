@@ -1,0 +1,23 @@
+\begin{table}[t]
+\caption{NFT endpoint accuracy versus denoising steps, using the same two seeds 42/123 at every budget.}
+\label{tab:lowsteps}
+\centering\small
+\begin{tabular}{lrr}
+\toprule
+Benchmark / model & Steps & Mean pass@1 (\%) \\
+\midrule
+GSM8K / ELF-B & 8 & 30.52 \\
+GSM8K / ELF-B & 16 & 37.64 \\
+GSM8K / ELF-B & 32 & 41.28 \\
+GSM8K / ELF-B & 64 & 41.51 \\
+GSM8K / ELF-L & 8 & 55.04 \\
+GSM8K / ELF-L & 16 & 60.31 \\
+GSM8K / ELF-L & 32 & 62.47 \\
+GSM8K / ELF-L & 64 & 63.08 \\
+MATH500 / ELF-L & 8 & 16.60 \\
+MATH500 / ELF-L & 16 & 20.30 \\
+MATH500 / ELF-L & 32 & 23.00 \\
+MATH500 / ELF-L & 64 & 23.40 \\
+\bottomrule
+\end{tabular}
+\end{table}

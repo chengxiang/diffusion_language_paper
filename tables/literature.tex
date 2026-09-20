@@ -1,0 +1,17 @@
+\begin{table}[t]
+\caption{Reported single-sample GSM8K results from recent continuous language models. External rows retain their papers' training and evaluation protocols; they are contextual comparisons rather than matched-data ablations. Our rows use eight-seed mean pass@1 at 64 steps after NFT.}
+\label{tab:literature}
+\centering\small
+\begin{tabular}{llr}
+\toprule
+Method & Reported setting & Accuracy (\%)\\
+\midrule
+$\mathbb S$-FLM \citep{hyperspherical} & Top-1 velocity, $T=1$, 1024 steps & 18.00\\
+FMLM+ (Init) \citep{posterior} & Posterior refinement, 64 NFEs & 33.60\\
+MLFM \citep{mlfm} & Guidance + online token promotion & 31.24\\
+\midrule
+ELF-B + NFT & Natural-language solutions, 64 steps & 42.16\\
+ELF-L + NFT & Natural-language solutions, 64 steps & 63.74\\
+\bottomrule
+\end{tabular}
+\end{table}

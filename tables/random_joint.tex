@@ -1,0 +1,14 @@
+\begin{table}[t]
+\caption{ELF-B training from initialization with teacher prompts or a random trainable prompt encoder. Both use synchronous 32-step evaluation and ELF EMA $0.999$; the learned prompt also uses EMA $0.999$. Mean over seeds 42/123.}
+\label{tab:randomjoint}
+\centering\small
+\begin{tabular}{rrrr}
+\toprule
+Epoch & Teacher prompt & Random joint & Joint minus teacher (pp) \\
+\midrule
+2 & 11.03 & 5.76 & -5.27 \\
+4 & 22.18 & 8.15 & -14.03 \\
+6 & 26.76 & 8.68 & -18.08 \\
+\bottomrule
+\end{tabular}
+\end{table}

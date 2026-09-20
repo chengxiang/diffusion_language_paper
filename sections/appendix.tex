@@ -1,0 +1,164 @@
+\section{Implementation details}
+\label{app:implementation}
+\begin{table}[h]
+\caption{Model components. Parameter counts are in millions. The frozen lookup table is loaded at inference but its values are excluded from optimization and EMA updates.}
+\centering\small
+\begin{tabular}{lrr}
+\toprule
+Component & ELF-B & ELF-L\\
+\midrule
+Denoiser blocks & 12 & 32\\
+Denoiser hidden width & 768 & 1280\\
+Attention heads & 12 & 16\\
+Latent width & 1024 & 1024\\
+Input bottleneck width & 512 & 512\\
+Denoiser + shared decoder parameters & 246.96 & 795.21\\
+Prompt Transformer blocks & 6 & 6\\
+Prompt Transformer hidden width & 768 & 1280\\
+Trainable prompt parameters & 45.02 & 121.33\\
+Frozen Qwen lookup values & 388.96 & 388.96\\
+Complete inference parameter footprint & 680.94 & 1305.50\\
+\bottomrule
+\end{tabular}
+\end{table}
+The teacher is Qwen3-4B-Instruct-2507, with 36 decoder blocks, hidden width 2,560, and a vocabulary of 151,936 tokens. All teacher features are post-block residuals before final RMSNorm. Feature extraction uses BF16 inference with native causal attention. Prompt representations contain only question-prefix tokens; future answer tokens cannot affect them. The learned prompt Transformer is bidirectional over that prefix and uses rotary position embeddings, a factorized input frontend, output RMSNorm, and a 1,024-dimensional projection.
+
+Supervised training uses a constant learning rate of $0.002$, effective batch 512, zero weight decay, gradient clipping at one, and BF16 computation. Muon uses momentum $0.95$ and five FP32 Newton--Schulz iterations for eligible matrix weights; auxiliary optimizers handle the remaining parameters. Raw weights and independent EMA tracks are maintained for both learnable components. Standalone prompt imitation runs for 60, 30, and 10 prompt epochs for GSM8K ELF-B, GSM8K ELF-L, and MATH ELF-L, respectively. A prompt epoch counts unique questions; a denoiser epoch counts solution rows.
+
+The inference canvas has 1,024 positions including the native prompt. Longer prompts therefore leave fewer answer positions. MATH500 evaluation admits prefixes up to 1,023 positions; all benchmark problems are retained. Generation does not use reference answer lengths. Greedy token decoding follows the final continuous state, and the decoded answer ends at the first terminal token when one is emitted.
+
+\section{Projector construction}
+\label{app:projectors}
+For each selected layer, collect the assistant-token mean $\mu_\ell$ and covariance $C_\ell$. With eigendecomposition $C_\ell=U_\ell\Lambda_\ell U_\ell^\top$, define
+\begin{equation}
+ \widetilde C_\ell=U_\ell\operatorname{diag}(\max(\lambda_{\ell i},10^{-5}))U_\ell^\top,
+ \qquad W_\ell=\widetilde C_\ell^{-1/2}.
+\end{equation}
+A differentiable thin QR factorization supplies an orthonormal basis $Q_\ell=\operatorname{qf}(R_\ell)$, with encoder $E_\ell=W_\ell Q_\ell$. Initialize $Q_\ell$ with the leading covariance eigenvectors and the reconstruction decoder with $D_{\ell,0}=\widetilde C_\ell^{1/2}Q_{\ell,0}$. This reproduces PCA reconstruction at initialization. During learning, gradients pass through QR and the decoder is free to adapt independently.
+
+The teacher suffix after the intervened layer, its final normalization, and its vocabulary head remain frozen. Full-vocabulary teacher cross-entropy is evaluated at assistant positions that predict the following assistant-content token. The first assistant token, terminal token, prompt, and padding are excluded as projector targets. Soft CE differs from teacher-to-reconstruction KL only by the teacher entropy. Each layer's projector is trained through its own intervention; errors from one reconstructed layer are not fed into the training of another projector.
+
+The whitening identity holds with respect to the regularized covariance used to construct the transform. It does not impose identity covariance on every minibatch, on prompt activations, or on the concatenation of the three layers. In particular, cross-layer correlations remain available to the denoiser.
+
+\section{Supervised objective and SCCFG}
+\label{app:objective}
+The clean-target flow residual is $v^*=(x-z_t)/\max(1-t,0.05)$. A detached bootstrap pass with zero answer self-conditioning predicts a clean endpoint. With probability $u\sim\mathrm{Bernoulli}(0.5)$, the main pass receives that endpoint as answer self-conditioning. Clean prompt states are restored independently of $u$. Following ELF, draw $s_{\rm sc}$ through $\log(1+s_{\rm sc})\sim\mathrm{Uniform}(\log1.5,\log6)$ and use the target
+\begin{equation}
+ \widetilde v^*=\sg\!\left[v^*+u(1-s_{\rm sc}^{-1})(v^1-v^0)\right],
+\end{equation}
+where $v^0$ and $v^1$ are auxiliary predictions without and with answer self-conditioning. The problem prompt remains present in both. All auxiliary targets are detached; the main forward carries gradients into the learned prompt encoder during joint training.
+
+For a decoder row, each token independently samples $\lambda=\operatorname{sigmoid}(0.8+0.8\xi)$ and forms $z^{\rm dec}=\lambda x+(1-\lambda)\epsilon'$, where $\xi$ and $\epsilon'$ are standard Gaussian. Decoder corruption has noise scale one, whereas flow corruption has noise scale two. Decoder mode uses time one and zero answer self-conditioning. A row selects one objective; decoder rows are not also flow rows. The combined objective has one valid-response-token denominator per local microbatch. Across ranks and accumulation steps, supervised training averages these local objectives.
+
+\section{NFT objective and collection}
+\label{app:nft}
+Each update collects 24 prompt groups, with 15 old-policy generations and one reference solution per group. Each retained endpoint receives eight independent time/noise draws, giving at most $24\times16\times8=3072$ training records. Training time is synchronous and distributed as $\operatorname{sigmoid}(-1.5+0.8\xi)$. Generated reward is $0.75$ for a correct answer and zero otherwise; reference reward is one. Groups with all 15 generations correct are excluded before normalization.
+
+For retained group $g$ and endpoint $k$, define
+\begin{equation}
+ A_{gk}=\operatorname{clip}\left(\frac{R_{gk}-\bar R_g}{\sigma_R+10^{-4}},-5,5\right),
+ \qquad \rho_{gk}=\operatorname{clip}\left(\tfrac12+\tfrac{A_{gk}}{10},0,1\right),
+\end{equation}
+where $\sigma_R$ is the population standard deviation of all retained raw rewards across the update. It is not the standard deviation of centered advantages. All eight noise draws retain their endpoint's coefficient.
+
+Let $p$ index current, old, or fixed reference policy. Its SCCFG-compatible training velocity is
+\begin{equation}
+ \widetilde v_p=v_p^{\rm main}-\sg\!\left[u(1-s_{\rm sc}^{-1})(v_p^{\rm main}-v_p^0)\right].
+\end{equation}
+Only the current main pass is differentiated. The subtraction is detached, so it does not rescale the main-pass gradient by $s_{\rm sc}^{-1}$. Write $e_c=\widetilde v_c-v^*$ and $e_o=\sg(\widetilde v_o)-v^*$. With NFT parameter $\beta=1$, the positive and negative residuals are $e_+=e_c$ and $e_-=2e_o-e_c$. The optimized objective is
+\begin{equation}
+ \mathcal L_{\rm NFT}=
+ 5\,\E_M\left[\rho\|e_+\|_2^2/1024+(1-\rho)\|e_-\|_2^2/1024\right]
+ +0.1\,\E_M\left[\|\widetilde v_c-\sg(\widetilde v_{\rm ref})\|_2^2/1024\right],
+\end{equation}
+where $\E_M$ divides by the number of valid response tokens across the entire update. Decoder-only weights are frozen. Both the current flow backbone and prompt body use learning rate $10^{-4}$, zero weight decay, and separate norm-one clipping. No decoder CE or prompt-imitation loss is added during NFT. The fixed reference is not refreshed. Correctness is determined from the final answer, not token-level matching to a particular reference solution.
+
+\section{Evaluation estimators and numerical controls}
+\label{app:evaluation}
+Pilot seeds are 42, 123, 456, and 789. The eight-sample expansion adds 2026, 31415, 27182, and 16180. Within a supervised/NFT pair, the selected step count maximizes the equally weighted mean of the two checkpoints' four-seed pilot pass@1, with ties choosing 32. Expansion draws do not participate in that selection. Both pilot budgets are retained. Stage comparisons use the four pilot seeds at 32 steps, and schedule comparisons use seeds 42/123 at 32 steps.
+
+For problem $i$, let $c_i$ of $n$ samples be correct. We estimate
+\begin{equation}
+ \widehat{\mathrm{pass}@k}=
+ \frac1N\sum_{i=1}^{N}\left[1-\frac{\binom{n-c_i}{k}}{\binom{n}{k}}\right],
+ \qquad 1\le k\le n,
+\end{equation}
+interpreting the numerator as zero when $n-c_i<k$. In particular, pass@1 averages all draws rather than reporting the best seed. Problem-bootstrap intervals resample $N$ problems 4,000 times with seed 20260918. Paired contrasts use the same resampled indices across conditions.
+
+Voting is final-answer plurality voting, commonly called majority voting: a winning answer need not receive more than half of the votes. Invalid or missing extractions abstain. GSM8K groups canonical numerical answers; MATH groups equivalent parsed answers using the fixed symbolic/numerical comparison procedure. Group construction does not consult gold answers. Tied largest groups receive equal selection probability. Smaller-$k$ vote estimates average uniformly over $k$-subsets of available draws. For equivalence partitions, a multivariate hypergeometric calculation gives the exact expectation. For nontransitive MATH comparisons, answers are reclustered within each subset: enumerate up to 65,536 subsets, otherwise use 16,384 deterministic sampled subsets, paired across conditions. The bootstrap does not include this separate subset-approximation uncertainty. Oracle estimates use the unbiased formula above. All-draw voting at $k=n$ directly uses the complete cohort.
+
+For inference, time-embedding means are accumulated in FP64 before casting back to model dtype. Non-time weights are unchanged when introducing group clocks. The grid is $\tau_0=0$, $\tau_S=1$, and
+\begin{equation}
+ \tau_k=\operatorname{sigmoid}\left[-1.5+0.8\Phi^{-1}(k/S)\right],\qquad 0<k<S.
+\end{equation}
+All primary comparisons preserve guidance, decoding, problem order, and benchmark coverage. Math-Verify is the primary MATH scorer; PRM800K is a secondary diagnostic and does not choose the headline checkpoint.
+
+\input{tables/low_steps}
+\input{tables/budget512}
+
+\section{Prompt-stage results and imitation curves}
+\label{app:prompt}
+\input{tables/prompt_stages}
+\input{tables/random_joint}
+The immediate swap losses are $8.91$ points for GSM8K ELF-B (95\% paired interval $[7.32,10.52]$), $11.71$ for GSM8K ELF-L ($[10.08,13.42]$), and $2.80$ for MATH ($[1.10,4.45]$). Subsequent joint gains are $8.43$ ($[6.96,10.01]$), $9.46$ ($[7.83,11.05]$), and $4.25$ ($[2.50,6.05]$). Final joint minus original-Qwen accuracy is $-0.47$, $-2.26$, and $+1.45$ points, respectively. Their paired intervals are $[-2.09,1.18]$, $[-3.90,-0.64]$, and $[-0.25,3.30]$.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/prompt_mse.pdf}
+\caption{Standalone prompt-imitation progress. GSM8K curves use 21,853 held-out prompts; MATH evaluation uses a fixed 32,768-prompt training diagnostic panel. Prompt-training epochs differ from denoiser epochs. Each task has its own target representation, so absolute losses should not be compared across panels.}
+\label{fig:promptmse}
+\end{figure}
+The final prompt EMA $0.999$ MSEs are 0.2172, 0.2191, and 0.1356 for the three models. The corresponding $0.9999$ losses are 1.1899, 26.3952, and 27.0031. The slower EMA therefore remains a poor proxy for the fitted prompt at these endpoints. Figure~\ref{fig:promptmse} shows why the primary swap comparison uses $0.999$. The curves document training progress and diminishing improvements where observed; they do not establish convergence of every EMA track.
+
+\section{Layer-choice motivation and robustness}
+\label{app:cka}
+\begin{figure}[t]
+\centering
+\includegraphics[width=.62\linewidth]{figures/cka.pdf}
+\caption{Linear CKA across the frozen teacher's 36 post-block representations. White diagonal markers identify layers 16, 24, and 32. The pronounced transition after layer 16 motivates including it; layers 24 and 32 sample progressively deeper representations at regular intervals.}
+\label{fig:cka}
+\end{figure}
+The CKA study uses two disjoint 4,096-problem panels of teacher-forced gold solutions. Assistant-content activations are mean-pooled into eight relative-position bins, concatenated, and compared with equal weight per problem. The selected layers have pairwise CKA 0.124 (16/24), 0.543 (16/32), and 0.842 (24/32), while the adjacent 16/17 value is 0.038. CKA motivates a practical choice across depth; it is not an optimization criterion for downstream accuracy.
+
+We also probe the frozen teacher by perturbing assistant activations at one selected layer at a time, with noise magnitude proportional to each problem's clean activation RMS. The 64-problem GSM8K panel is stratified by token length and uses two noise seeds. Gold-token CE, teacher-distribution KL, and top-1 agreement measure downstream deterioration. This diagnostic combines sensitivity at the intervened layer with recovery through the remaining teacher suffix. It therefore does not directly predict the best clocks for the trained ELF denoiser, whose projected coordinates and conditional dynamics differ from those of Qwen.
+
+\section{Sampling cost and pre-NFT tradeoffs}
+\label{app:cost}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/pre_budget.pdf}
+\caption{Supervised endpoint counterparts of Figure~\ref{fig:budget}, with the same sample budgets and asynchronous clocks. Upper panels show oracle coverage and lower panels show final-answer voting.}
+\label{fig:prebudget}
+\end{figure}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/time_vs_steps.pdf}
+\caption{Measured GPU inference time against total denoising steps. Time includes prompt encoding, denoising, and terminal decoding, while excluding startup and scoring. These are throughput-derived amortized costs, not single-query latencies. ELF-B NFT runs pack two cases on one H200; the other panels use one case per H200.}
+\label{fig:time}
+\end{figure}
+Four older GSM NFT seed cases have no recorded timing; later compatible draws supply the corresponding timing coefficients. Missing measurements are not imputed as zero. At a fixed denoising-step budget, shorter trajectories require more prompt-encoder and terminal-decoder work because they generate more samples. This explains the systematic overhead visible in Figure~\ref{fig:time} and motivates reporting both steps and measured cost.
+
+\section{Answer diversity, coverage, and NFT filtering}
+\label{app:diversity}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/diversity.pdf}
+\caption{Answer diversity before and after NFT. The fixed-eight-sample comparison holds the number of draws constant. Diversity concerns extracted final answers, not the semantic diversity of reasoning paths.}
+\label{fig:diversity}
+\end{figure}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/coverage_transitions.pdf}
+\caption{Problem-level coverage transitions between supervised and NFT endpoints, using matched generation cohorts. Aggregate improvements can coexist with problems that lose coverage.}
+\label{fig:transitions}
+\end{figure}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/math_breakdown.pdf}
+\caption{Exploratory MATH500 subject and difficulty breakdowns from the saved predictions. Subgroups are smaller than the full benchmark and are descriptive analyses, not separately selected evaluation endpoints.}
+\label{fig:mathbreakdown}
+\end{figure}
+
+For the first 200 NFT updates, discarded all-correct groups comprise 20.10\% for GSM8K ELF-B, 38.81\% for GSM8K ELF-L, and 1.44\% for MATH ELF-L. Through the selected endpoints, these fractions are 22.32\%, 43.50\%, and 1.81\%, respectively. Each retained group supplies the same number of endpoint/time records, so a lower discard fraction leaves more training records per update. The token mass can still differ because answers have different lengths. The smaller discard rate on MATH is consistent with broader training coverage contributing to its NFT gains, but this comparison does not isolate a causal filtering effect.
+
+An additional GSM8K ELF-B rollout comparison uses shared-square $(2,2,2)$ versus identity $(1,1,1)$ clocks during NFT collection, with synchronous loss times in both arms. Through update 400, shared-square discards 31.84\% of groups versus 23.55\% for identity; matched asynchronous test accuracy is 39.12\% versus 40.75\%. Identity is also ahead at update 200, while shared-square is ahead at update 100 with one evaluation seed. This supports recording rollout difficulty and discarded fraction together, without attributing the accuracy difference solely to filtering.

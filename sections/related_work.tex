@@ -1,0 +1,9 @@
+\section{Related work}
+\paragraph{Continuous and discrete language diffusion.}
+LLaDA demonstrates large-scale language modeling with discrete masking \citep{llada}. Continuous methods instead choose an embedding geometry and transport process. Hyperspherical flows use normalized latent directions \citep{hyperspherical}; masked language flows combine continuous trajectories with token masking and promotion \citep{mlfm}; posterior refinement equips flow maps with adaptive token refinement \citep{posterior}. Our work builds directly on ELF's contextual latent flow and shared decoder \citep{elf}, focusing on representations and conditional training for mathematical reasoning. We inherit its self-conditioning and SCCFG construction.
+
+\paragraph{Teacher representations and reasoning supervision.}
+Qwen supplies pretrained contextual features \citep{qwen3,qwen2507}, while teacher-distribution matching makes the compression objective sensitive to downstream predictions. CKA \citep{cka} provides a descriptive view of layer geometry. The resulting model benefits from teacher representations and synthetic mathematical instruction data \citep{openmath}; its resource profile therefore differs from a language model trained entirely from scratch on the same answer corpus.
+
+\paragraph{Reward optimization and inference-time computation.}
+DiffusionNFT \citep{diffusionnft} provides the reward-based forward-process objective we adapt to masked language sequences and learned prompt conditioning. Multiple-sample evaluation and verification have long been useful for mathematical reasoning \citep{gsm8k,prm800k}. The standard pass@$k$ estimator \citep{codex} measures sample-set coverage, while self-consistency selects answers using agreement \citep{selfconsistency}. We study both as functions of the allocation between denoising depth and sample count.

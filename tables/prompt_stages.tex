@@ -1,0 +1,14 @@
+\begin{table}[t]
+\caption{Four-seed prompt-stage comparison at 32 steps. ELF EMA is $0.9999$; the swapped MSE prompt uses $0.999$, and the joint prompt uses $0.9999$.}
+\label{tab:promptstage}
+\centering\small
+\begin{tabular}{lrrr}
+\toprule
+Benchmark / model & Qwen epoch 12 & MSE swap & Joint endpoint \\
+\midrule
+GSM8K / ELF-B & 38.25 & 29.34 & 37.77 \\
+GSM8K / ELF-L & 60.78 & 49.07 & 58.53 \\
+MATH500 / ELF-L & 16.00 & 13.20 & 17.45 \\
+\bottomrule
+\end{tabular}
+\end{table}

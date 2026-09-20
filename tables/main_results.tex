@@ -1,0 +1,17 @@
+\begin{table}[t]
+\caption{Main results at 64 denoising steps with eight samples per problem. Accuracy is in percent; brackets are 95\% problem-bootstrap intervals for mean pass@1. All rows use clocks $(2.5,2,1.5)$.}
+\label{tab:main}
+\centering\small
+\begin{tabular}{llrrrr}
+\toprule
+Benchmark / model & Stage & Pass@1 [95\% CI] & Pass@2 & Pass@4 & Pass@8 \\
+\midrule
+GSM8K / ELF-B & Supervised & 39.17 [37.17, 41.20] & 49.82 & 59.20 & 67.32 \\
+GSM8K / ELF-B & + NFT & 42.16 [39.97, 44.33] & 51.36 & 59.40 & 66.26 \\
+GSM8K / ELF-L & Supervised & 58.67 [56.45, 60.78] & 68.17 & 75.13 & 80.21 \\
+GSM8K / ELF-L & + NFT & 63.74 [61.52, 65.88] & 71.48 & 77.34 & 81.96 \\
+MATH500 / ELF-L & Supervised & 18.85 [16.42, 21.40] & 27.50 & 37.13 & 47.20 \\
+MATH500 / ELF-L & + NFT & 23.60 [20.80, 26.45] & 33.00 & 43.07 & 52.60 \\
+\bottomrule
+\end{tabular}
+\end{table}

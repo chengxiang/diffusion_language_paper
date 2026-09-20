@@ -1,0 +1,40 @@
+\section{Experimental setup and main results}
+\label{sec:experiments}
+\paragraph{Tasks and models.}
+We evaluate on the 1,319-problem GSM8K test set \citep{gsm8k} and the 500-problem MATH500 benchmark drawn from MATH \citep{math,math500}. GSM8K training uses 2.43 million solution rows combining GSM-style subsets of OpenMathInstruct-2, Orca-Math, and MetaMathQA \citep{openmath,orcamath,metamath}; the MATH model uses 3.97 million eligible MATH-family solution rows from OpenMathInstruct-2. All models use a 1,024-token canvas and the native Qwen tokenizer. The problem is supplied without demonstrations, followed by an instruction to reason step by step and put the final answer in a box. Final learned-prompt inference does not execute Qwen Transformer layers.
+
+ELF-B has 12 blocks of width 768 and 247.0 million parameters; ELF-L has 32 blocks of width 1,280 and 795.2 million parameters. These counts include the shared token decoder. Their final prompt encoders add 45.0 and 121.3 million trainable parameters, respectively. Both also retain a frozen 389.0-million-element Qwen token lookup table. We distinguish denoiser capacity from this complete inference footprint in Appendix~\ref{app:implementation}.
+
+\paragraph{Training and endpoint selection.}
+We train the denoiser with teacher prompt conditioning for 12 epochs, then jointly adapt the learned prompt encoder and denoiser through epoch 18 for ELF-B and epoch 21 for ELF-L. The effective supervised batch is 512, with constant learning rate $0.002$, Muon and auxiliary optimizers, zero weight decay, and gradient clipping at one. We select NFT updates 300, 500, and 600 for GSM8K ELF-B, GSM8K ELF-L, and MATH ELF-L, respectively, using fixed development sets of 1,000 GSM-style and 500 MATH problems. Selection uses two-seed mean accuracy and favors the earlier update on an exact tie.
+
+\paragraph{Evaluation.}
+We first evaluate four sampling seeds at 32 and 64 steps. Each supervised/NFT pair uses a common step budget chosen by its equally weighted pilot mean pass@1; ties favor 32. All three pairs select 64 steps. Four further seeds give eight samples per problem at that budget. The stage and schedule ablations use 32 steps throughout. Supervised evaluation selects ELF/prompt EMA $0.9999/0.9999$; NFT selects $0.99/0.99$. The immediate prompt-swap experiment selects the standalone MSE prompt EMA $0.999$. GSM8K uses canonical numerical-answer scoring; MATH uses Math-Verify, with PRM800K retained as a secondary scorer \citep{mathverify,prm800k}.
+
+We report mean pass@1 and the standard unbiased pass@$k$ estimator \citep{codex}. Confidence intervals use 4,000 paired problem-bootstrap replicates, retaining matched problems across conditions. They quantify uncertainty for fixed trained checkpoints and the observed sampling seeds. Appendix~\ref{app:evaluation} specifies the estimators, seed lists, and selection procedure.
+
+\subsection{Reasoning performance}
+\input{tables/main_results}
+Table~\ref{tab:main} reports the six main endpoints. NFT raises mean pass@1 from 39.17\% to 42.16\% for GSM8K ELF-B, from 58.67\% to 63.74\% for GSM8K ELF-L, and from 18.85\% to 23.60\% for MATH ELF-L. The effect on oracle coverage is less uniform. At eight samples, GSM8K ELF-B changes from 67.32\% to 66.26\%, whereas MATH increases from 47.20\% to 52.60\%. Thus the benefit of post-training is not summarized fully by a single-sample score.
+
+\input{tables/literature}
+Table~\ref{tab:literature} places the GSM8K result alongside recent continuous-language-model reports. Both our model sizes exceed the listed continuous-model accuracies. These are cross-paper comparisons: the methods use different training corpora, teacher resources, tokenizers, and solution formats. In particular, the TinyGSM-based methods are scored by executing generated Python, whereas our models generate natural-language solutions with a final answer. The comparison establishes the practical performance range of the approaches, rather than a controlled architecture-only ranking.
+
+\subsection{Representation controls}
+\label{sec:representationcontrols}
+We separate projector construction from layer selection using three six-epoch ELF-B arms: learned projectors over layers 16/24/32, PCA over the same layers and dimensions, and a 1,024-dimensional PCA representation from layer 32 alone. All representations are whitened. The first pair fixes layer selection; the second fixes the projector family and total latent width. Their layout is shown in Table~\ref{tab:representation}. Epoch-six evaluation uses a common EMA, seed set, and inference schedule.
+
+\begin{table}[t]
+\caption{Representation ablation at six GSM8K epochs. The learned reference uses original Qwen prompt conditioning. All entries use ELF EMA $0.999$ and synchronous 32-step inference with seeds 42/123. Dashes reserve the pending PCA results.}
+\label{tab:representation}
+\centering\small
+\begin{tabular}{llcr}
+\toprule
+Projector & Teacher layers & Latent widths & Pass@1 (\%)\\
+\midrule
+Learned, whitened & 16/24/32 & 256/256/512 & 26.76\\
+PCA, whitened & 16/24/32 & 256/256/512 & \pending\\
+PCA, whitened & 32 & 1024 & \pending\\
+\bottomrule
+\end{tabular}
+\end{table}
