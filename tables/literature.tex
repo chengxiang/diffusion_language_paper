@@ -1,24 +1,24 @@
 % !TEX root = ../main.tex
 \begin{table}[t]
-\caption{Continuous-model mathematical reasoning: selected author-reported operating points. Accuracy is in percent and parameters are in millions. Step-active counts include the heads and codebooks used repeatedly; terminal-only counts exclude shared weights. Total counts also include one-time prompt components. $^\dagger$Python execution; $^*$reported sampling steps, with additional guidance calls. Appendix~\ref{app:literaturecontinuous} details mechanisms, parameter accounting, and NFE curves.}
+\caption{Continuous-model mathematical reasoning: selected author-reported operating points. Accuracy is in percent and parameters are in millions. Per-step parameters include recurrent heads and embedding matrices. Parameters active once include additional prompt-conditioning and terminal-decoding components. Both columns include frozen weights; shared parameters are counted once, and their union gives the total before rounding. $^\dagger$Python execution; $^*$reported sampling steps, with additional guidance calls.}
 \label{tab:literature}
 \centering\small
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{lrrrrrr}
+\setlength{\tabcolsep}{2.5pt}
+\begin{tabular}{@{}lrrrrrr@{}}
 \toprule
-Method & Step-active & Terminal-only & Total & NFE & GSM8K & MATH500\\
+Method & \shortstack{Parameters\\(active per\\denoising step)} & \shortstack{Parameters\\(active once)} & Total & NFE & GSM8K & MATH500\\
 \midrule
 $\mathbb S$-FLM \citep{hyperspherical} & $\sim$163 & 0 & $\sim$163 & 1024 & 18.00$^\dagger$ & ---\\
 FMLM+ (Init) \citep{posterior} & $\sim$168 & 0 & $\sim$168 & 64 & 33.60$^\dagger$ & ---\\
 TESS 2 v0.1, FT \citep{tess2} & $\sim$7000 & 0 & $\sim$7000 & 100 & 66.60 & ---\\
 MLFM \citep{mlfm} & $\sim$1347 & 0 & $\sim$1347 & 256$^*$ & 31.24 & ---\\
 \midrule
-ELF-B, pre-NFT & 90.44 & 156.52 & 680.94 & 65 & 39.17 & ---\\
-ELF-B, post-NFT & 90.44 & 156.52 & 680.94 & 65 & 42.16 & ---\\
-ELF-L, pre-NFT & 638.15 & 157.05 & 1305.50 & 65 & 58.67 & 18.85\\
-ELF-L, post-NFT & 638.15 & 157.05 & 1305.50 & 65 & 63.74 & 23.60\\
+ELF-B, pre-NFT & 90.44 & 590.50 & 680.94 & 65 & 39.17 & ---\\
+ELF-B, post-NFT & 90.44 & 590.50 & 680.94 & 65 & 42.16 & ---\\
+ELF-L, pre-NFT & 638.15 & 667.34 & 1305.50 & 65 & 58.67 & 18.85\\
+ELF-L, post-NFT & 638.15 & 667.34 & 1305.50 & 65 & 63.74 & 23.60\\
 \bottomrule
 \end{tabular}
 \vspace{2pt}
-\parbox{\linewidth}{\footnotesize $\mathbb S$-FLM's size is derived from its released configuration; FMLM+ reports its approximate size. MLFM has 1,028M frozen parameters plus 319M trainable adapters, counted before merging. Our pre-NFT rows use the final supervised checkpoints; post-NFT rows add reward-based fine-tuning. Both average eight seeds at 64 denoising steps, requiring 65 backbone calls including terminal decoding. TESS 2 FT uses GSM8K-specific fine-tuning and eight-shot prompting. A dash denotes an unreported result. These are published-protocol comparisons, with different supervision and output formats.}
+\parbox{\linewidth}{\footnotesize Zero in the one-time column means the embedding and vocabulary-decoding parameters are already counted in the per-step column; these components are present in every listed method. ELF's one-time count includes its prompt Transformer, frozen lookup, and additional decoder parameters. Counts describe parameter usage, not FLOPs; Appendix~\ref{app:literaturecontinuous} details the accounting. $\mathbb S$-FLM's size is derived from its release; FMLM+ reports its approximate size. MLFM includes 1,028M frozen parameters and 319M adapters before merging. ELF rows average eight seeds at 64 steps (65 backbone calls), before or after NFT. TESS 2 FT uses task-specific fine-tuning and eight-shot prompting. A dash denotes an unreported result. Training and evaluation protocols differ.}
 \end{table}

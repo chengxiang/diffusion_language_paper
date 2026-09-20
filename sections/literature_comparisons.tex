@@ -5,10 +5,12 @@ We separate continuous-state diffusion and flows, discrete masked or blockwise g
 
 \subsection{Continuous methods: components, mechanisms, and NFE}
 \label{app:literaturecontinuous}
-Table~\ref{tab:literature} compares selected published operating points. A step-active parameter belongs to a component used repeatedly during denoising, including any recurrent vocabulary projection or embedding codebook. A terminal-only parameter is additional to those shared components. A one-time lookup can occupy substantial memory while requiring little arithmetic; parameter counts are therefore not FLOP estimates.
+Table~\ref{tab:literature} partitions each model's inference parameters by frequency of use. Parameters \emph{active per denoising step} include the denoising core and any vocabulary heads or embedding matrices used within the trajectory. Parameters \emph{active once} belong to additional prompt-conditioning or terminal-decoding components. A parameter used during both denoising and terminal decoding is counted only in the per-step column. Frozen parameters are included in both categories, and total parameters count each shared weight once. The comparison uses the reported inference configuration, including unmerged adapters where applicable.
+
+The zeros in the one-time column do not indicate absent or cost-free encoders or decoders: the listed comparison methods use their vocabulary interfaces during denoising, so those parameters appear in the per-step count. For ELF, the one-time total is 590.50M/667.34M, comprising additional decoder parameters, the prompt Transformer, and the frozen lookup. Consequently, ELF-B has a smaller per-step count than FMLM+ but a larger total footprint (680.94M versus approximately 168M). A lookup can occupy substantial memory while requiring little arithmetic, and dense layers have different costs; these counts describe architecture and parameter usage, not FLOPs or elapsed time.
 
 \begin{table}[ht]
-\caption{Continuous formulations and their additional mechanisms. ``No terminal-only head'' means the vocabulary head already participates in denoising, not that vocabulary prediction is free.}
+\caption{Continuous formulations and their additional mechanisms. Vocabulary heads used during denoising belong to the per-step parameter count, including when they also produce the final tokens.}
 \label{tab:continuousmechanisms}
 \centering\small
 \setlength{\tabcolsep}{4pt}
@@ -20,7 +22,7 @@ $\mathbb S$-FLM & Hyperspherical transport; normalized architecture; truncated/a
 TESS 2 & Gaussian corruption of token-logit simplex; AR adaptation with UL2 masking objectives, label shifting, bidirectional attention, self-conditioning, and argmax projection during sampling. & Approximately 7B recurrent model. Input embedding mixture and vocabulary head are used at each step; no separate terminal-only head. Optional reward guidance adds a reward model and backward passes, but is not used for the reported GSM8K rows.\\
 FMLM+ & Two-time flow maps; masking-style schedules; confidence-based posterior refinement. Scratch, MDLM initialization, and distillation are distinct training arms. & About 168M total (Table 11); the softmax head is recurrent. The paper does not report a separate trunk/head count. No additional terminal-only head.\\
 MLFM & Continuous Brownian-bridge corruption with masking; SMDM adaptation through LoRA/AdaLN; context-corrupted guidance; discrete online token promotion. & 1,028M frozen parameters plus 319M adapters before merging. Vocabulary predictions and codebook operations occur during sampling. No separately reported trunk/head split.\\
-Our ELF & Contextual latent flow; teacher-trained projectors and whitening; staged prompt encoder; self-conditioning/SCCFG; layer clocks; optional NFT. & 90.44M/638.15M denoising paths; 156.52M/157.05M terminal-only parameters. Prompt Transformer 45.02M/121.33M plus lookup 388.96M are used once. The terminal decoder reuses the backbone.\\
+Our ELF & Contextual latent flow; teacher-trained projectors and whitening; staged prompt encoder; self-conditioning/SCCFG; layer clocks; optional NFT. & 90.44M/638.15M per step; 590.50M/667.34M active once: additional decoder 156.52M/157.05M, prompt Transformer 45.02M/121.33M, and lookup 388.96M. The terminal decoder reuses the backbone.\\
 \bottomrule
 \end{tabular}
 \end{table}
