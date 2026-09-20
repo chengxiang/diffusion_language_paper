@@ -1,0 +1,23 @@
+% !TEX root = ../main.tex
+\begin{table}[ht]
+\caption{Vocabulary maps separated from Transformer and conditioning networks. Counts are in millions, derived from reported dimensions and released module definitions or configurations. These components are already included in model totals. Output counts include associated biases, vocabulary scales, and output-head LoRA where present. $V$ is the output matrix width.}
+\label{tab:vocabularymaps}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrr>{\raggedright\arraybackslash}p{4.3cm}}
+\toprule
+Method & $V$ & Input map & Output map & Use during sampling\\
+\midrule
+$\mathbb S$-FLM & 49,152 & 37.75 & 37.80 & Top-1 codebook selection; dense output each step.\\
+FMLM+ & 49,152 & 37.75 & 37.80 & Dense input and output at each step.\\
+TESS 2 v0.1, FT & 32,001 & 131.08 & 131.08 & Dense input and output at each step.\\
+MLFM & 32,000$^\dagger$ & 57.35 & 65.99 & Expected embeddings and dense output during denoising.\\
+PlaidQ v1 (code) & 151,936 & 2.43 & 155.73 & Codebook reconstruction and dense output during denoising.\\
+\midrule
+ELF-B & 151,936 & 388.96 & 155.73 & Input lookup once; dense output once.\\
+ELF-L & 151,936 & 388.96 & 155.73 & Input lookup once; dense output once.\\
+\bottomrule
+\end{tabular}
+\vspace{2pt}
+\parbox{\linewidth}{\footnotesize $\mathbb S$-FLM includes a vocabulary-sized logit scale; FMLM+ and ELF include an output bias. TESS~2 uses the released GSM8K-symbolic v0.1 configuration, including its pad token. $^\dagger$MLFM has an additional input mask row; its output count is 57.34M base weights plus 8.65M unmerged output-head LoRA parameters. PlaidQ is a coding reference. Its small codebook and large output head illustrate why both directions matter \citep{hyperspherical,posterior,tess2,mlfm,plaidq}.}
+\end{table}
