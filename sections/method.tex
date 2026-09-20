@@ -56,6 +56,8 @@ Here $\widetilde v^*$ is the SCCFG-adjusted target. The mask includes the answer
 
 \subsection{Staged prompt conditioning}
 \label{sec:prompt}
+Original ELF conditions on clean contextual embeddings from a frozen T5 encoder \citep{elf}. FMLM+ instead supplies clean one-hot prompt states to the denoising Transformer, which contextualizes the prompt together with the noisy answer without a separate prompt encoder \citep{posterior}. We retain ELF's contextual conditioning interface, but learn a smaller prompt Transformer to replace the Qwen teacher at inference.
+
 Initially, the denoiser conditions on projected teacher activations of the question alone. A separate six-layer bidirectional prompt Transformer $P_\phi$ maps frozen Qwen token embeddings through a $2560\!\to\!512\!\to\!d_{\rm model}$ frontend and a 1,024-dimensional output. It first imitates the teacher prompt targets using an equally weighted per-question MSE:
 \begin{equation}
  \mathcal L_{\rm prompt}=\E_q\left[
@@ -63,6 +65,7 @@ Initially, the denoiser conditions on projected teacher activations of the quest
  \|P_\phi(q)_j-c_{{\rm T},j}(q)\|_2^2\right].
 \end{equation}
 After 12 denoiser epochs, we substitute $P_\phi(q)$ for the teacher prompt and continue training both $\theta$ and $\phi$ under Eq.~\eqref{eq:elf}. Answer targets remain fixed; no prompt-imitation term is added during joint training. Gradients through the main conditional forward adapt the prompt representation to the downstream objective.
+At inference, $P_\phi(q)$ is computed once and reused throughout denoising. The frozen Qwen token lookup is retained, but none of Qwen's Transformer layers is evaluated.
 
 \subsection{Layer-specific inference clocks}
 \label{sec:clocks}
