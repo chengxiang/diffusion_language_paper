@@ -1,0 +1,103 @@
+% !TEX root = ../main.tex
+\section{Literature comparisons and evaluation protocols}
+\label{app:literature}
+We organize the literature available through September 19, 2026 by generative representation, inference structure, and evaluation protocol. The tables below reproduce selected operating points from primary papers; they are not evaluations performed with our harness. A model name alone is insufficient to identify a result: checkpoint, prompting, output length, sampling order, and post-training can all change the reported score. In particular, a paper's \emph{MATH} result is not automatically a MATH500 result. We retain the distinction even when later papers place the numbers in a shared column.
+
+\subsection{Continuous models and small-model comparisons}
+\label{app:literaturecontinuous}
+The continuous-flow rows in Table~\ref{tab:literature} have different operating points. $\mathbb S$-FLM uses top-1 velocity, temperature one, and 1,024 sampling steps (its Table~2). FMLM+ initialized from an MDLM reaches 33.6\% at 64 function evaluations; its scratch and distillation variants reach 19.1\% and 23.4\%, respectively (its Table~8). Both papers train on TinyGSM and execute generated Python solutions \citep{hyperspherical,posterior}. MLFM adapts a frozen 1,028M-parameter SMDM backbone with additional adapters; its 31.24\% result uses continuous classifier-free guidance, online token promotion, and 256 sampling steps, with a 512-token limit \citep{mlfm}. It retains discrete token promotion within a continuous trajectory, whereas our model decodes the complete answer at the end.
+
+Early work also establishes mathematical reasoning in diffusion models. Diffusion of Thoughts reports 32.6\% for Plaid and 53.5\% for SEDD-medium on its GSM8K-Aug protocol, with separate self-consistency scores \citep{dot}. DiffuGPT-M reports 61.8\% with 355M parameters under a symbolic-reasoning protocol \citep{diffugpt}. These results are relevant precedents, but their compact reasoning format differs from our natural-language solution format. SMDM's 58.5\% likewise follows task-specific augmented-GSM8K fine-tuning \citep{smdm}. Duo's 1.7B result follows large-scale pretraining and supervised mathematical adaptation \citep{duoscaling}.
+
+\begin{table}[ht]
+\caption{Additional small diffusion models. Scores are percentages. ``MATH'' retains the original paper's label and is deliberately separate from MATH500. Rows marked $^*$ are the evaluations reported in OPDLM's Table~6, rather than the original model paper.}
+\label{tab:literaturesmall}
+\centering\small
+\begin{tabular}{lrrrr}
+\toprule
+Model & Params (B) & GSM8K & MATH500 & MATH\\
+\midrule
+Simple-dLLM, masked \citep{simpledllm} & 0.6 & 29.30 & --- & 8.70\\
+Simple-dLLM, block \citep{simpledllm} & 0.6 & 46.30 & --- & 12.90\\
+Simple-dLLM, block$^*$ \citep{opdlm} & 0.6 & 46.30 & 15.80 & ---\\
+TIDE-Cross \citep{tide} & 0.6 & 52.24 & --- & 13.20\\
+OPDLM, self-distilled \citep{opdlm} & 0.6 & 42.10 & 28.00 & ---\\
+Fast-dLLM v2 \citep{fastv2} & 1.5 & 62.00 & --- & 38.10\\
+Fast-dLLM v2$^*$ \citep{opdlm} & 1.5 & 62.00 & 39.40 & ---\\
+T3D--SDAR, block 4 \citep{t3d} & 1.7 & 70.96 & 47.00 & ---\\
+T3D--SDAR, block 8 \citep{t3d} & 1.7 & 68.84 & 47.80 & ---\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+TIDE's listed student is initialized from Qwen3-0.6B-Base and distilled across tokenizers from LLaDA2.0-mini; it uses zero-shot evaluation with 256 generation tokens and 256 steps \citep{tide}. Fast-dLLM v2 uses a 32-token block and eight-token sub-block, with greedy decoding and parallel decoding disabled for its principal accuracy table \citep{fastv2}. SDAR's principal results use zero-shot chain-of-thought prompting and four denoising steps for \emph{each four-token block} \citep{sdar}. OPDLM uses greedy static decoding with block size four; its 0.6B result changes substantially with teacher size, so the 4B-teacher result and self-distilled result are separate rows \citep{opdlm}. T3D's two-token-per-step setting is also local to successive blocks \citep{t3d}. None of these should be read as generating a whole answer in two or four model evaluations.
+
+Parameter accounting introduces another distinction. Our 247M/795M denoisers have total inference footprints of 681M/1,305M after adding the prompt network and frozen embedding lookup (Table~\ref{tab:components}). These totals exclude the frozen Qwen Transformer used during training. AR-converted diffusion models inherit their backbone's pretraining, while our model inherits teacher representations and synthetic supervision. Post-training token counts alone do not measure the complete resources underlying either approach.
+
+\subsection{Reward-based reasoning and larger models}
+\begin{table}[ht]
+\caption{Reported reasoning results from post-training and larger diffusion systems. Scores are single-sample accuracies (\%). $L$ denotes generation length where specified. We keep one stated setting per row; the GSM8K and MATH500 maxima need not occur at the same length. All LLaDA rows use an 8B backbone.}
+\label{tab:literaturerl}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrl}
+\toprule
+Method & GSM8K & MATH500 & Setting / source table\\
+\midrule
+LLaDA-Instruct, d1 evaluation \citep{d1} & 78.2 & 36.2 & $L=512$, Table 1\\
+d1 \citep{d1} & 82.1 & 40.2 & $L=512$, Table 1\\
+wd1 \citep{wd1} & 82.3 & 39.0 & $L=512$, Table 1\\
+wd1++ \citep{wd1} & 84.5 & 44.2 & Full tuning, Table 3\\
+SFT + GDPO \citep{gdpo} & 84.99 & 41.4 & $L=512$, Table 2\\
+SPG mixture \citep{spg} & 84.5 & 41.8 & $L=512$, Table 1\\
+ESPO \citep{espo} & 83.7 & 43.4 & $L=512$, Table 1\\
+d2 \citep{d2} & 85.0 & 41.6 & Task-specific, Table 6\\
+SFT + IGPO \citep{igpo} & 86.4 & 47.4 & Greedy, Table 1\\
+StableDRL \citep{stabledrl} & 86.3 & 44.0 & $L=512$, Table 1\\
+GDSD \citep{gdsd} & 86.0 & 44.6 & $L=512$, Table 2\\
+JustGRPO \citep{justgrpo} & 89.8 & 45.2 & $L=512$, Table 1\\
+\midrule
+SDAR-4B \citep{sdar} & 89.9 & 72.8 & Static block 4, Table 2\\
+SDAR-8B \citep{sdar} & 91.3 & 78.6 & Static block 4, Table 2\\
+StableDRL--SDAR-8B \citep{stabledrl} & 92.4 & 79.2 & Static sampling, Table 2\\
+OPDLM-MATH-4B thinking \citep{opdlm} & 91.7 & 90.2 & Math-specialized, Table 5\\
+OPDLM-MATH-8B thinking \citep{opdlm} & 93.8 & 92.4 & Math-specialized, Table 5\\
+I-DLM-8B thinking \citep{idllm} & 95.0 & 96.8 & Up to 32,768 tokens, Table 1\\
+I-DLM-32B thinking \citep{idllm} & 94.9 & 97.6 & Up to 32,768 tokens, Table 1\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Several distinctions matter when interpreting Table~\ref{tab:literaturerl}. LLaDA 1.5's original 42.6\% and LLaDOU's 44.6\% are labeled MATH in their original papers; they are not substituted for MATH500 here \citep{llada15,lladou}. JustGRPO's strongest setting uses left-to-right, one-token-per-step decoding of a diffusion-trained model \citep{justgrpo}. IGPO includes a length-aligned supervised stage before reinforcement learning \citep{igpo}. SDAR, TraDo, and their descendants can combine blockwise generation with long reasoning traces \citep{sdar,trado}. I-DLM preserves an AR-derived introspective consistency mechanism and enables thinking with a much larger token budget \citep{idllm}. These systems establish a substantially higher broad performance frontier; their numerical advantage is not evidence about a matched 64-step continuous denoiser.
+
+Other relevant post-training studies include MMaDA's mixed reasoning and UniGRPO, temporal consistency reinforcement, entropy-guided step selection, and curriculum initialization of the diffusion canvas \citep{mmada,midtruth,egspo,canvasanneal}. They motivate examining more than final training reward. In particular, CanvasAnneal reports different effects on GSM8K and MATH500; this is related evidence about task-dependent exploration, not a test of the all-correct-group filtering mechanism in our NFT implementation. We therefore treat our discarded-group measurements as diagnostics rather than an established explanation of cross-task gains.
+
+\subsection{Inference, diversity, and alternative latent pipelines}
+\begin{table}[ht]
+\caption{Examples of other relevant evaluation settings. These rows describe different inference systems, rather than additional directly comparable backbone models. All scores are percentages.}
+\label{tab:literatureinference}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrp{5.0cm}}
+\toprule
+System & GSM8K & MATH500 & Additional computation / protocol\\
+\midrule
+CDLM--Dream-7B \citep{cdlm} & 78.8 & --- & 8-shot GSM8K; mean 44.1 total steps; 256-token canvas.\\
+CD4LM--LLaDA \citep{cd4lm} & 77.6 & --- & Mean 76.3 NFEs; 32-token blocks.\\
+TCR--LLaDA \citep{midtruth} & 83.0 & 41.4 & Accuracy plus temporal-entropy RL reward; $L=512$.\\
+LRD--Dream-Instruct \citep{lrd} & 82.7 & 41.8 & Latent refinement during token commitment; $L=512$.\\
+MDPO + RCR \citep{mdpo} & --- & 44.2 & 256 steps; $L=512$; block size 128.\\
+OPTD--LLaDA \citep{optd} & 78.85 & 34.0 & Native decoder; GSM/MATH tokens per forward 10.85/7.41.\\
+IMH--LLaDA \citep{qualityexploration} & --- & 36.0 & Single-sample accuracy; the separate pass@$k$ score is 70.0.\\
+IMH--WeDLM \citep{qualityexploration} & --- & 54.0 & Single-sample accuracy; the separate pass@$k$ score is 87.5.\\
+LaDi-RL \citep{ladirl} & --- & 81.4 & Latent diffusion plus a 7B AR language backbone and extended reasoning.\\
+AR plan + LLaDA \citep{arplan} & 87.2 & 41.8 & External Sonnet planner; 256-token diffusion completion.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Training-free sampling, order learning, search, and adaptive stopping can materially alter a fixed diffusion checkpoint's mathematical performance \citep{fastdllm,unmasking,ots,sas,adas}. Consequently, an inference comparison should count all backbone evaluations, cached versus full-sequence work, guidance branches, final decoding, and any planner or verifier. Within our fixed implementation, total denoising steps remain a useful allocation axis; across architectures, equal step counts need not imply equal compute. Our timing analysis in Appendix~\ref{app:cost} complements that axis without redefining it.
+
+LaDiR reports 84.8\% pass@1 on GSM8K and 46.2\% on its 500-example MATH evaluation, but it uses diffusion thought blocks with a language decoder \citep{ladir}. We do not merge that result into the fully parallel continuous-token-decoding group. Related continuous representation studies include contextual AR rounding in CoDAR, continuous/discrete composition in CRoCoDiL, hierarchical latent generation in ColaDLM, and block-causal latent generation in AURORA-LM \citep{codar,crocodil,coladlm,auroralm}. Their principal evaluations address language modeling or generation rather than the paired mathematical benchmarks considered here.
+
+The linked PlaidQ version~1 studies few-step and one-step continuous \emph{code} generation, not GSM8K or MATH500 \citep{plaidq}. Its later version is marked withdrawn for institutional disclosure requirements concerning research resources. We record it as a related coding preprint, without using it as a mathematical result. Its trajectory-distillation direction is distinct from the undistilled denoising-depth sweep in this work.

@@ -1,18 +1,27 @@
 % !TEX root = ../main.tex
 \begin{table}[t]
-\caption{Reported single-sample GSM8K results from recent continuous language models. External rows retain their papers' training and evaluation protocols; they are contextual comparisons rather than matched-data ablations. Our rows use eight-seed mean pass@1 at 64 steps after NFT.}
+\caption{Reported single-sample mathematical accuracy (\%). External results retain their original protocols. Parameters are reported model sizes; our totals include the prompt encoder and frozen lookup. $^\dagger$Python execution; $^\ddagger$distilled from Qwen3-4B. A dash denotes an unreported value, not zero. Appendix~\ref{app:literature} gives sources and settings.}
 \label{tab:literature}
 \centering\small
-\begin{tabular}{llr}
+\begin{tabular}{lrrr}
 \toprule
-Method & Reported setting & Accuracy (\%)\\
+Method & Parameters (B) & GSM8K & MATH500\\
 \midrule
-$\mathbb S$-FLM \citep{hyperspherical} & Top-1 velocity, $T=1$, 1024 steps & 18.00\\
-FMLM+ (Init) \citep{posterior} & Posterior refinement, 64 NFEs & 33.60\\
-MLFM \citep{mlfm} & Guidance + online token promotion & 31.24\\
+\multicolumn{4}{l}{\emph{Continuous flows and our latent models}}\\
+$\mathbb S$-FLM \citep{hyperspherical} & --- & 18.00$^\dagger$ & ---\\
+FMLM+ (Init) \citep{posterior} & --- & 33.60$^\dagger$ & ---\\
+MLFM \citep{mlfm} & 1.028$^\S$ & 31.24 & ---\\
+ELF-B + NFT & 0.681 & 42.16 & ---\\
+ELF-L + NFT & 1.305 & 63.74 & 23.60\\
 \midrule
-ELF-B + NFT & Natural-language solutions, 64 steps & 42.16\\
-ELF-L + NFT & Natural-language solutions, 64 steps & 63.74\\
+\multicolumn{4}{l}{\emph{Small discrete and block-diffusion models}}\\
+SMDM \citep{smdm} & 1.1 & 58.50 & ---\\
+Duo \citep{duoscaling} & 1.7 & 65.80 & ---\\
+OPDLM$^\ddagger$ \citep{opdlm} & 0.6 & 47.90 & 36.20\\
+OPDLM \citep{opdlm} & 1.7 & 71.00 & 53.00\\
+SDAR-Chat \citep{sdar} & 1.7 & 80.10 & 63.20\\
 \bottomrule
 \end{tabular}
+\vspace{2pt}
+\parbox{\linewidth}{\footnotesize $^\S$MLFM reports a 1,028M frozen backbone with additional trained adapters. Our rows use 64 denoising steps and eight-seed mean pass@1. External parameter conventions, teacher resources, data, decoding, and step budgets differ.}
 \end{table}

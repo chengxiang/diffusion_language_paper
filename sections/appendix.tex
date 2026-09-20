@@ -3,6 +3,7 @@
 \label{app:implementation}
 \begin{table}[h]
 \caption{Model components. Parameter counts are in millions. The frozen lookup table is loaded at inference but its values are excluded from optimization and EMA updates.}
+\label{tab:components}
 \centering\small
 \begin{tabular}{lrr}
 \toprule
@@ -163,3 +164,6 @@ Four older GSM NFT seed cases have no recorded timing; later compatible draws su
 For the first 200 NFT updates, discarded all-correct groups comprise 20.10\% for GSM8K ELF-B, 38.81\% for GSM8K ELF-L, and 1.44\% for MATH ELF-L. Through the selected endpoints, these fractions are 22.32\%, 43.50\%, and 1.81\%, respectively. Each retained group supplies the same number of endpoint/time records, so a lower discard fraction leaves more training records per update. The token mass can still differ because answers have different lengths. The smaller discard rate on MATH is consistent with broader training coverage contributing to its NFT gains, but this comparison does not isolate a causal filtering effect.
 
 An additional GSM8K ELF-B rollout comparison uses shared-square $(2,2,2)$ versus identity $(1,1,1)$ clocks during NFT collection, with synchronous loss times in both arms. Through update 400, shared-square discards 31.84\% of groups versus 23.55\% for identity; matched asynchronous test accuracy is 39.12\% versus 40.75\%. Identity is also ahead at update 200, while shared-square is ahead at update 100 with one evaluation seed. This supports recording rollout difficulty and discarded fraction together, without attributing the accuracy difference solely to filtering.
+
+\clearpage
+\input{sections/literature_comparisons}
