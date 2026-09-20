@@ -2,7 +2,7 @@
 \section{Implementation details}
 \label{app:implementation}
 \begin{table}[h]
-\caption{Model components. Parameter counts are in millions. The frozen lookup table is loaded at inference but its values are excluded from optimization and EMA updates.}
+\caption{Model components. Parameter counts are in millions. Shared weights are counted once. The frozen lookup is excluded from optimization and EMA updates.}
 \label{tab:components}
 \centering\small
 \begin{tabular}{lrr}
@@ -14,7 +14,9 @@ Denoiser hidden width & 768 & 1280\\
 Attention heads & 12 & 16\\
 Latent width & 1024 & 1024\\
 Input bottleneck width & 512 & 512\\
-Denoiser + shared decoder parameters & 246.96 & 795.21\\
+Denoising-active parameters & 90.44 & 638.15\\
+Terminal-only decoder parameters & 156.52 & 157.05\\
+Union of denoiser and decoder parameters & 246.96 & 795.21\\
 Prompt Transformer blocks & 6 & 6\\
 Prompt Transformer hidden width & 768 & 1280\\
 Trainable prompt parameters & 45.02 & 121.33\\
@@ -23,6 +25,8 @@ Complete inference parameter footprint & 680.94 & 1305.50\\
 \bottomrule
 \end{tabular}
 \end{table}
+The denoising-active count includes the shared Transformer, latent input/output projections, and time and SCCFG conditioning. Terminal-only parameters comprise the factored vocabulary head and decoder-mode tokens. The terminal decoder reuses the Transformer; it is not a separate 247M/795M model. A generation with $S$ integration steps makes $S+1$ ELF backbone calls, one prompt-Transformer call, and a prompt token lookup. SCCFG is supplied as learned conditioning and does not add an unconditional inference branch in this implementation. The lookup is a memory footprint, not a dense 389M-parameter computation at every step.
+
 The teacher is Qwen3-4B-Instruct-2507, with 36 decoder blocks, hidden width 2,560, and a vocabulary of 151,936 tokens. All teacher features are post-block residuals before final RMSNorm. Feature extraction uses BF16 inference with native causal attention. Prompt representations contain only question-prefix tokens; future answer tokens cannot affect them. The learned prompt Transformer is bidirectional over that prefix and uses rotary position embeddings, a factorized input frontend, output RMSNorm, and a 1,024-dimensional projection.
 
 Supervised training uses a constant learning rate of $0.002$, effective batch 512, zero weight decay, gradient clipping at one, and BF16 computation. Muon uses momentum $0.95$ and five FP32 Newton--Schulz iterations for eligible matrix weights; auxiliary optimizers handle the remaining parameters. Raw weights and independent EMA tracks are maintained for both learnable components. Standalone prompt imitation runs for 60, 30, and 10 prompt epochs for GSM8K ELF-B, GSM8K ELF-L, and MATH ELF-L, respectively. A prompt epoch counts unique questions; a denoiser epoch counts solution rows.

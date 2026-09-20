@@ -1,27 +1,20 @@
 % !TEX root = ../main.tex
 \begin{table}[t]
-\caption{Reported single-sample mathematical accuracy (\%). External results retain their original protocols. Parameters are reported model sizes; our totals include the prompt encoder and frozen lookup. $^\dagger$Python execution; $^\ddagger$distilled from Qwen3-4B. A dash denotes an unreported value, not zero. Appendix~\ref{app:literature} gives sources and settings.}
+\caption{Continuous-model mathematical reasoning: selected author-reported operating points. Accuracy is in percent and parameters are in millions. Step-active counts include the heads and codebooks used repeatedly; terminal-only counts exclude shared weights. Total counts also include one-time prompt components. $^\dagger$Python execution; $^*$reported sampling steps, with additional guidance calls. Appendix~\ref{app:literaturecontinuous} details mechanisms, parameter accounting, and NFE curves.}
 \label{tab:literature}
 \centering\small
-\begin{tabular}{lrrr}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrrrrr}
 \toprule
-Method & Parameters (B) & GSM8K & MATH500\\
+Method & Step-active & Terminal-only & Total & NFE & GSM8K & MATH500\\
 \midrule
-\multicolumn{4}{l}{\emph{Continuous flows and our latent models}}\\
-$\mathbb S$-FLM \citep{hyperspherical} & --- & 18.00$^\dagger$ & ---\\
-FMLM+ (Init) \citep{posterior} & --- & 33.60$^\dagger$ & ---\\
-MLFM \citep{mlfm} & 1.028$^\S$ & 31.24 & ---\\
-ELF-B + NFT & 0.681 & 42.16 & ---\\
-ELF-L + NFT & 1.305 & 63.74 & 23.60\\
-\midrule
-\multicolumn{4}{l}{\emph{Small discrete and block-diffusion models}}\\
-SMDM \citep{smdm} & 1.1 & 58.50 & ---\\
-Duo \citep{duoscaling} & 1.7 & 65.80 & ---\\
-OPDLM$^\ddagger$ \citep{opdlm} & 0.6 & 47.90 & 36.20\\
-OPDLM \citep{opdlm} & 1.7 & 71.00 & 53.00\\
-SDAR-Chat \citep{sdar} & 1.7 & 80.10 & 63.20\\
+$\mathbb S$-FLM \citep{hyperspherical} & $\sim$163 & 0 & $\sim$163 & 1024 & 18.00$^\dagger$ & ---\\
+FMLM+ (Init) \citep{posterior} & $\sim$168 & 0 & $\sim$168 & 64 & 33.60$^\dagger$ & ---\\
+MLFM \citep{mlfm} & $\sim$1347 & 0 & $\sim$1347 & 256$^*$ & 31.24 & ---\\
+ELF-B + NFT & 90.44 & 156.52 & 680.94 & 65 & 42.16 & ---\\
+ELF-L + NFT & 638.15 & 157.05 & 1305.50 & 65 & 63.74 & 23.60\\
 \bottomrule
 \end{tabular}
 \vspace{2pt}
-\parbox{\linewidth}{\footnotesize $^\S$MLFM reports a 1,028M frozen backbone with additional trained adapters. Our rows use 64 denoising steps and eight-seed mean pass@1. External parameter conventions, teacher resources, data, decoding, and step budgets differ.}
+\parbox{\linewidth}{\footnotesize $\mathbb S$-FLM's size is derived from its released configuration; FMLM+ reports its approximate size. MLFM has 1,028M frozen parameters plus 319M trainable adapters, counted before merging. Our 64 denoising steps require 65 backbone calls including terminal decoding; accuracies average eight seeds. A dash denotes an unreported result. These are published-protocol comparisons, with different supervision and output formats.}
 \end{table}
