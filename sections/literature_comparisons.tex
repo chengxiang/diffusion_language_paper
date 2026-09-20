@@ -20,7 +20,7 @@ $\mathbb S$-FLM & Hyperspherical transport; normalized architecture; truncated/a
 TESS 2 & Gaussian corruption of token-logit simplex; AR adaptation with UL2 masking objectives, label shifting, bidirectional attention, self-conditioning, and argmax projection during sampling. & Approximately 7B recurrent model. Input embedding mixture and vocabulary head are used at each step; no separate terminal-only head. Optional reward guidance adds a reward model and backward passes, but is not used for the reported GSM8K rows.\\
 FMLM+ & Two-time flow maps; masking-style schedules; confidence-based posterior refinement. Scratch, MDLM initialization, and distillation are distinct training arms. & About 168M total (Table 11); the softmax head is recurrent. The paper does not report a separate trunk/head count. No additional terminal-only head.\\
 MLFM & Continuous Brownian-bridge corruption with masking; SMDM adaptation through LoRA/AdaLN; context-corrupted guidance; discrete online token promotion. & 1,028M frozen parameters plus 319M adapters before merging. Vocabulary predictions and codebook operations occur during sampling. No separately reported trunk/head split.\\
-Our ELF & Contextual latent flow; teacher-trained projectors and whitening; staged prompt encoder; self-conditioning/SCCFG; layer clocks; NFT. & 90.44M/638.15M denoising paths; 156.52M/157.05M terminal-only parameters. Prompt Transformer 45.02M/121.33M plus lookup 388.96M are used once. The terminal decoder reuses the backbone.\\
+Our ELF & Contextual latent flow; teacher-trained projectors and whitening; staged prompt encoder; self-conditioning/SCCFG; layer clocks; optional NFT. & 90.44M/638.15M denoising paths; 156.52M/157.05M terminal-only parameters. Prompt Transformer 45.02M/121.33M plus lookup 388.96M are used once. The terminal decoder reuses the backbone.\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -30,12 +30,12 @@ The $\mathbb S$-FLM count is an analytical count of the released TinyGSM \texttt
 \begin{figure}[ht]
 \centering
 \includegraphics[width=\linewidth]{figures/continuous_literature_nfe.pdf}
-\caption{GSM8K accuracy across continuous-model sampling budgets. Our curves use the same two seeds 42/123 throughout. FMLM+ values are the authors' Table~8; $\mathbb S$-FLM/MLFM Figure~1 and TESS~2 Figure~3b values are digitized and rounded to 0.1 percentage points \citep{posterior,hyperspherical,mlfm,tess2}. Left: ELF counts $S+1$ backbone calls for $S$ integration steps, including terminal decoding; the released $\mathbb S$-FLM sampler decodes on its last call. Right: MLFM retains its reported step axis because guidance, promotion, and early stopping prevent identifying steps with total NFEs. Lines connect measured operating points. Training data, solution format, model size, and scoring differ across papers.}
+\caption{GSM8K accuracy across continuous-model sampling budgets. Our pre-NFT (dashed, open triangles) and post-NFT (solid, circles) curves use the same two seeds 42/123 throughout, distinct from the eight-seed headline table. FMLM+ values are the authors' Table~8; $\mathbb S$-FLM/MLFM Figure~1 and TESS~2 Figure~3b values are digitized and rounded to 0.1 percentage points \citep{posterior,hyperspherical,mlfm,tess2}. Left: ELF counts $S+1$ backbone calls for $S$ integration steps, including terminal decoding; the released $\mathbb S$-FLM sampler decodes on its last call. Right: MLFM retains its reported step axis because guidance, promotion, and early stopping prevent identifying steps with total NFEs. Lines connect measured operating points. Training data, solution format, model size, and scoring differ across papers.}
 \label{fig:continuousnfe}
 \end{figure}
 
 \begin{table}[ht]
-\caption{Numerical depth comparison: single-sample GSM8K accuracy (\%). $^\dagger$Approximate author-figure values, rounded to 0.1 points. Column $S$ denotes the reported budget: NFEs for the first four rows, sampling steps for MLFM, and integration steps for ELF. ELF therefore uses $S+1$ backbone evaluations.}
+\caption{Numerical depth comparison: single-sample GSM8K accuracy (\%). Both ELF stages use seeds 42/123. $^\dagger$Approximate author-figure values, rounded to 0.1 points. Column $S$ denotes the reported budget: NFEs for the first four rows, sampling steps for MLFM, and integration steps for ELF. ELF therefore uses $S+1$ backbone evaluations.}
 \label{tab:continuousnfe}
 \centering\small
 \begin{tabular}{lrrrr}
@@ -48,8 +48,10 @@ FMLM+, Distill & 10.3 & 18.7 & 21.6 & 23.4\\
 FMLM+, Init & 15.1 & 26.1 & 31.8 & 33.6\\
 MLFM, CCFG + OTP$^\dagger$ & 20.8 & 24.0 & 26.7 & 27.1\\
 \midrule
-ELF-B + NFT, seeds 42/123 & 30.52 & 37.64 & 41.28 & 41.51\\
-ELF-L + NFT, seeds 42/123 & 55.04 & 60.31 & 62.47 & 63.08\\
+ELF-B, pre-NFT & 26.12 & 34.57 & 37.07 & 39.27\\
+ELF-B, post-NFT & 30.52 & 37.64 & 41.28 & 41.51\\
+ELF-L, pre-NFT & 49.62 & 55.57 & 59.25 & 59.02\\
+ELF-L, post-NFT & 55.04 & 60.31 & 62.47 & 63.08\\
 \bottomrule
 \end{tabular}
 \end{table}
