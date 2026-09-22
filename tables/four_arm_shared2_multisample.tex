@@ -1,0 +1,17 @@
+% !TEX root = ../main.tex
+\begin{table}[t]
+\caption{Four-seed shared-$t^2$ epoch-six results extending Table~\ref{tab:representation}. All entries are percentages. Pass@2 and pass@4 measure oracle coverage over the same four draws; bracketed ranges are 95\% problem-bootstrap intervals.}
+\label{tab:shared2multisample}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrr}
+\toprule
+Arm & Pass@1 & Pass@2 [95\% CI] & Pass@4 [95\% CI] \\
+\midrule
+Learned multilayer & 30.76 & 42.03 [39.68, 44.24] & 53.22 [50.57, 55.88] \\
+PCA multilayer & 28.43 & 39.13 [36.85, 41.32] & 50.11 [47.46, 52.77] \\
+PCA layer 32 & 11.20 & 17.15 [15.43, 18.84] & 24.18 [21.91, 26.38] \\
+Random joint & 8.70 & 13.61 [12.03, 15.21] & 20.02 [17.82, 22.21] \\
+\bottomrule
+\end{tabular}
+\end{table}

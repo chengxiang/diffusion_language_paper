@@ -1,17 +1,17 @@
 % !TEX root = ../main.tex
 \begin{table}[t]
-\caption{Four-arm ELF-B comparison at six GSM8K epochs. All rows use the shared $t=\tau^2$ clock, 32 steps, ELF EMA $0.999$, and seeds 42/123. The random-joint arm also selects prompt EMA $0.999$; other arms use frozen Qwen prompt activations. All representations are whitened and 1,024-dimensional.}
+\caption{Four-arm ELF-B comparison at six GSM8K epochs, using shared $t=\tau^2$, 32 steps, and seeds 42/123/456/789. Entries are mean pass@1 with 95\% problem-bootstrap intervals. ELF EMA is $0.999$; the random-joint arm independently selects prompt EMA $0.999$. All representations are whitened and 1,024-dimensional.}
 \label{tab:representation}
 \centering\small
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{lllr}
 \toprule
-Arm & Teacher layers & Prompt conditioning & Pass@1 (\%) \\
+Representation & Layers & Prompt & Pass@1 (\%) [95\% CI] \\
 \midrule
-Learned multilayer & 16/24/32 & Original Qwen & 31.01 \\
-PCA multilayer & 16/24/32 & Original Qwen & 28.39 \\
-PCA layer 32 & 32 & Original Qwen & 11.68 \\
-Learned multilayer & 16/24/32 & Random joint & 8.61 \\
+Learned multilayer & 16/24/32 & Original Qwen & 30.76 [28.81, 32.64] \\
+PCA multilayer & 16/24/32 & Original Qwen & 28.43 [26.55, 30.27] \\
+PCA layer 32 & 32 & Original Qwen & 11.20 [9.95, 12.45] \\
+Learned multilayer & 16/24/32 & Random joint & 8.70 [7.60, 9.84] \\
 \bottomrule
 \end{tabular}
 \end{table}

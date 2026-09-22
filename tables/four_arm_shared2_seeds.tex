@@ -1,0 +1,17 @@
+% !TEX root = ../main.tex
+\begin{table}[t]
+\caption{Individual sampling-seed accuracies (\%) for the shared-$t^2$ epoch-six comparison. These are generation seeds at fixed trained checkpoints, not independent training runs.}
+\label{tab:shared2seeds}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}
+\toprule
+Arm & Seed 42 & Seed 123 & Seed 456 & Seed 789 \\
+\midrule
+Learned multilayer & 30.71 & 31.31 & 30.63 & 30.40 \\
+PCA multilayer & 28.58 & 28.20 & 28.58 & 28.35 \\
+PCA layer 32 & 11.52 & 11.83 & 10.69 & 10.77 \\
+Random joint & 8.57 & 8.64 & 8.42 & 9.17 \\
+\bottomrule
+\end{tabular}
+\end{table}

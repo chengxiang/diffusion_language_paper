@@ -84,7 +84,7 @@ where $\E_M$ divides by the number of valid response tokens across the entire up
 
 \section{Evaluation estimators and numerical controls}
 \label{app:evaluation}
-Pilot seeds are 42, 123, 456, and 789. The eight-sample expansion adds 2026, 31415, 27182, and 16180. Within a supervised/NFT pair, the selected step count maximizes the equally weighted mean of the two checkpoints' four-seed pilot pass@1, with ties choosing 32. Expansion draws do not participate in that selection. Both pilot budgets are retained. Stage comparisons and the three-schedule comparison in Table~\ref{tab:schedules} use all four pilot seeds at 32 steps. The broader six-schedule sweep and four-arm learning curves use seeds 42/123.
+Pilot seeds are 42, 123, 456, and 789. The eight-sample expansion adds 2026, 31415, 27182, and 16180. Within a supervised/NFT pair, the selected step count maximizes the equally weighted mean of the two checkpoints' four-seed pilot pass@1, with ties choosing 32. Expansion draws do not participate in that selection. Both pilot budgets are retained. Stage comparisons, the three-schedule comparison in Table~\ref{tab:schedules}, and the shared-$t^2$ epoch-six table use all four pilot seeds at 32 steps. The broader six-schedule sweep and four-arm learning curves use seeds 42/123.
 
 The compute-allocation study uses 64/32/16/8 draws at 8/16/32/64 steps for each of the six endpoints, totaling 720 benchmark seed evaluations. The nested seed lists are shared across endpoints and retain the original pilot and expansion seeds. Further seeds are drawn deterministically with seed 20260918. Thus all four depths reach 512 total denoising steps, and the 8-step cohort supports pass@64. Table~\ref{tab:lowsteps} retains the matched two-seed comparison; its pass@1 estimates therefore differ from averages over the expanded cohorts.
 
@@ -123,7 +123,11 @@ At epoch six, identity-clock accuracies are 26.76\%, 24.22\%, 13.38\%, and 8.68\
 All arms use the original seed-42 ELF initialization, 2,434,330 training rows, effective batch 512, and fresh optimizers. The PCA multilayer run migrated from two to four GPUs during training while preserving effective batch; this changed its stochastic trajectory. No arm is repeated to estimate training variability. The representation comparisons hold layer selection fixed for learned versus PCA projectors and projector family fixed for multilayer versus layer 32; they do not measure the interaction between the two choices.
 
 \input{tables/identity_four_seed}
-A separate identity-clock epoch-six extension evaluates the three teacher-prompt representation arms with four generation seeds (Table~\ref{tab:identityfourseed}). Learned minus PCA multilayer is $+3.07$ points with paired 95\% interval $[1.57,4.51]$; PCA multilayer minus layer 32 is $+10.94$ points, $[9.44,12.51]$. These intervals condition on the trained checkpoints and observed draws. They support the representation ordering under identity clocks and are not transferred to the two-seed shared-$t^2$ results.
+A separate identity-clock epoch-six extension evaluates the three teacher-prompt representation arms with four generation seeds (Table~\ref{tab:identityfourseed}). Learned minus PCA multilayer is $+3.07$ points with paired 95\% interval $[1.57,4.51]$; PCA multilayer minus layer 32 is $+10.94$ points, $[9.44,12.51]$. These intervals condition on the trained checkpoints and observed draws. Both four-seed clock comparisons support the representation ordering; each uses its own predictions and bootstrap contrasts.
+
+\input{tables/four_arm_shared2_multisample}
+\input{tables/four_arm_shared2_seeds}
+Tables~\ref{tab:shared2multisample} and~\ref{tab:shared2seeds} give oracle coverage and individual seed accuracies for the primary shared-$t^2$ epoch-six comparison. All four arms use the same four generation seeds. Learned minus PCA multilayer is $+2.89$ points at pass@2 (paired 95\% interval $[1.10,4.76]$) and $+3.11$ at pass@4 ($[0.68,5.54]$). The four-arm ordering also persists in these oracle-coverage metrics. These additional draws improve evaluation precision without measuring variability across training runs.
 
 \section{Broader inference-schedule sweep}
 \label{app:schedules}
@@ -166,10 +170,10 @@ We also probe the frozen teacher by perturbing assistant activations at one sele
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/time_vs_steps.pdf}
-\caption{Measured GPU inference time against total denoising steps from the earlier timing cohorts; the 8-step timing curve does not include the later expansion to 64 draws. Time includes prompt encoding, denoising, and terminal decoding, while excluding startup and scoring. These are throughput-derived amortized costs, not single-query latencies. ELF-B NFT runs pack two cases on one H200; the other panels use one case per H200.}
+\caption{Measured GPU inference time against total denoising steps, including the expanded 8-step cohorts with 64 draws. All four depths reach 512 total steps at all six endpoints. Time includes prompt encoding, denoising, and terminal decoding, while excluding startup, scoring, and voting. These are throughput-derived amortized costs, not single-query latencies. ELF-B NFT runs pack two cases on one H200; the other panels use one case per H200.}
 \label{fig:time}
 \end{figure}
-Four older GSM NFT seed cases have no recorded timing; later compatible draws supply the corresponding timing coefficients. Missing measurements are not imputed as zero. At a fixed denoising-step budget, shorter trajectories require more prompt-encoder and terminal-decoder work because they generate more samples. This explains the systematic overhead visible in Figure~\ref{fig:time} and motivates reporting both steps and measured cost.
+The timing analysis uses 23,832 recorded batch inference windows from 716 of the 720 seed evaluations. Four older GSM NFT seed cases have no recorded timing; later compatible draws supply the corresponding timing coefficients. Missing measurements are not imputed as zero. Within each cohort, we union overlapping inference windows per GPU allocation and divide their summed durations by the total measured answer count. Multiplying this amortized cost by the number of draws gives each plotted point. This avoids double-counting concurrent ELF-B NFT workers. At a fixed denoising-step budget, shorter trajectories require more prompt-encoder and terminal-decoder work because they generate more samples. This explains the systematic overhead visible in Figure~\ref{fig:time} and motivates reporting both steps and measured cost.
 
 \section{Answer diversity, coverage, and NFT filtering}
 \label{app:diversity}
