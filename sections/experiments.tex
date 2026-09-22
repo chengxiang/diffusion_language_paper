@@ -10,7 +10,7 @@ ELF-B has 12 blocks of width 768; ELF-L has 32 blocks of width 1,280. Their deno
 We train the denoiser with teacher prompt conditioning for 12 epochs, then jointly adapt the learned prompt encoder and denoiser through epoch 18 for ELF-B and epoch 21 for ELF-L. The effective supervised batch is 512, with constant learning rate $0.002$, Muon and auxiliary optimizers, zero weight decay, and gradient clipping at one. We select NFT updates 300, 500, and 600 for GSM8K ELF-B, GSM8K ELF-L, and MATH ELF-L, respectively, using fixed development sets of 1,000 GSM-style and 500 MATH problems. Selection uses two-seed mean accuracy and favors the earlier update on an exact tie.
 
 \paragraph{Evaluation.}
-We first evaluate four sampling seeds at 32 and 64 steps. Each supervised/NFT pair uses a common step budget chosen by its equally weighted pilot mean pass@1; ties favor 32. All three pairs select 64 steps. Four further seeds give eight samples per problem at that budget. The stage and schedule ablations use 32 steps throughout. Supervised evaluation selects ELF/prompt EMA $0.9999/0.9999$; NFT selects $0.99/0.99$. The immediate prompt-swap experiment selects the standalone MSE prompt EMA $0.999$. GSM8K uses canonical numerical-answer scoring; MATH uses Math-Verify, with PRM800K retained as a secondary scorer \citep{mathverify,prm800k}.
+We first evaluate four sampling seeds at 32 and 64 steps. Each supervised/NFT pair uses a common step budget chosen by its equally weighted pilot mean pass@1; ties favor 32. All three pairs select 64 steps. Four further seeds give eight samples per problem at that budget. The stage and schedule ablations use 32 steps throughout. Main supervised endpoints select ELF/prompt EMA $0.9999/0.9999$; NFT selects $0.99/0.99$. The immediate prompt-swap experiment selects the standalone MSE prompt EMA $0.999$. The six-epoch controls below instead use ELF EMA $0.999$, with prompt EMA $0.999$ when applicable. GSM8K uses canonical numerical-answer scoring; MATH uses Math-Verify, with PRM800K retained as a secondary scorer \citep{mathverify,prm800k}.
 
 We report mean pass@1 and the standard unbiased pass@$k$ estimator \citep{codex}. Confidence intervals use 4,000 paired problem-bootstrap replicates, retaining matched problems across conditions. They quantify uncertainty for fixed trained checkpoints and the observed sampling seeds. Appendix~\ref{app:evaluation} specifies the estimators, seed lists, and selection procedure.
 
@@ -21,21 +21,17 @@ Table~\ref{tab:main} reports the six main endpoints. NFT raises mean pass@1 from
 \input{tables/literature}
 Table~\ref{tab:literature} compares continuous models using the original papers' accuracies and separates our pre-NFT and post-NFT results. Before reward-based fine-tuning, ELF-B's 39.17\% and ELF-L's 58.67\% on GSM8K already exceed the listed $\mathbb S$-FLM, FMLM+, and MLFM operating points. Pre-NFT ELF-B also reaches 34.57\% at 16 steps (17 backbone calls, seeds 42/123), versus FMLM+ Init's 33.6\% at 64 NFEs. The larger 7B TESS~2 reaches 66.6\% after GSM8K-specific fine-tuning at 100 steps with eight-shot prompting, above post-NFT ELF-L's 63.74\% with zero-shot prompting \citep{tess2}. Appendix~\ref{app:literaturecontinuous} retains both training stages' depth curves and the protocol differences; our sweep starts at eight steps. None of these four continuous comparators reports MATH500. Discrete masked and blockwise models are tabulated separately in Appendix~\ref{app:literaturediscrete}.
 
-\subsection{Representation controls}
+\subsection{Representation and early joint-training controls}
 \label{sec:representationcontrols}
-We separate projector construction from layer selection using three six-epoch ELF-B arms: learned projectors over layers 16/24/32, PCA over the same layers and dimensions, and a 1,024-dimensional PCA representation from layer 32 alone. All representations are whitened. The first pair fixes layer selection; the second fixes the projector family and total latent width. Their layout is shown in Table~\ref{tab:representation}. Epoch-six evaluation uses a common EMA, seed set, and inference schedule.
+We compare four ELF-B training arms over six GSM8K epochs: learned projectors over layers 16/24/32; PCA over the same layers and widths $(256,256,512)$; a 1,024-dimensional PCA representation from layer 32; and the learned multilayer representation with a randomly initialized prompt encoder trained jointly from epoch zero. All representations are whitened. The first three arms use frozen Qwen prompt activations; the fourth retains Qwen's frozen token lookup and learns its prompt Transformer alongside ELF. All arms start from the same ELF initialization and use the same training population and effective batch.
 
-\begin{table}[t]
-\caption{Representation ablation at six GSM8K epochs. The learned reference uses original Qwen prompt conditioning. All entries use ELF EMA $0.999$ and synchronous 32-step inference with seeds 42/123. Dashes reserve the pending PCA results.}
-\label{tab:representation}
-\centering\small
-\begin{tabular}{llcr}
-\toprule
-Projector & Teacher layers & Latent widths & Pass@1 (\%)\\
-\midrule
-Learned, whitened & 16/24/32 & 256/256/512 & 26.76\\
-PCA, whitened & 16/24/32 & 256/256/512 & \pending\\
-PCA, whitened & 32 & 1024 & \pending\\
-\bottomrule
-\end{tabular}
-\end{table}
+\input{tables/four_arm_shared2}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/four_arm_shared2.pdf}
+\caption{Four-arm GSM8K learning curves with shared $t=\tau^2$ inference, 32 steps, and ELF EMA $0.999$. Each point averages seeds 42/123 at one trained checkpoint. Random joint training also selects prompt EMA $0.999$. Identity-clock counterparts appear in Appendix~\ref{app:fourarm}.}
+\label{fig:fourarm}
+\end{figure}
+Table~\ref{tab:representation} and Figure~\ref{fig:fourarm} use the common inference clock $t=\tau^2$, equivalent to $(2,2,2)$ across multilayer groups. At epoch six, learned projectors outperform PCA with the layers fixed by 2.62 percentage points (31.01\% versus 28.39\%). Under PCA, the multilayer representation exceeds layer 32 alone by 16.72 points (28.39\% versus 11.68\%). Learned multilayer leads from epoch two onward, while multilayer PCA exceeds layer-32 PCA at every evaluated epoch. These comparisons support both teacher-predictive projection learning and multilayer features within this training budget; they do not isolate the layer-selection effect under learned projectors or determine eventual performance ceilings.
+
+Random joint training reaches only 8.61\% at epoch six, 22.40 points below the teacher-prompt learned reference. The same epoch-six ordering holds with identity $t=\tau$ inference (Appendix~\ref{app:fourarm}), so the main representation and curriculum conclusions persist across both evaluated clocks.

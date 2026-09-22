@@ -1,0 +1,17 @@
+% !TEX root = ../main.tex
+\begin{table}[t]
+\caption{Four-arm ELF-B comparison at six GSM8K epochs. All rows use the shared $t=\tau^2$ clock, 32 steps, ELF EMA $0.999$, and seeds 42/123. The random-joint arm also selects prompt EMA $0.999$; other arms use frozen Qwen prompt activations. All representations are whitened and 1,024-dimensional.}
+\label{tab:representation}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lllr}
+\toprule
+Arm & Teacher layers & Prompt conditioning & Pass@1 (\%) \\
+\midrule
+Learned multilayer & 16/24/32 & Original Qwen & 31.01 \\
+PCA multilayer & 16/24/32 & Original Qwen & 28.39 \\
+PCA layer 32 & 32 & Original Qwen & 11.68 \\
+Learned multilayer & 16/24/32 & Random joint & 8.61 \\
+\bottomrule
+\end{tabular}
+\end{table}

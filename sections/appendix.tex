@@ -84,7 +84,9 @@ where $\E_M$ divides by the number of valid response tokens across the entire up
 
 \section{Evaluation estimators and numerical controls}
 \label{app:evaluation}
-Pilot seeds are 42, 123, 456, and 789. The eight-sample expansion adds 2026, 31415, 27182, and 16180. Within a supervised/NFT pair, the selected step count maximizes the equally weighted mean of the two checkpoints' four-seed pilot pass@1, with ties choosing 32. Expansion draws do not participate in that selection. Both pilot budgets are retained. Stage comparisons use the four pilot seeds at 32 steps, and schedule comparisons use seeds 42/123 at 32 steps.
+Pilot seeds are 42, 123, 456, and 789. The eight-sample expansion adds 2026, 31415, 27182, and 16180. Within a supervised/NFT pair, the selected step count maximizes the equally weighted mean of the two checkpoints' four-seed pilot pass@1, with ties choosing 32. Expansion draws do not participate in that selection. Both pilot budgets are retained. Stage comparisons and the three-schedule comparison in Table~\ref{tab:schedules} use all four pilot seeds at 32 steps. The broader six-schedule sweep and four-arm learning curves use seeds 42/123.
+
+The compute-allocation study uses 64/32/16/8 draws at 8/16/32/64 steps for each of the six endpoints, totaling 720 benchmark seed evaluations. The nested seed lists are shared across endpoints and retain the original pilot and expansion seeds. Further seeds are drawn deterministically with seed 20260918. Thus all four depths reach 512 total denoising steps, and the 8-step cohort supports pass@64. Table~\ref{tab:lowsteps} retains the matched two-seed comparison; its pass@1 estimates therefore differ from averages over the expanded cohorts.
 
 For problem $i$, let $c_i$ of $n$ samples be correct. We estimate
 \begin{equation}
@@ -105,10 +107,32 @@ All primary comparisons preserve guidance, decoding, problem order, and benchmar
 \input{tables/low_steps}
 \input{tables/budget512}
 
+\section{Four-arm robustness to the inference clock}
+\label{app:fourarm}
+The main four-arm comparison uses shared $t=\tau^2$ inference for all arms. This reporting choice followed inspection of the test results and alignment with the shared-square control used in later-stage evaluations; it was not selected on an independent development set. Here we hold checkpoints, guidance, numerical arithmetic, and generation seeds fixed while changing the physical clock to $t=\tau$. Both schedules use 32 integration steps on the same base grid. The shared-square evaluator includes the $2\tau$ chain-rule factor; the identity evaluator uses the original scalar time embedding.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/four_arm_identity.pdf}
+\caption{Identity-clock ($t=\tau$) counterparts of Figure~\ref{fig:fourarm}. Points average seeds 42/123 with the same trained checkpoints and EMA selectors. The epoch-six ordering is unchanged: learned multilayer, PCA multilayer, PCA layer 32, then random joint.}
+\label{fig:fourarmidentity}
+\end{figure}
+\input{tables/four_arm_identity}
+At epoch six, identity-clock accuracies are 26.76\%, 24.22\%, 13.38\%, and 8.68\% for learned multilayer, PCA multilayer, PCA layer 32, and random joint, respectively. Learned multilayer exceeds PCA multilayer from epoch two onward under both schedules; multilayer PCA exceeds layer 32 PCA at every epoch. Shared $t^2$ improves the two multilayer teacher-prompt arms at later checkpoints but does not uniformly help: layer 32 PCA decreases at epochs four through six, and random joint remains weak. We therefore interpret the persistent endpoint ordering as robustness of these ablation conclusions to the two tested clocks, rather than a general advantage of a squared clock.
+
+All arms use the original seed-42 ELF initialization, 2,434,330 training rows, effective batch 512, and fresh optimizers. The PCA multilayer run migrated from two to four GPUs during training while preserving effective batch; this changed its stochastic trajectory. No arm is repeated to estimate training variability. The representation comparisons hold layer selection fixed for learned versus PCA projectors and projector family fixed for multilayer versus layer 32; they do not measure the interaction between the two choices.
+
+\input{tables/identity_four_seed}
+A separate identity-clock epoch-six extension evaluates the three teacher-prompt representation arms with four generation seeds (Table~\ref{tab:identityfourseed}). Learned minus PCA multilayer is $+3.07$ points with paired 95\% interval $[1.57,4.51]$; PCA multilayer minus layer 32 is $+10.94$ points, $[9.44,12.51]$. These intervals condition on the trained checkpoints and observed draws. They support the representation ordering under identity clocks and are not transferred to the two-seed shared-$t^2$ results.
+
+\section{Broader inference-schedule sweep}
+\label{app:schedules}
+\input{tables/schedules_two_seed}
+Table~\ref{tab:schedulestwoseed} retains all six schedules evaluated with seeds 42/123. Table~\ref{tab:schedules} in the main paper extends the headline async allocation and the two competitive shared exponents, 1.5 and 2, to four seeds. The two tables summarize different draw sets. In particular, the two-seed MATH NFT async-minus-shared-$t^2$ difference of $+2.60$ points becomes $+0.65$ points with four seeds, with interval $[-0.60,1.85]$. Neither sweep establishes a universally optimal schedule. These are inference-clock comparisons at fixed trained checkpoints, separate from the NFT rollout-clock experiments below.
+
 \section{Prompt-stage results and imitation curves}
 \label{app:prompt}
 \input{tables/prompt_stages}
-\input{tables/random_joint}
 The immediate swap losses are $8.91$ points for GSM8K ELF-B (95\% paired interval $[7.32,10.52]$), $11.71$ for GSM8K ELF-L ($[10.08,13.42]$), and $2.80$ for MATH ($[1.10,4.45]$). Subsequent joint gains are $8.43$ ($[6.96,10.01]$), $9.46$ ($[7.83,11.05]$), and $4.25$ ($[2.50,6.05]$). Final joint minus original-Qwen accuracy is $-0.47$, $-2.26$, and $+1.45$ points, respectively. Their paired intervals are $[-2.09,1.18]$, $[-3.90,-0.64]$, and $[-0.25,3.30]$.
 
 \begin{figure}[t]
@@ -142,7 +166,7 @@ We also probe the frozen teacher by perturbing assistant activations at one sele
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/time_vs_steps.pdf}
-\caption{Measured GPU inference time against total denoising steps. Time includes prompt encoding, denoising, and terminal decoding, while excluding startup and scoring. These are throughput-derived amortized costs, not single-query latencies. ELF-B NFT runs pack two cases on one H200; the other panels use one case per H200.}
+\caption{Measured GPU inference time against total denoising steps from the earlier timing cohorts; the 8-step timing curve does not include the later expansion to 64 draws. Time includes prompt encoding, denoising, and terminal decoding, while excluding startup and scoring. These are throughput-derived amortized costs, not single-query latencies. ELF-B NFT runs pack two cases on one H200; the other panels use one case per H200.}
 \label{fig:time}
 \end{figure}
 Four older GSM NFT seed cases have no recorded timing; later compatible draws supply the corresponding timing coefficients. Missing measurements are not imputed as zero. At a fixed denoising-step budget, shorter trajectories require more prompt-encoder and terminal-decoder work because they generate more samples. This explains the systematic overhead visible in Figure~\ref{fig:time} and motivates reporting both steps and measured cost.

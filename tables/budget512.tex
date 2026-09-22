@@ -1,21 +1,19 @@
 % !TEX root = ../main.tex
 \begin{table}[t]
-\caption{NFT results at 512 total denoising steps. Oracle pass@$k$ and vote@$k$ are percentages.}
+\caption{All six endpoints at 512 total denoising steps, with async $(2.5,2,1.5)$. Each cell is oracle pass@$k$ / vote@$k$ (\%). Column labels give steps per sample $\times$ samples. Each cell uses its complete cohort; MATH uses Math-Verify.}
 \label{tab:budget512}
 \centering\small
-\begin{tabular}{lrrrr}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{llrrrr}
 \toprule
-Benchmark / model & Steps & Samples & Oracle & Vote \\
+Benchmark / model & Stage & $8\times64$ & $16\times32$ & $32\times16$ & $64\times8$ \\
 \midrule
-GSM8K / ELF-B & 16 & 32 & 74.68 & 45.83 \\
-GSM8K / ELF-B & 32 & 16 & 71.42 & 49.17 \\
-GSM8K / ELF-B & 64 & 8 & 66.26 & 49.07 \\
-GSM8K / ELF-L & 16 & 32 & 86.58 & 67.92 \\
-GSM8K / ELF-L & 32 & 16 & 85.90 & 69.47 \\
-GSM8K / ELF-L & 64 & 8 & 81.96 & 68.84 \\
-MATH500 / ELF-L & 16 & 32 & 64.80 & 31.39 \\
-MATH500 / ELF-L & 32 & 16 & 60.40 & 32.41 \\
-MATH500 / ELF-L & 64 & 8 & 52.60 & 32.42 \\
+GSM8K / ELF-B & Pre-NFT & 75.82 / 37.99 & 75.89 / 46.42 & 73.62 / 48.24 & 67.32 / 48.44 \\
+GSM8K / ELF-L & Pre-NFT & 89.84 / 64.21 & 87.95 / 66.98 & 85.37 / 67.17 & 80.21 / 67.09 \\
+MATH500 / ELF-L & Pre-NFT & 67.60 / 24.09 & 60.20 / 29.05 & 56.20 / 28.68 & 47.20 / 26.34 \\
+GSM8K / ELF-B & NFT & 76.04 / 38.47 & 74.68 / 45.83 & 71.42 / 49.17 & 66.26 / 49.07 \\
+GSM8K / ELF-L & NFT & 88.78 / 64.84 & 86.58 / 67.92 & 85.90 / 69.47 & 81.96 / 68.84 \\
+MATH500 / ELF-L & NFT & 67.00 / 25.79 & 64.80 / 31.39 & 60.40 / 32.41 & 52.60 / 32.42 \\
 \bottomrule
 \end{tabular}
 \end{table}
