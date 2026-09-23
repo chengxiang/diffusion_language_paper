@@ -20,6 +20,8 @@ Layer-specific clocks change both where the model is queried and how each latent
 
 Table~\ref{tab:schedules} compares the headline allocation with shared exponents 1.5 and 2 using four seeds. At GSM8K epoch 21, async improves over $(2,2,2)$ by 1.14 points, with paired 95\% interval $[0.45,1.82]$, and over $(1.5,1.5,1.5)$ by 1.35 points, $[0.53,2.14]$. For the other three endpoints, all paired pass@1 intervals against these controls include zero. The MATH NFT gain over $(2,2,2)$ is 0.65 points, $[-0.60,1.85]$; a shared exponent of 1.5 has the higher point estimate. Thus the gains from layer-specific clocks depend on the checkpoint. Appendix~\ref{app:schedules} retains the broader two-seed sweep. We retain the fixed asynchronous allocation for the headline reasoning endpoints and use shared $t^2$ specifically for the four-arm early-training controls.
 
+Appendix~\ref{app:sccfgsweep} separately examines SCCFG sensitivity at the final supervised ELF-L checkpoints. The headline evaluations retain SCCFG 2.
+
 \subsection{More denoising steps or more answers?}
 \label{sec:budget}
 For $k$ samples with $S$ denoising steps each, define the transparent compute proxy $B=kS$. At each of the six pre-/post-NFT endpoints, the 8-, 16-, 32-, and 64-step cohorts contain 64, 32, 16, and 8 samples per problem, respectively, so every depth reaches $B=512$. Oracle pass@$k$ counts a problem as solved if a correct answer appears anywhere among the samples. Voting groups equivalent final answers without consulting the reference and selects the largest group. We average uniformly over tied winning groups.
@@ -37,6 +39,14 @@ The step proxy omits repeated prompt encoding and terminal decoding. We preserve
 
 \subsection{NFT improves correctness while concentrating answers}
 \label{sec:diversity}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/nft_improvement.pdf}
+\caption{NFT pass@1 improvement over the final supervised checkpoint, in percentage points. Every update uses async $(2.5,2,1.5)$, 32 steps, SCCFG 2, and seeds 42/123. Bars are pointwise paired 95\% problem-bootstrap intervals, including uncertainty in the supervised reference. Stars mark development-selected updates; zero denotes no improvement. References are joint epoch 18 for ELF-B and epoch 21 for ELF-L. These two-seed curves are separate from the eight-seed, 64-step headline evaluation.}
+\label{fig:nftimprovement}
+\end{figure}
+Figure~\ref{fig:nftimprovement} follows NFT at updates 100--600 while holding the evaluation protocol fixed. At the development-selected updates, gains over the final supervised checkpoint are $+4.21$ points for GSM8K ELF-B (paired 95\% interval $[2.73,5.69]$), $+3.22$ for GSM8K ELF-L ($[1.78,4.62]$), and $+5.10$ for MATH ($[2.50,7.70]$). The gains vary across updates, and several early MATH intervals include zero. This motivates distinguishing the selected endpoint from the entire post-training trajectory. Appendix~\ref{app:trainingcurves} includes the preceding supervised epochs and prompt substitution.
+
 To compare stages without changing sample count, we analyze eight matched draws at 32 steps. NFT reduces the mean number of distinct answers from 4.18 to 3.67 for GSM8K ELF-B, from 3.10 to 2.55 for GSM8K ELF-L, and from 5.91 to 5.48 for MATH. Pairwise answer agreement increases in all three settings.
 
 For GSM8K, gains in pass@1 coexist with small changes in oracle pass@8: $+1.06$ points for ELF-B and $+0.68$ for ELF-L, with paired intervals that include zero. MATH gains $4.40$ points in oracle pass@8 and $6.89$ in vote@8, with intervals $[0.60,8.20]$ and $[4.11,9.69]$. These results distinguish concentrating probability on existing successes from expanding coverage. Appendix~\ref{app:diversity} includes per-problem coverage transitions, subject/difficulty breakdowns, and the NFT group-discard diagnostic.

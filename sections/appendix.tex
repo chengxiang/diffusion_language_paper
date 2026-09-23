@@ -88,6 +88,8 @@ Pilot seeds are 42, 123, 456, and 789. The eight-sample expansion adds 2026, 314
 
 The compute-allocation study uses 64/32/16/8 draws at 8/16/32/64 steps for each of the six endpoints, totaling 720 benchmark seed evaluations. The nested seed lists are shared across endpoints and retain the original pilot and expansion seeds. Further seeds are drawn deterministically with seed 20260918. Thus all four depths reach 512 total denoising steps, and the 8-step cohort supports pass@64. Table~\ref{tab:lowsteps} retains the matched two-seed comparison; its pass@1 estimates therefore differ from averages over the expanded cohorts.
 
+NFT checkpoint selection uses generated-answer accuracy on fixed development sets at 32 steps with async $(2.5,2,1.5)$ and seeds 42/123. For GSM8K ELF-B, the mean accuracies at updates 100/200/300/400 are 52.05/53.30/54.85/54.40\%; for GSM8K ELF-L, updates 100/300/500 score 75.30/78.65/80.10\%. MATH updates 200/400/600 score 20.20/21.10/22.60\% by Math-Verify. These shortlists select updates 300, 500, and 600, respectively. Subsequent test-set learning curves do not change the selected checkpoints.
+
 For problem $i$, let $c_i$ of $n$ samples be correct. We estimate
 \begin{equation}
  \widehat{\mathrm{pass}@k}=
@@ -95,6 +97,13 @@ For problem $i$, let $c_i$ of $n$ samples be correct. We estimate
  \qquad 1\le k\le n,
 \end{equation}
 interpreting the numerator as zero when $n-c_i<k$. In particular, pass@1 averages all draws rather than reporting the best seed. Problem-bootstrap intervals resample $N$ problems 4,000 times with seed 20260918. Paired contrasts use the same resampled indices across conditions.
+
+For NFT update $u$, let $a_{i,s}^{(u)}$ and $a_{i,s}^{\rm pre}$ be binary correctness indicators on problem $i$ with sampling seed $s$. The paired gain is
+\begin{equation}
+ d_i^{(u)}=\frac{1}{n}\sum_{s=1}^{n}\bigl(a_{i,s}^{(u)}-a_{i,s}^{\rm pre}\bigr),
+ \qquad \widehat\Delta_u=\frac{100}{N}\sum_{i=1}^{N}d_i^{(u)}.
+\end{equation}
+We bootstrap the per-problem differences $d_i^{(u)}$, preserving both models and all matched seeds within each resampled problem. Thus uncertainty in the pre-NFT reference is included. The resulting intervals are pointwise, conditional on the evaluated checkpoints and observed draws; they are not simultaneous bands or estimates of training-run variability. Repeating generation reduces sampling noise without adding distinct benchmark problems, so absolute-accuracy intervals need not shrink in proportion to the square root of the number of seeds.
 
 Voting is final-answer plurality voting, commonly called majority voting: a winning answer need not receive more than half of the votes. Invalid or missing extractions abstain. GSM8K groups canonical numerical answers; MATH groups equivalent parsed answers using the fixed symbolic/numerical comparison procedure. Group construction does not consult gold answers. Tied largest groups receive equal selection probability. Smaller-$k$ vote estimates average uniformly over $k$-subsets of available draws. For equivalence partitions, a multivariate hypergeometric calculation gives the exact expectation. For nontransitive MATH comparisons, answers are reclustered within each subset: enumerate up to 65,536 subsets, otherwise use 16,384 deterministic sampled subsets, paired across conditions. The bootstrap does not include this separate subset-approximation uncertainty. Oracle estimates use the unbiased formula above. All-draw voting at $k=n$ directly uses the complete cohort.
 
@@ -106,6 +115,19 @@ All primary comparisons preserve guidance, decoding, problem order, and benchmar
 
 \input{tables/low_steps}
 \input{tables/budget512}
+
+\section{Supervised and NFT training curves}
+\label{app:trainingcurves}
+We evaluate the supervised lineage at epochs 4, 8, and 12, then epochs 16 and 18 for ELF-B, and 16, 20, and 21 for ELF-L. Epoch 12 includes both original Qwen prompt conditioning and the immediate MSE-prompt swap. NFT checkpoints cover updates 100--600 in increments of 100. The 38 points use seeds 42/123, giving 76 full-benchmark seed evaluations, all at async $(2.5,2,1.5)$, 32 steps, and SCCFG 2.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=.94\linewidth]{figures/training_curves_nft_improvement.pdf}
+\caption{Supervised progress and subsequent NFT improvement. Left: absolute mean pass@1, with the epoch-12 prompt substitution shown explicitly. Right: paired gains over the final supervised checkpoint, with a common percentage-point axis and zero reference. Bars are pointwise 95\% problem-bootstrap intervals; stars mark development-selected NFT updates. Every point uses seeds 42/123 and 32 steps.}
+\label{fig:trainingcurves}
+\end{figure}
+
+The supervised evaluations use ELF EMA $0.9999$, standalone prompt EMA $0.999$ at the immediate swap, and joint prompt EMA $0.9999$ thereafter. NFT evaluations use ELF/prompt EMA $0.99/0.99$. The reference for each NFT contrast is the final supervised checkpoint, not a separately evaluated NFT update-zero EMA state. Both ELF and the prompt encoder change during subsequent joint training, so these curves describe the complete training lineage rather than isolating prompt-encoder improvement. The two-seed curve values also differ from the four-seed prompt-stage comparison and eight-seed headline endpoints.
 
 \section{Four-arm robustness to the inference clock}
 \label{app:fourarm}
@@ -133,6 +155,19 @@ Tables~\ref{tab:shared2multisample} and~\ref{tab:shared2seeds} give oracle cover
 \label{app:schedules}
 \input{tables/schedules_two_seed}
 Table~\ref{tab:schedulestwoseed} retains all six schedules evaluated with seeds 42/123. Table~\ref{tab:schedules} in the main paper extends the headline async allocation and the two competitive shared exponents, 1.5 and 2, to four seeds. The two tables summarize different draw sets. In particular, the two-seed MATH NFT async-minus-shared-$t^2$ difference of $+2.60$ points becomes $+0.65$ points with four seeds, with interval $[-0.60,1.85]$. Neither sweep establishes a universally optimal schedule. These are inference-clock comparisons at fixed trained checkpoints, separate from the NFT rollout-clock experiments below.
+
+\section{SCCFG sensitivity at the supervised endpoint}
+\label{app:sccfgsweep}
+We sweep SCCFG coefficients $\{1,2,3,4\}$ at the epoch-21 ELF-L checkpoints on GSM8K and MATH500. Both use ELF/prompt EMA $0.9999/0.9999$, async $(2.5,2,1.5)$, 32 steps, CFG 1, and seeds 42/123. The coefficient is applied to both denoising and terminal decoding; SCCFG 1 retains recurrent self-conditioning. Separate seeded invocations match the initial noise across coefficients.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/sccfg_sweep.pdf}
+\caption{SCCFG sensitivity on full GSM8K and MATH500 test sets at ELF-L epoch 21. Points average seeds 42/123; bars show pointwise 95\% problem-bootstrap intervals for absolute pass@1. Other inference settings and checkpoints are fixed. This is a test-set sensitivity analysis; the headline setting remains SCCFG 2.}
+\label{fig:sccfgsweep}
+\end{figure}
+
+SCCFG 3 gives the highest observed mean on both tasks: 59.97\% on GSM8K and 19.70\% on MATH500, compared with 59.25\% and 17.90\% at SCCFG 2. The paired improvements over 2 are $+0.72$ points ($[-0.49,1.93]$) and $+1.80$ ($[-0.20,3.80]$), respectively; both intervals include zero. On GSM8K, reducing SCCFG from 2 to 1 lowers accuracy by 5.76 points ($[4.36,7.13]$). This sweep characterizes sensitivity at these checkpoints without establishing a universally optimal coefficient.
 
 \section{Prompt-stage results and imitation curves}
 \label{app:prompt}
