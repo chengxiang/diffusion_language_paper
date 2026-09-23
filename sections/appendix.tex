@@ -156,7 +156,7 @@ Tables~\ref{tab:shared2multisample} and~\ref{tab:shared2seeds} give oracle cover
 \input{tables/schedules_two_seed}
 Table~\ref{tab:schedulestwoseed} retains all six schedules evaluated with seeds 42/123. Table~\ref{tab:schedules} in the main paper extends the headline async allocation and the two competitive shared exponents, 1.5 and 2, to four seeds. The two tables summarize different draw sets. In particular, the two-seed MATH NFT async-minus-shared-$t^2$ difference of $+2.60$ points becomes $+0.65$ points with four seeds, with interval $[-0.60,1.85]$. Neither sweep establishes a universally optimal schedule. These are inference-clock comparisons at fixed trained checkpoints, separate from the NFT rollout-clock experiments below.
 
-\section{SCCFG sensitivity at the supervised endpoint}
+\section{SCCFG sensitivity}
 \label{app:sccfgsweep}
 We sweep SCCFG coefficients $\{1,2,3,4\}$ at the epoch-21 ELF-L checkpoints on GSM8K and MATH500. Both use ELF/prompt EMA $0.9999/0.9999$, async $(2.5,2,1.5)$, 32 steps, CFG 1, and seeds 42/123. The coefficient is applied to both denoising and terminal decoding; SCCFG 1 retains recurrent self-conditioning. Separate seeded invocations match the initial noise across coefficients.
 
@@ -167,7 +167,25 @@ We sweep SCCFG coefficients $\{1,2,3,4\}$ at the epoch-21 ELF-L checkpoints on G
 \label{fig:sccfgsweep}
 \end{figure}
 
-SCCFG 3 gives the highest observed mean on both tasks: 59.97\% on GSM8K and 19.70\% on MATH500, compared with 59.25\% and 17.90\% at SCCFG 2. The paired improvements over 2 are $+0.72$ points ($[-0.49,1.93]$) and $+1.80$ ($[-0.20,3.80]$), respectively; both intervals include zero. On GSM8K, reducing SCCFG from 2 to 1 lowers accuracy by 5.76 points ($[4.36,7.13]$). This sweep characterizes sensitivity at these checkpoints without establishing a universally optimal coefficient.
+In this initial two-seed sweep, SCCFG 3 gives the highest observed mean on both tasks: 59.97\% on GSM8K and 19.70\% on MATH500, compared with 59.25\% and 17.90\% at SCCFG 2. The paired improvements over 2 are $+0.72$ points ($[-0.49,1.93]$) and $+1.80$ ($[-0.20,3.80]$), respectively; both intervals include zero. On GSM8K, reducing SCCFG from 2 to 1 lowers accuracy by 5.76 points ($[4.36,7.13]$). This sweep characterizes sensitivity at these checkpoints without establishing a universally optimal coefficient.
+
+\subsection{Expanded MATH500 comparison across inference budgets}
+\label{app:mathsccfg3}
+Following the initial sweep, we evaluate SCCFG 3 on MATH500 at both epoch 21 and NFT update 600, matching the SCCFG 2 study's checkpoints, prompts, arithmetic, scoring, and ordered seed lists. At 8, 16, 32, and 64 steps, each checkpoint has 64, 32, 16, and 8 draws per problem, respectively. The resulting 240 SCCFG 3 seed evaluations include the two reused epoch-21, 32-step cases from the initial sweep. The coefficient changes in both denoising and terminal decoding; all other settings, including independent ELF/prompt EMA $0.9999/0.9999$ before NFT and $0.99/0.99$ afterward, are fixed. Math-Verify is primary. The previously chosen 64-step headline budget and NFT checkpoint are retained. This follow-up measures sensitivity on the same test benchmark and is not an independent development-set selection of guidance.
+
+\input{tables/math_sccfg3}
+Table~\ref{tab:mathsccfg3} reports mean pass@1 over each complete draw cohort. At 64 steps, pre-NFT pass@2 and pass@4 also improve by $2.49$ and $2.22$ points, with paired intervals $[1.02,4.04]$ and $[0.18,4.39]$; the pass@8 gain of $1.40$ points has interval $[-1.80,4.60]$. The post-NFT pass@1 gain is smaller and its interval touches zero, while pass@4 and pass@8 decrease by $0.34$ and $1.40$ points with intervals including zero. Holding SCCFG at 3, NFT still improves 64-step pass@1 over the supervised checkpoint by $3.50$ points ($[2.28,4.75]$).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/math_sccfg3_budget.pdf}
+\caption{MATH500 oracle coverage and final-answer voting under matched SCCFG 2 and 3 evaluations. Columns show the supervised and NFT checkpoints; colors indicate steps per sample. Dashed curves use SCCFG 2 and solid curves SCCFG 3. Markers indicate powers-of-two sample counts, with each depth reaching 512 total denoising steps. Curves show point estimates; Table~\ref{tab:mathsccfg3} and the text report paired uncertainty for key contrasts.}
+\label{fig:mathsccfg3budget}
+\end{figure}
+
+Figure~\ref{fig:mathsccfg3budget} shows why the pass@1 gain does not imply uniform improvement in oracle coverage. Before NFT, SCCFG 3 increases the voting point estimate at every plotted point. At $16\!\times\!32$, oracle coverage rises from 60.20\% to 63.40\% ($+3.20$ points; $[0.40,6.20]$), and voting rises from 29.05\% to 31.72\% ($+2.67$; $[0.51,4.92]$). After NFT, at $32\!\times\!16$, oracle coverage falls from 60.40\% to 56.80\% ($-3.60$; $[-6.41,-0.80]$), while voting changes by only $+0.04$ points ($[-1.93,2.14]$). At $64\!\times\!8$, post-NFT voting increases from 32.42\% to 33.38\%, but its paired gain of $0.96$ points has interval $[-1.60,3.48]$.
+
+The compute-allocation pattern also persists under SCCFG 3: at a 512-step budget, $8\!\times\!64$ has the highest observed oracle coverage at both checkpoints (66.80\% and 67.60\%) and the lowest voting accuracy (25.30\% and 28.63\%). Among the 16-, 32-, and 64-step allocations, pairwise voting intervals include zero at this budget, so their point estimates do not establish an optimal allocation. All intervals are pointwise paired problem-bootstrap intervals conditional on the checkpoints and draws, without multiple-comparison adjustment. Voting retains the equivalence and subset-averaging procedure in Appendix~\ref{app:evaluation}; parse or comparison failures do not remove problems from the 500-problem denominator.
 
 \section{Prompt-stage results and imitation curves}
 \label{app:prompt}

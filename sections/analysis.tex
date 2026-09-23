@@ -20,7 +20,8 @@ Layer-specific clocks change both where the model is queried and how each latent
 
 Table~\ref{tab:schedules} compares the headline allocation with shared exponents 1.5 and 2 using four seeds. At GSM8K epoch 21, async improves over $(2,2,2)$ by 1.14 points, with paired 95\% interval $[0.45,1.82]$, and over $(1.5,1.5,1.5)$ by 1.35 points, $[0.53,2.14]$. For the other three endpoints, all paired pass@1 intervals against these controls include zero. The MATH NFT gain over $(2,2,2)$ is 0.65 points, $[-0.60,1.85]$; a shared exponent of 1.5 has the higher point estimate. Thus the gains from layer-specific clocks depend on the checkpoint. Appendix~\ref{app:schedules} retains the broader two-seed sweep. We retain the fixed asynchronous allocation for the headline reasoning endpoints and use shared $t^2$ specifically for the four-arm early-training controls.
 
-Appendix~\ref{app:sccfgsweep} separately examines SCCFG sensitivity at the final supervised ELF-L checkpoints. The headline evaluations retain SCCFG 2.
+\paragraph{Guidance strength.}
+The SCCFG sweep in Appendix~\ref{app:sccfgsweep} motivates an expanded MATH500 comparison of coefficients 2 and 3. At 64 steps with eight matched seeds, SCCFG 3 raises pre-NFT pass@1 from 18.85\% to 21.18\% ($+2.33$ points; paired 95\% interval $[1.27,3.43]$) and post-NFT pass@1 from 23.60\% to 24.68\% ($+1.08$; $[0.00,2.20]$). Pre-NFT gains have positive paired intervals at all four tested step counts; post-NFT effects are smaller and higher-$k$ coverage is mixed. This is a test-set sensitivity study at fixed checkpoints and seed lists. We retain the common SCCFG 2 headline protocol and report both settings in Appendix~\ref{app:mathsccfg3}.
 
 \subsection{More denoising steps or more answers?}
 \label{sec:budget}
