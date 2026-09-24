@@ -1,0 +1,23 @@
+% !TEX root = ../main.tex
+\section{Variation across evaluation seeds}
+\label{app:seedvariability}
+
+Table~\ref{tab:headlineseedsd} reports standard deviations across independent sampling seeds for all our settings in Tables~\ref{tab:headlinecomparison} and~\ref{tab:headlinelownfe}, together with the SCCFG 2 MATH500 settings used in Figure~\ref{fig:headlinestages}. Each seed generates one solution per problem across the full fixed test set. For seed accuracies $a_1,\ldots,a_n$, expressed as percentages, we report the mean $\bar a$ and sample standard deviation
+\[
+  s_a=\sqrt{\frac{1}{n-1}\sum_{r=1}^{n}(a_r-\bar a)^2}.
+\]
+These values describe generation randomness at a fixed checkpoint and test set. They are distinct from uncertainty across test problems and from variation across training runs. We use every completed sampling seed at each denoising budget: $n=64,32,16,8$ for NFE $8,16,32,64$, respectively. Checkpoints, guidance, scorers, and benchmark populations match the main tables.
+
+\input{tables/headline_seed_variability}
+
+\section{ELF-B inference allocation before and after NFT}
+\label{app:elfbbudgets}
+
+Figure~\ref{fig:elfbstages} complements the ELF-L comparison in Figure~\ref{fig:headlinestages}. It uses the GSM8K supervised epoch-18 and NFT-update-300 checkpoints with async $(2.5,2,1.5)$ and SCCFG 2. Y-axis ranges are matched across training stages separately for oracle accuracy and voting.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{figures/appendix_elf_b_stages_sccfg2.pdf}
+\caption{GSM8K ELF-B before and after NFT. Upper panels show oracle pass@$k$; lower panels show majority-vote accuracy. Colors denote denoising NFE per sample. The same 64/32/16/8 sample cohorts and total budget of 512 denoising calls are used as in Figure~\ref{fig:headlinestages}.}
+\label{fig:elfbstages}
+\end{figure}

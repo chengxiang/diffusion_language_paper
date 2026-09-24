@@ -1,0 +1,29 @@
+% !TEX root = ../main.tex
+\begin{table}[htbp]
+\caption{Mean accuracy $\pm$ standard deviation across sampling seeds, in percentage points. Each seed evaluates the complete benchmark at the same fixed checkpoint. Columns use 64, 32, 16, and 8 seeds, respectively. The 64-NFE column supplies the results in Table~\ref{tab:headlinecomparison}; SCCFG 3 supplies the MATH500 rows in Tables~\ref{tab:headlinecomparison} and~\ref{tab:headlinelownfe}. SCCFG 2 MATH500 rows correspond to Figure~\ref{fig:headlinestages}.}
+\label{tab:headlineseedsd}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Model / stage & 8 NFE & 16 NFE & 32 NFE & 64 NFE\\
+\midrule
+\multicolumn{5}{@{}l}{\textit{GSM8K, ELF-B, SCCFG 2}}\\
+Pre-NFT & $26.40\pm0.87$ & $34.48\pm0.94$ & $37.80\pm1.20$ & $39.17\pm0.63$\\
+Post-NFT & $30.08\pm0.87$ & $37.77\pm0.84$ & $41.13\pm0.94$ & $42.16\pm0.88$\\
+\addlinespace
+\multicolumn{5}{@{}l}{\textit{GSM8K, ELF-L, SCCFG 2}}\\
+Pre-NFT & $49.41\pm0.86$ & $55.33\pm0.91$ & $57.88\pm1.03$ & $58.67\pm0.69$\\
+Post-NFT & $54.84\pm0.92$ & $60.55\pm0.69$ & $62.47\pm0.82$ & $63.74\pm0.83$\\
+\addlinespace
+\multicolumn{5}{@{}l}{\textit{MATH500, ELF-L, SCCFG 3}}\\
+Pre-NFT & $15.23\pm1.16$ & $17.93\pm1.30$ & $19.65\pm1.37$ & $21.18\pm0.70$\\
+Post-NFT & $17.45\pm1.33$ & $20.93\pm1.26$ & $22.60\pm1.58$ & $24.68\pm1.27$\\
+\addlinespace
+\multicolumn{5}{@{}l}{\textit{MATH500, ELF-L, SCCFG 2}}\\
+Pre-NFT & $13.88\pm1.19$ & $16.39\pm1.20$ & $17.89\pm1.31$ & $18.85\pm1.38$\\
+Post-NFT & $16.31\pm1.36$ & $20.09\pm1.23$ & $22.08\pm1.41$ & $23.60\pm1.79$\\
+\addlinespace
+\bottomrule
+\end{tabular}
+\end{table}
