@@ -1,0 +1,37 @@
+% !LW recipe = Paper (portable)
+% Build with LaTeX Workshop or `make pdf`; outputs are written to build/.
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{iclr2027_conference,times}
+\usepackage{amsmath,amssymb,amsfonts,bm}
+\usepackage{graphicx,booktabs,multirow,array}
+\usepackage{hyperref,url}
+\usepackage{xcolor}
+\input{macros}
+
+\title{Mathematical Reasoning with\\ Continuous Latent Diffusion}
+\author{Anonymous authors}
+% Keep the official anonymous submission mode for this draft.
+
+\begin{document}
+\maketitle
+\input{sections/abstract}
+\input{sections/introduction}
+\input{sections/method}
+\input{sections/experiments}
+\input{sections/analysis}
+\input{sections/related_work}
+\input{sections/conclusion}
+
+\section*{Reproducibility statement}
+The appendix specifies the representation, training objectives, prompt conditioning, sampling clocks, checkpoint selection, and evaluation estimators. Tables report fixed-checkpoint sampling results with problem-bootstrap uncertainty. Figures and numerical tables use the same saved evaluation cohorts.
+
+\section*{AI use statement}
+AI coding and writing assistants were used to help implement experiment and analysis scripts, inspect results, and prepare this manuscript draft. The research questions and experimental decisions were directed by the authors.
+
+\bibliography{references}
+\bibliographystyle{iclr2027_conference}
+\clearpage
+\appendix
+\input{sections/appendix}
+\end{document}
