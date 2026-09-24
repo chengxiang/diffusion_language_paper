@@ -85,5 +85,60 @@ The joint-from-start control in Figure~\ref{fig:representationcomparison} suppor
 
 This perspective connects to REPA \citep{repa}, where external pretrained features ease the representation-learning burden of a diffusion model and accelerate training. Here the teacher supplies structure through the \emph{conditioning interface}. We interpret the comparison as evidence for a related curriculum principle: establish the conditional generative model under stable teacher guidance before asking it to reshape that guidance. The precise contribution of feature drift versus the initial quality of the prompt representation remains an open mechanism; the practical implication is that \emph{when conditioning becomes learnable} is an important design choice alongside its architecture.
 
-% Asynchronous denoising and its mathematical formulation will be drafted after
-% the user's next discussion; no inference subsection is added in this revision.
+\subsection{Asynchronous denoising through local clocks}
+\label{sec:clocks}
+
+Our representation separates features from three depths of the teacher. Besides changing what the model learns to generate, this decomposition allows us to control \emph{when} each group becomes clean. We first explain a shared time reparameterization, then extend it to different clocks for the three representation groups. Both are inference-time changes to a model trained with synchronous corruption.
+
+\paragraph{From a shared clock to local clocks.}
+Let $\tau\in[0,1]$ denote the integration clock and $t=f(\tau)$ the physical interpolation time in Eq.~\eqref{eq:methodinterpolant}. By the chain rule, the synchronous sampling ODE becomes
+\begin{equation}
+ \frac{\mathrm dz_\tau}{\mathrm d\tau}
+ = f'(\tau)\,v_\theta(z_\tau,f(\tau),c,s),
+ \qquad f(0)=0,\quad f(1)=1.
+ \label{eq:sharedclock}
+\end{equation}
+The identity schedule uses $f(\tau)=\tau$. A simple alternative is $f(\tau)=\tau^2$, with multiplier $2\tau$. For an ideal continuous vector field, this reparameterizes the same synchronous flow without changing its endpoints. Our finite-step sampler instead queries the model and updates recurrent self-conditioning at discrete times; changing their physical-time spacing can improve generation. We use the same base $\tau$ grid when comparing schedules.
+
+Asynchronous inference assigns each group $\ell\in\{16,24,32\}$ its own local clock,
+\begin{equation}
+ t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell},
+ \qquad
+ z_\tau^{(\ell)}=t_\ell x^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}.
+ \label{eq:localclocks}
+\end{equation}
+Equal exponents recover a synchronous schedule. Unequal exponents allow groups to have different noise levels at the same global step, while a single bidirectional denoiser processes their concatenation. This creates an opportunity to reconstruct one feature group using cleaner information from another, rather than requiring every part of the representation to progress together.
+
+\paragraph{Adapting a synchronously trained denoiser.}
+Training uses one shared time and one learned time-embedding function $e_\theta(t)$. At inference, we duplicate this function into three identical copies, retain all learned weights, and condition the network on their average:
+\begin{equation}
+ \bar e_\theta(\bm t)
+ =\frac{1}{3}\sum_{\ell\in\{16,24,32\}}e_\theta^{(\ell)}(t_\ell),
+ \qquad e_\theta^{(\ell)}=e_\theta.
+ \label{eq:asynctimeembedding}
+\end{equation}
+The copies require no further training, and equal local times recover the original embedding. We average the \emph{embeddings}, rather than first reducing the local times to one scalar; these operations differ because the embedding function is nonlinear. A historical conditioning control favored this interface over a single embedding at the geometric-mean local time (Appendix~\ref{app:inferenceclocks}).
+
+Let $\widehat x_k$ be the resulting clean prediction at global time $\tau_k$. Each group follows its own endpoint-to-velocity conversion and clock derivative:
+\begin{equation}
+ z_{k+1}^{(\ell)}=z_k^{(\ell)}+
+ (\tau_{k+1}-\tau_k)\,\gamma_\ell\tau_k^{\gamma_\ell-1}
+ \frac{\widehat x_k^{(\ell)}-z_k^{(\ell)}}
+ {\max(1-\tau_k^{\gamma_\ell},0.05)}.
+ \label{eq:asyncsampler}
+\end{equation}
+Question states remain clean, and recurrent self-conditioning carries the previous endpoint prediction to the next call. All groups are updated in the same denoiser forward, so asynchrony does not multiply NFE. The terminal token-decoding call is separate. Unlike the shared reparameterization in Eq.~\eqref{eq:sharedclock}, this extends the model to unequal group times that were not explicitly presented during synchronous training.
+
+\paragraph{Schedule choice and reasoning accuracy.}
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$. This choice is consistent with the highest observed accuracy in the six-schedule MATH development sweep: 18.70\%, versus 17.80\% for $(2,2,2)$ and 15.40\% for $(1,1,1)$, at ELF-L epoch 21 and 32 steps. The 500-problem MATH development set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K development set comprises held-out original training questions. We therefore regard the MATH development comparison as more directly matched to its benchmark's source distribution; the two development sets need not favor the same schedule.
+
+\input{tables/inference_clocks}
+
+Table~\ref{tab:inferenceclocks} compares four schedules under a common test protocol. The shared-square clock substantially improves on the identity clock: from 52.96\% to 57.51\% on GSM8K and from 15.50\% to 17.40\% on MATH500. The $(2.5,2,1.5)$ allocation has the highest mean among these four on both benchmarks, and reversing the exponent assignment reduces accuracy. Its gain over the shared-square clock is larger on GSM8K (+1.74 percentage points) than MATH500 (+0.50 points). The full sweep and shorter-step comparison in Appendix~\ref{app:inferenceclocks} show that this ordering is conditional on the checkpoint, schedule candidates, and inference budget.
+
+\paragraph{What does the layer decomposition capture?}
+We probe a trained ELF-B model by corrupting one group of clean gold-solution latents, predicting the clean representation, and decoding it to tokens. A matched control replaces the layer groups by eight random partitions of the same 256/256/512 widths, keeping the assigned times and injected Gaussian energy fixed. Figure~\ref{fig:layerreconstruction} shows that the actual groups have different reconstruction sensitivities: perturbing layer-16 features is more damaging than perturbing deeper features, with the clearest contrast against layer 24. Random grouping attenuates these contrasts. The layer decomposition thus exposes structure that is obscured when coordinates are grouped arbitrarily.
+
+\input{figures/layer_reconstruction_random}
+
+For $0<\tau<1$, our chosen powers give $t_{16}<t_{24}<t_{32}$: layer 16 becomes clean relatively later, while all groups reach their endpoint together. One possible explanation is that the more sensitive layer-16 representation benefits from being reconstructed with cleaner deeper-layer features available as context. This is a hypothesis about coordination between representations, rather than a consequence of the local probe. In particular, a separate generation control that assigns the clocks to random coordinates gives nearly identical GSM8K accuracy (Appendix~\ref{app:inferenceclocks}). The probe motivates investigating layer-dependent denoising, but further experiments are needed to establish whether this proposed mechanism explains its sampling benefits.

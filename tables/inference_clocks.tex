@@ -1,0 +1,17 @@
+% !TEX root = ../main.tex
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{lcc}
+\toprule
+Clock powers $(\gamma_{16},\gamma_{24},\gamma_{32})$ & GSM8K & MATH500 \\
+\midrule
+$(1,1,1)$ & 52.96 {\scriptsize($\pm 1.13$)} & 15.50 {\scriptsize($\pm 1.27$)} \\
+$(2,2,2)$ & 57.51 {\scriptsize($\pm 0.80$)} & 17.40 {\scriptsize($\pm 1.41$)} \\
+$(1.5,2,2.5)$ & 58.07 {\scriptsize($\pm 0.64$)} & 17.60 {\scriptsize($\pm 1.98$)} \\
+$(2.5,2,1.5)$ & \textbf{59.25} {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scriptsize($\pm 1.27$)} \\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Inference clocks change reasoning accuracy without retraining.} ELF-L epoch 21, 32 denoising steps, SCCFG 2, and ELF/prompt EMA $0.9999/0.9999$. Entries are mean pass@1 (\%) and sample standard deviation across generation seeds 42/123; each seed evaluates all 1,319 GSM8K or 500 MATH500 problems. MATH uses Math-Verify. Bold marks the highest mean among these four schedules. The complete six-schedule development/test sweep appears in Appendix~\ref{app:inferenceclocks}.}
+\label{tab:inferenceclocks}
+\end{table}
