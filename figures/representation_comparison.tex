@@ -1,0 +1,15 @@
+% !TEX root = ../main.tex
+\begin{figure}[htbp]
+\centering
+\begin{minipage}[c]{.55\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/representation_shared2_sd.pdf}
+\end{minipage}\hfill
+\begin{minipage}[c]{.43\linewidth}
+\centering
+{\small\textbf{Epoch 6}}\par\medskip
+\input{tables/representation_epoch6_compact}
+\end{minipage}
+\caption{\textbf{Representation and conditioning choices change reasoning performance.} ELF-B on GSM8K with shared $t=\tau^2$, 32 steps, and ELF EMA $0.999$. \textbf{Left:} learning curves average seeds 42/123; error bars show $\pm1$ sample standard deviation across their full-test accuracies. \textbf{Right:} epoch-six means over seeds 42/123/456/789, with standard deviations in smaller parentheses. All latents are whitened and 1,024-dimensional. The first three variants use frozen Qwen prompt activations. The fourth uses learned multilayer answer latents and a randomly initialized prompt encoder trained jointly from the start (prompt EMA $0.999$). Variation is across generation seeds at fixed checkpoints.}
+\label{fig:representationcomparison}
+\end{figure}
