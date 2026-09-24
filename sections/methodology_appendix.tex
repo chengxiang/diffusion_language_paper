@@ -1,0 +1,39 @@
+% !TEX root = ../main.tex
+\section{ELF objective and conditioning details}
+\label{app:methodobjective}
+
+\paragraph{Time and self-conditioning.}
+For a flow row, sample $t=\operatorname{sigmoid}(-1.5+0.8\xi)$ with $\xi\sim\mathcal N(0,1)$ and use noise scale $\sigma=2$. A detached bootstrap pass with zero answer self-conditioning produces $\widehat x^{\,0}$. With $u\sim\mathrm{Bernoulli}(0.5)$, the main pass receives $u\widehat x^{\,0}$ in answer self-conditioning positions. Prompt states are restored to the clean condition independently of $u$. The velocity conversion for both prediction and target uses $\Delta_t=\max(1-t,0.05)$, so the executed target differs from $x-2\epsilon$ where the clamp is active.
+
+\paragraph{SCCFG target.}
+Draw the guidance scale $g$ from $\log(1+g)\sim\mathrm{Uniform}(\log1.5,\log6)$, giving $g\in[0.5,5]$. Let $v^0$ and $v^1$ denote auxiliary velocity predictions without and with answer self-conditioning. The main loss uses
+\begin{equation}
+ \widetilde v^*=\sg\!\left[v^*+u(1-g^{-1})(v^1-v^0)\right].
+ \label{eq:methodscguidance}
+\end{equation}
+The question is present in both auxiliary branches. All auxiliary predictions and targets are detached; during joint training, gradients enter the prompt encoder through the main conditioned forward. At inference, the preceding denoising prediction supplies recurrent self-conditioning and the requested guidance scale is passed to the network. Guidance scale one retains recurrent self-conditioning. Prompt-drop probability is zero in supervised training, and all reported evaluations use prompt CFG one.
+
+\paragraph{Decoder corruption and mixed objective.}
+Each row independently draws $b_r\sim\mathrm{Bernoulli}(0.2)$ to choose decoder mode. At each position of a decoder row, sample
+\[
+ \lambda_{rj}=\operatorname{sigmoid}(0.8+0.8\xi_{rj}),\qquad
+ z^{\mathrm{dec}}_{rj}=\lambda_{rj}x_{rj}+(1-\lambda_{rj})\epsilon'_{rj},
+\]
+where $\xi_{rj}$ and $\epsilon'_{rj}$ are standard Gaussian. Decoder noise scale is one. The model receives decoder mode, time one, zero answer self-conditioning, and the clean question prefix. Token CE predicts the original token at each position, without a next-token shift.
+
+For valid response mask $M_{rj}$, including the terminal token and excluding question/padding positions, a rank-local microbatch minimizes
+\begin{equation}
+ \mathcal L_{\mathrm{ELF}}^{\mathrm{micro}}=
+ \frac{\sum_{rj}M_{rj}\left[
+ (1-b_r)\|v_{\theta,rj}-\widetilde v^*_{rj}\|_2^2/d
+ -b_r\log p_{\theta,rj}^{\mathrm{dec}}(y_{rj})\right]}
+ {\sum_{rj}M_{rj}}.
+ \label{eq:methodmicroobjective}
+\end{equation}
+There is one denominator across both row types, with no additional normalization by mode probability. The flow term averages all 1,024 coordinates, preserving the relative 256/256/512 group widths. Gradients are averaged over data-parallel ranks and accumulation microsteps. ELF-B uses 12 bidirectional blocks of width 768 and ELF-L uses 32 blocks of width 1,280; both share their backbone between flow and token-decoder modes.
+
+\paragraph{Prompt encoder.}
+The frozen Qwen token table maps vocabulary IDs to 2,560-dimensional vectors. The learned frontend applies $2560\to512\to d_{\mathrm{model}}$ linear maps without an intervening nonlinearity. Six bidirectional Transformer blocks use width 768 and 12 heads for ELF-B, or width 1,280 and 16 heads for ELF-L, followed by RMSNorm and a 1,024-dimensional output projection. Inputs contain only the question prefix, and padding is masked. The standalone objective averages MSE over positions and coordinates within each question, then weights questions equally. Joint training retains the flow/decoder objective and fixed answer targets. The token table stays frozen while the prompt Transformer and ELF receive gradients from the main forward.
+
+\paragraph{Training-curve cohorts.}
+Figure~\ref{fig:promptcurriculum} uses the same two-seed pre-NFT evaluations as the original training-curve campaign: epochs 4, 8, 12 before prompt substitution; epoch 12 immediately after substitution; and epochs 16/18 for ELF-B or 16/20/21 for ELF-L. All 20 plotted points retain their saved predictions, canonical scores, and 4,000-replicate problem-bootstrap intervals. Both epoch-12 conditions share identical ELF weights. These curves use 32 steps and SCCFG 2, whereas the headline results use 64 steps and SCCFG 3 for MATH500. The joint-from-start comparison in Figure~\ref{fig:representationcomparison} instead uses the common $t=\tau^2$ clock and ELF EMA $0.999$ for its six-epoch controls; its four-seed endpoint means are not points on the curriculum curves.
