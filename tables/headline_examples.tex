@@ -1,5 +1,5 @@
 % !TEX root = ../main.tex
-\begin{figure}[p]
+\begin{figure}[tbp]
 \centering
 \setlength{\fboxsep}{8pt}
 \fbox{\begin{minipage}{0.94\linewidth}
@@ -26,28 +26,20 @@ Thus, the program had a total of $\boxed{366}$ downloads over the three months.
 \fbox{\begin{minipage}{0.94\linewidth}
 \small
 \setlength{\fboxsep}{3pt}
-\setlength{\abovedisplayskip}{4pt}
-\setlength{\belowdisplayskip}{4pt}
 \textbf{MATH500: evaluating a rational function}\par\medskip
 \textbf{Problem.} If $f(x) = \frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.
 
 \medskip\textbf{Generated solution.}\par\smallskip
 To find the value of $f(-2)+f(-1)+f(0)$ we need to substitute $x=-2, x=-1,$ and $x=0$ into the function $f(x)$.
 
-For $f(-2)$:
-\[ f(-2) = \frac{3(-2) - 2}{-2 - 2} = \frac{-6 - 2}{-4} = \frac{-8}{-4} = 2 \]
+For $f(-2)$: $f(-2) = \frac{3(-2) - 2}{-2 - 2} = \frac{-6 - 2}{-4} = \frac{-8}{-4} = 2$
 
-For $f(-1)$:
-\[ f(-1) = \frac{3(-1) - 2}{-1 - 2} = \frac{-3 - 2}{-3} = \frac{-5}{-3} = \frac{5}{3} \]
+For $f(-1)$: $f(-1) = \frac{3(-1) - 2}{-1 - 2} = \frac{-3 - 2}{-3} = \frac{-5}{-3} = \frac{5}{3}$
 
-For $f(0)$:
-\[ f(0) = \frac{3(0) - 2}{0 - 2} = \frac{-2}{-2} = 1 \]
+For $f(0)$: $f(0) = \frac{3(0) - 2}{0 - 2} = \frac{-2}{-2} = 1$
 
-Now we can add these together to find the sum:
-\[ f(-2) + f(-1) + f(0) = 2 + \frac{5}{3} + 1 = \frac{11}{3} + 1 = \frac{11}{3} + \frac{3}{3} = \frac{14}{3} \]
-
-\[ \boxed{\frac{14}{3}} \]
+Now we can add these together to find the sum: $f(-2) + f(-1) + f(0) = 2 + \frac{5}{3} + 1 = \frac{11}{3} + 1 = \frac{11}{3} + \frac{3}{3} = \frac{14}{3}$ $\boxed{\frac{14}{3}}$
 \end{minipage}}
-\caption{Correct generations from ELF-L at 64 denoising NFEs, async $(2.5,2,1.5)$, SCCFG 2, and seed 42. GSM8K uses NFT update 500; MATH500 uses NFT update 600. Model text is unchanged, with mathematical markup typeset for readability. Both answers and the intermediate calculations are correct.}
+\caption{Correct generations from ELF-L at 64 denoising NFEs, async $(2.5,2,1.5)$, SCCFG 2, and seed 42. GSM8K uses NFT update 500; MATH500 uses NFT update 600. Displayed equations have been moved inline to save space; model wording and calculations are unchanged. Both answers and the intermediate calculations are correct.}
 \label{fig:headlineexamples}
 \end{figure}
