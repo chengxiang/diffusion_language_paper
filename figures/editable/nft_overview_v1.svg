@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="993.6" height="576.0" viewBox="0 0 993.6 576.0">
+<rect width="100%" height="100%" fill="white"/>
+<polyline id="path_0000" points="331.200,17.280 331.200,545.040" fill="none" stroke="#B7C3CF" stroke-width="0.55"/>
+<polyline id="path_0001" points="662.400,17.280 662.400,545.040" fill="none" stroke="#B7C3CF" stroke-width="0.55"/>
+<rect id="rect_0002" x="18.0" y="16.560000000000002" width="295.2" height="42.48" rx="5.76" fill="#F3F6F9" stroke="#F3F6F9" stroke-width="1"/>
+<text id="text_0003_0" x="38.160000000000004" y="42.175078125" font-family="DejaVu Sans, Arial, sans-serif" font-size="21" font-weight="bold" fill="#63758A" text-anchor="middle">1</text>
+<text id="text_0004_0" x="53.28" y="41.39578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#233344" text-anchor="start">Collect endpoints</text>
+<rect id="rect_0005" x="349.2" y="16.560000000000002" width="295.2" height="42.48" rx="5.76" fill="#F3F6F9" stroke="#F3F6F9" stroke-width="1"/>
+<text id="text_0006_0" x="369.36" y="42.175078125" font-family="DejaVu Sans, Arial, sans-serif" font-size="21" font-weight="bold" fill="#63758A" text-anchor="middle">2</text>
+<text id="text_0007_0" x="384.48" y="41.39578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#233344" text-anchor="start">Reward + selection</text>
+<rect id="rect_0008" x="680.4" y="16.560000000000002" width="295.2" height="42.48" rx="5.76" fill="#F3F6F9" stroke="#F3F6F9" stroke-width="1"/>
+<text id="text_0009_0" x="700.5600000000001" y="42.175078125" font-family="DejaVu Sans, Arial, sans-serif" font-size="21" font-weight="bold" fill="#63758A" text-anchor="middle">3</text>
+<text id="text_0010_0" x="715.68" y="41.39578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#233344" text-anchor="start">NFT update</text>
+<rect id="rect_0011" x="28.080000000000002" y="79.2" width="279.36" height="34.56" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0012_0" x="167.76" y="101.415546875" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" font-weight="normal" fill="#233344" text-anchor="middle">Question q</text>
+<polyline id="path_0013" points="167.040,116.640 167.040,137.520" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="167.040,137.520 164.794,132.840 169.286,132.840" fill="#233344"/>
+<rect id="old_rollout_policy" x="38.160000000000004" y="140.4" width="259.2" height="45.36" rx="5.040000000000001" fill="#F1F6FA" stroke="#367AB5" stroke-width="1"/>
+<text id="old_rollout_policy_label_0" x="167.76" y="157.58578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#233344" text-anchor="middle">Old rollout policy</text>
+<text id="old_rollout_policy_label_1" x="167.76" y="177.92578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#233344" text-anchor="middle">ELF + prompt encoder</text>
+<text id="text_0016_0" x="168.48" y="210.27671875" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="normal" fill="#63758A" text-anchor="middle">32 steps · synchronous (1, 1, 1)</text>
+<polyline id="path_0017" points="167.040,219.600 167.040,237.600" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="167.040,237.600 164.794,232.920 169.286,232.920" fill="#233344"/>
+<text id="text_0018_0" x="169.20000000000002" y="252.931015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="bold" fill="#233344" text-anchor="middle">15 sampled latent</text>
+<text id="text_0018_1" x="169.20000000000002" y="272.14101562499997" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="bold" fill="#233344" text-anchor="middle">endpoints</text>
+<rect id="rect_0019" x="38.88" y="280.08" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#D9EBE8" stroke="#2C917F" stroke-width="1"/>
+<text id="text_0020_0" x="60.480000000000004" y="292.297421875" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x1</text>
+<rect id="rect_0021" x="90.72" y="280.08" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0022_0" x="112.32000000000001" y="292.297421875" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x2</text>
+<rect id="rect_0023" x="142.56" y="280.08" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0024_0" x="164.16" y="292.297421875" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x3</text>
+<rect id="rect_0025" x="194.4" y="280.08" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0026_0" x="216.0" y="292.297421875" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x4</text>
+<rect id="rect_0027" x="246.24" y="280.08" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#D9EBE8" stroke="#2C917F" stroke-width="1"/>
+<text id="text_0028_0" x="267.84" y="292.297421875" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x5</text>
+<rect id="rect_0029" x="38.88" y="306.71999999999997" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0030_0" x="60.480000000000004" y="318.9374218749999" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x6</text>
+<rect id="rect_0031" x="90.72" y="306.71999999999997" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0032_0" x="112.32000000000001" y="318.9374218749999" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x7</text>
+<rect id="rect_0033" x="142.56" y="306.71999999999997" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0034_0" x="164.16" y="318.9374218749999" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x8</text>
+<rect id="rect_0035" x="194.4" y="306.71999999999997" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#D9EBE8" stroke="#2C917F" stroke-width="1"/>
+<text id="text_0036_0" x="216.0" y="318.9374218749999" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x9</text>
+<rect id="rect_0037" x="246.24" y="306.71999999999997" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0038_0" x="267.84" y="318.9374218749999" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x10</text>
+<rect id="rect_0039" x="38.88" y="333.36" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0040_0" x="60.480000000000004" y="345.57742187499997" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x11</text>
+<rect id="rect_0041" x="90.72" y="333.36" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0042_0" x="112.32000000000001" y="345.57742187499997" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x12</text>
+<rect id="rect_0043" x="142.56" y="333.36" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#D9EBE8" stroke="#2C917F" stroke-width="1"/>
+<text id="text_0044_0" x="164.16" y="345.57742187499997" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x13</text>
+<rect id="rect_0045" x="194.4" y="333.36" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0046_0" x="216.0" y="345.57742187499997" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x14</text>
+<rect id="rect_0047" x="246.24" y="333.36" width="43.199999999999996" height="18.72" rx="5.040000000000001" fill="#F2F4F6" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0048_0" x="267.84" y="345.57742187499997" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="normal" fill="#233344" text-anchor="middle">x15</text>
+<text id="text_0049_0" x="168.48" y="388.11671875" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="normal" fill="#63758A" text-anchor="middle">Decode text for correctness scoring</text>
+<rect id="gold_endpoint_anchor" x="30.240000000000002" y="420.48" width="276.48" height="55.44" rx="5.040000000000001" fill="#F2F0F6" stroke="#7965AA" stroke-width="1"/>
+<text id="gold_endpoint_anchor_label_0" x="168.48" y="442.70578125000003" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#233344" text-anchor="middle">+ 1 reference solution</text>
+<text id="gold_endpoint_anchor_label_1" x="168.48" y="463.04578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#233344" text-anchor="middle">Cached gold Qwen latent</text>
+<text id="text_0052_0" x="170.28000000000003" y="508.061484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#63758A" text-anchor="middle">Retain generated terminal latents</text>
+<text id="text_0052_1" x="170.28000000000003" y="525.011484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#63758A" text-anchor="middle">for the NFT update.</text>
+<rect id="rect_0053" x="360.71999999999997" y="86.39999999999999" width="279.36" height="43.199999999999996" rx="3.6" fill="#ECF5F3" stroke="#2C917F" stroke-width="1"/>
+<text id="text_0054_0" x="370.79999999999995" y="111.696015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="start">Correct generation</text>
+<text id="text_0055_0" x="596.52" y="112.534609375" font-family="DejaVu Sans, Arial, sans-serif" font-size="23" font-weight="bold" fill="#2C917F" text-anchor="middle">0.75</text>
+<rect id="rect_0056" x="360.71999999999997" y="144.71999999999997" width="279.36" height="43.199999999999996" rx="3.6" fill="#F9F1F1" stroke="#B86565" stroke-width="1"/>
+<text id="text_0057_0" x="370.79999999999995" y="170.01601562499997" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="start">Incorrect generation</text>
+<text id="text_0058_0" x="596.52" y="170.85460937499997" font-family="DejaVu Sans, Arial, sans-serif" font-size="23" font-weight="bold" fill="#B86565" text-anchor="middle">0</text>
+<rect id="rect_0059" x="360.71999999999997" y="203.04" width="279.36" height="43.199999999999996" rx="3.6" fill="#F3F1F7" stroke="#7965AA" stroke-width="1"/>
+<text id="text_0060_0" x="370.79999999999995" y="228.336015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="start">Gold reference</text>
+<text id="text_0061_0" x="596.52" y="229.174609375" font-family="DejaVu Sans, Arial, sans-serif" font-size="23" font-weight="bold" fill="#7965AA" text-anchor="middle">1</text>
+<polyline id="path_0062" points="500.400,249.120 500.400,272.160" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="500.400,272.160 498.154,267.480 502.646,267.480" fill="#233344"/>
+<rect id="rect_0063" x="360.0" y="275.03999999999996" width="280.8" height="49.67999999999999" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0064_0" x="500.4" y="294.69101562500003" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Discard groups with</text>
+<text id="text_0064_1" x="500.4" y="313.901015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">all 15 generations correct</text>
+<polyline id="path_0065" points="500.400,327.600 500.400,348.480" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="500.400,348.480 498.154,343.800 502.646,343.800" fill="#233344"/>
+<rect id="rect_0066" x="360.0" y="351.36" width="280.8" height="56.160000000000004" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0067_0" x="500.4" y="374.7088671875" font-family="DejaVu Sans, Arial, sans-serif" font-size="15.5" font-weight="normal" fill="#233344" text-anchor="middle">Center rewards within each group;</text>
+<text id="text_0067_1" x="500.4" y="392.2238671875" font-family="DejaVu Sans, Arial, sans-serif" font-size="15.5" font-weight="normal" fill="#233344" text-anchor="middle">scale by retained raw-reward SD</text>
+<polyline id="path_0068" points="500.400,410.400 500.400,429.840" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="500.400,429.840 498.154,425.160 502.646,425.160" fill="#233344"/>
+<rect id="rect_0069" x="360.0" y="432.71999999999997" width="280.8" height="53.28" rx="5.040000000000001" fill="#EEF6F5" stroke="#2C917F" stroke-width="1"/>
+<text id="text_0070_0" x="500.4" y="454.17101562499994" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Advantage A → weight ρ</text>
+<text id="text_0070_1" x="500.4" y="473.3810156249999" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">ρ = clip(½ + A/10, 0, 1)</text>
+<text id="text_0071_0" x="501.11999999999995" y="516.27671875" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="normal" fill="#63758A" text-anchor="middle">Weights are detached.</text>
+<rect id="rect_0072" x="690.48" y="79.2" width="280.08" height="40.32000000000001" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0073_0" x="830.52" y="103.51625000000001" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Latent endpoint x + fresh (t, ε)</text>
+<rect id="policy_current" x="705.5999999999999" y="146.88" width="251.28000000000003" height="36.0" rx="5.040000000000001" fill="#EDF3F8" stroke="#367AB5" stroke-width="1"/>
+<text id="policy_current_label_0" x="831.24" y="169.03625" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Current policy θ, φ</text>
+<polyline id="path_0076" points="696.240,123.120 696.240,164.880 704.160,164.880" fill="none" stroke="#367AB5" stroke-width="1"/>
+<polygon points="704.160,164.880 699.480,167.126 699.480,162.634" fill="#367AB5"/>
+<polyline id="path_0077" points="957.600,164.880 974.880,164.880 974.880,331.200 960.480,331.200" fill="none" stroke="#367AB5" stroke-width="1"/>
+<polygon points="960.480,331.200 965.160,328.954 965.160,333.446" fill="#367AB5"/>
+<rect id="policy_old" x="705.5999999999999" y="205.20000000000002" width="251.28000000000003" height="36.0" rx="5.040000000000001" fill="#F1F3F4" stroke="#63758A" stroke-width="1"/>
+<text id="policy_old_label_0" x="831.24" y="227.35625" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Old policy · stop-grad</text>
+<polyline id="path_0080" points="696.240,123.120 696.240,223.200 704.160,223.200" fill="none" stroke="#63758A" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="704.160,223.200 699.480,225.446 699.480,220.954" fill="#63758A"/>
+<polyline id="path_0081" points="957.600,223.200 974.880,223.200 974.880,331.200 960.480,331.200" fill="none" stroke="#63758A" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="960.480,331.200 965.160,328.954 965.160,333.446" fill="#63758A"/>
+<rect id="policy_fixed" x="705.5999999999999" y="263.52" width="251.28000000000003" height="36.0" rx="5.040000000000001" fill="#F1F3F4" stroke="#63758A" stroke-width="1"/>
+<text id="policy_fixed_label_0" x="831.24" y="285.67625000000004" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Fixed reference · stop-grad</text>
+<polyline id="path_0084" points="696.240,123.120 696.240,281.520 704.160,281.520" fill="none" stroke="#63758A" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="704.160,281.520 699.480,283.766 699.480,279.274" fill="#63758A"/>
+<polyline id="path_0085" points="957.600,281.520 974.880,281.520 974.880,331.200 960.480,331.200" fill="none" stroke="#63758A" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="960.480,331.200 965.160,328.954 965.160,333.446" fill="#63758A"/>
+<rect id="rect_0086" x="701.2799999999999" y="313.92" width="257.76" height="50.4" rx="5.040000000000001" fill="#F4F3F8" stroke="#7965AA" stroke-width="1"/>
+<text id="text_0087_0" x="830.16" y="334.541484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">SCCFG velocity for each role</text>
+<text id="text_0087_1" x="830.16" y="351.49148437499997" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">Detached guidance correction</text>
+<polyline id="path_0088" points="831.600,366.480 831.600,387.360" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="831.600,387.360 829.354,382.680 833.846,382.680" fill="#233344"/>
+<rect id="rect_0089" x="693.3599999999999" y="390.24" width="279.36" height="50.4" rx="5.040000000000001" fill="#EFF4F9" stroke="#367AB5" stroke-width="1"/>
+<text id="text_0090_0" x="833.04" y="410.251015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Reward-weighted NFT loss</text>
+<text id="text_0090_1" x="833.04" y="429.46101562499996" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">+ fixed-reference penalty</text>
+<polyline id="path_0091" points="641.520,459.360 682.560,459.360 682.560,415.440 691.920,415.440" fill="none" stroke="#2C917F" stroke-width="1.2"/>
+<polygon points="691.920,415.440 687.240,417.686 687.240,413.194" fill="#2C917F"/>
+<text id="text_0092_0" x="832.68" y="465.87671875000007" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="normal" fill="#63758A" text-anchor="middle">e+ = ec e− = 2eo − ec (β = 1)</text>
+<polyline id="path_0093" points="831.600,475.200 831.600,491.760" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="831.600,491.760 829.354,487.080 833.846,487.080" fill="#233344"/>
+<rect id="rect_0094" x="692.64" y="494.64" width="280.08" height="43.92" rx="5.040000000000001" fill="#F1F6FA" stroke="#367AB5" stroke-width="1"/>
+<text id="text_0095_0" x="832.68" y="511.71625000000006" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Update ELF + prompt encoder</text>
+<text id="text_0095_1" x="832.68" y="529.7962500000001" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Decoder-only weights frozen</text>
+<polyline id="path_0096" points="831.600,540.720 831.600,561.600 327.600,561.600 327.600,164.160 298.800,164.160" fill="none" stroke="#63758A" stroke-width="1" stroke-dasharray="3 2"/>
+<polygon points="298.800,164.160 303.480,161.914 303.480,166.406" fill="#63758A"/>
+<rect id="rect_0097" x="378.0" y="547.1999999999999" width="372.96" height="18.72" rx="0" fill="#FFFFFF" stroke="none" stroke-width="1"/>
+<text id="text_0098_0" x="564.48" y="559.8070703125" font-family="DejaVu Sans, Arial, sans-serif" font-size="12.5" font-weight="normal" fill="#63758A" text-anchor="middle">Refresh the rollout policy from the current policy</text>
+</svg>

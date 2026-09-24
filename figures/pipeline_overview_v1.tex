@@ -1,0 +1,10 @@
+% !TEX root = ../main.tex
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\textwidth]{figures/pipeline_overview_v1.pdf}
+    \caption{\textbf{A continuous-diffusion reasoning pipeline.}
+    \textbf{Left:} Learned, covariance-whitened projectors map frozen Qwen layer-16/24/32 states to 256/256/512 features per token. Concatenation gives a 1024-dimensional representation; projector learning preserves teacher token predictions through frozen Qwen suffixes.
+    \textbf{Center:} A shared bidirectional ELF backbone supports flow matching and token-decoding CE. Training begins with Qwen prompt features, then introduces an MSE-trained question encoder for joint adaptation. The prompt remains clean while answer latents are corrupted.
+    \textbf{Right:} At inference, the question is encoded once. All three representation groups pass through ELF jointly, with local clocks $t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell}$ and $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$. A terminal ELF/token-head call decodes the answer in parallel. Colored tiles illustrate schematic noise levels, not measured latent trajectories.}
+    \label{fig:pipelineoverview}
+\end{figure}

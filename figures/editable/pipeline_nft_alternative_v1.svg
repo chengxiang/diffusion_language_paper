@@ -1,0 +1,215 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="993.6" height="576.0" viewBox="0 0 993.6 576.0">
+<rect width="100%" height="100%" fill="white"/>
+<polyline id="path_0000" points="331.200,17.280 331.200,545.040" fill="none" stroke="#B7C3CF" stroke-width="0.55"/>
+<polyline id="path_0001" points="662.400,17.280 662.400,545.040" fill="none" stroke="#B7C3CF" stroke-width="0.55"/>
+<rect id="rect_0002" x="18.0" y="16.560000000000002" width="295.2" height="42.48" rx="5.76" fill="#F3F6F9" stroke="#F3F6F9" stroke-width="1"/>
+<text id="text_0003_0" x="38.160000000000004" y="42.175078125" font-family="DejaVu Sans, Arial, sans-serif" font-size="21" font-weight="bold" fill="#63758A" text-anchor="middle">1</text>
+<text id="text_0004_0" x="53.28" y="41.39578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#233344" text-anchor="start">Representation learning</text>
+<rect id="teacher_text_input" x="27.36" y="79.2" width="279.36" height="32.4" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="teacher_text_input_label_0" x="167.04" y="99.816015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Question + gold solution</text>
+<text id="text_0007_0" x="71.64" y="129.75625" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#233344" text-anchor="middle">Frozen</text>
+<text id="text_0007_1" x="71.64" y="147.83625" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#233344" text-anchor="middle">Qwen3-4B</text>
+<text id="text_0008_0" x="179.64000000000001" y="130.061484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="bold" fill="#233344" text-anchor="middle">Learned</text>
+<text id="text_0008_1" x="179.64000000000001" y="147.01148437499998" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="bold" fill="#233344" text-anchor="middle">projectors</text>
+<text id="text_0009_0" x="276.84000000000003" y="129.28671875" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="bold" fill="#233344" text-anchor="middle">Concatenate</text>
+<text id="text_0009_1" x="276.84000000000003" y="145.10671875" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="bold" fill="#233344" text-anchor="middle">features</text>
+<rect id="frozen_qwen_stack" x="26.64" y="151.20000000000002" width="90.0" height="188.64000000000001" rx="5.76" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<polyline id="path_0011" points="71.280,112.320 71.280,118.800" fill="none" stroke="#63758A" stroke-width="1.3"/>
+<polygon points="71.280,118.800 69.034,114.120 73.526,114.120" fill="#63758A"/>
+<rect id="qwen_layer_16" x="33.839999999999996" y="159.83999999999997" width="75.60000000000001" height="28.8" rx="5.040000000000001" fill="#E5EEF5" stroke="#367AB5" stroke-width="1"/>
+<text id="qwen_layer_16_label_0" x="71.64000000000001" y="178.13648437499998" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">Layer 16</text>
+<polyline id="path_0014" points="117.360,174.240 140.400,174.240" fill="none" stroke="#367AB5" stroke-width="1.3"/>
+<polygon points="140.400,174.240 135.720,176.486 135.720,171.994" fill="#367AB5"/>
+<polygon id="projector_E_16" points="144.720,154.800 216.000,161.280 216.000,187.200 144.720,193.680" fill="#DFEAF3" stroke="#367AB5" stroke-width="1.2"/>
+<text id="text_0016_0" x="178.2" y="179.4353125" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#367AB5" text-anchor="middle">E₁₆</text>
+<polyline id="path_0017" points="216.720,174.240 252.720,174.240" fill="none" stroke="#367AB5" stroke-width="1.3"/>
+<polygon points="252.720,174.240 248.040,176.486 248.040,171.994" fill="#367AB5"/>
+<text id="text_0018_0" x="234.71999999999997" y="165.8371875" font-family="DejaVu Sans, Arial, sans-serif" font-size="12" font-weight="normal" fill="#367AB5" text-anchor="middle">256</text>
+<rect id="qwen_layer_24" x="33.839999999999996" y="211.68" width="75.60000000000001" height="28.8" rx="5.040000000000001" fill="#F8F0E5" stroke="#C88A35" stroke-width="1"/>
+<text id="qwen_layer_24_label_0" x="71.64000000000001" y="229.97648437499998" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">Layer 24</text>
+<polyline id="path_0021" points="117.360,226.080 140.400,226.080" fill="none" stroke="#C88A35" stroke-width="1.3"/>
+<polygon points="140.400,226.080 135.720,228.326 135.720,223.834" fill="#C88A35"/>
+<polygon id="projector_E_24" points="144.720,206.640 216.000,213.120 216.000,239.040 144.720,245.520" fill="#F6ECDF" stroke="#C88A35" stroke-width="1.2"/>
+<text id="text_0023_0" x="178.2" y="231.27531249999998" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#C88A35" text-anchor="middle">E₂₄</text>
+<polyline id="path_0024" points="216.720,226.080 252.720,226.080" fill="none" stroke="#C88A35" stroke-width="1.3"/>
+<polygon points="252.720,226.080 248.040,228.326 248.040,223.834" fill="#C88A35"/>
+<text id="text_0025_0" x="234.71999999999997" y="217.67718750000003" font-family="DejaVu Sans, Arial, sans-serif" font-size="12" font-weight="normal" fill="#C88A35" text-anchor="middle">256</text>
+<rect id="qwen_layer_32" x="33.839999999999996" y="289.43999999999994" width="75.60000000000001" height="28.8" rx="5.040000000000001" fill="#E4F1EE" stroke="#2C917F" stroke-width="1"/>
+<text id="qwen_layer_32_label_0" x="71.64000000000001" y="307.736484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">Layer 32</text>
+<polyline id="path_0028" points="117.360,303.840 140.400,303.840" fill="none" stroke="#2C917F" stroke-width="1.3"/>
+<polygon points="140.400,303.840 135.720,306.086 135.720,301.594" fill="#2C917F"/>
+<polygon id="projector_E_32" points="144.720,284.400 216.000,290.880 216.000,316.800 144.720,323.280" fill="#DDEDEB" stroke="#2C917F" stroke-width="1.2"/>
+<text id="text_0030_0" x="178.2" y="309.0353125" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#2C917F" text-anchor="middle">E₃₂</text>
+<polyline id="path_0031" points="216.720,303.840 252.720,303.840" fill="none" stroke="#2C917F" stroke-width="1.3"/>
+<polygon points="252.720,303.840 248.040,306.086 248.040,301.594" fill="#2C917F"/>
+<text id="text_0032_0" x="234.71999999999997" y="295.43718749999994" font-family="DejaVu Sans, Arial, sans-serif" font-size="12" font-weight="normal" fill="#2C917F" text-anchor="middle">512</text>
+<text id="text_0033_0" x="71.28" y="209.77554687500003" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" font-weight="normal" fill="#63758A" text-anchor="middle">⋮</text>
+<text id="text_0034_0" x="71.28" y="269.79531249999997" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#63758A" text-anchor="middle">⋮</text>
+<rect id="concatenated_qwen_latents_layer16" x="254.16" y="151.20000000000002" width="51.12" height="51.12" rx="0" fill="#CDDEEC" stroke="#FFFFFF" stroke-width="0.3"/>
+<polyline id="path_0036" points="266.940,151.200 266.940,202.320" fill="none" stroke="#9FBFDB" stroke-width="0.45"/>
+<polyline id="path_0037" points="279.720,151.200 279.720,202.320" fill="none" stroke="#9FBFDB" stroke-width="0.45"/>
+<polyline id="path_0038" points="292.500,151.200 292.500,202.320" fill="none" stroke="#9FBFDB" stroke-width="0.45"/>
+<rect id="concatenated_qwen_latents_layer24" x="254.16" y="202.32" width="51.12" height="51.12" rx="0" fill="#F1E2CC" stroke="#FFFFFF" stroke-width="0.3"/>
+<polyline id="path_0040" points="266.940,202.320 266.940,253.440" fill="none" stroke="#E5C79E" stroke-width="0.45"/>
+<polyline id="path_0041" points="279.720,202.320 279.720,253.440" fill="none" stroke="#E5C79E" stroke-width="0.45"/>
+<polyline id="path_0042" points="292.500,202.320 292.500,253.440" fill="none" stroke="#E5C79E" stroke-width="0.45"/>
+<rect id="concatenated_qwen_latents_layer32" x="254.16" y="253.44" width="51.12" height="102.24" rx="0" fill="#CAE4DF" stroke="#FFFFFF" stroke-width="0.3"/>
+<polyline id="path_0044" points="266.940,253.440 266.940,355.680" fill="none" stroke="#9ACAC2" stroke-width="0.45"/>
+<polyline id="path_0045" points="279.720,253.440 279.720,355.680" fill="none" stroke="#9ACAC2" stroke-width="0.45"/>
+<polyline id="path_0046" points="292.500,253.440 292.500,355.680" fill="none" stroke="#9ACAC2" stroke-width="0.45"/>
+<rect id="concatenated_qwen_latents_outline" x="254.16" y="151.20000000000002" width="51.12" height="204.48" rx="0" fill="none" stroke="#B7C3CF" stroke-width="0.6"/>
+<text id="text_0048_0" x="168.12" y="376.856484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="bold" fill="#233344" text-anchor="middle">1024-D = 256 + 256 + 512</text>
+<text id="text_0049_0" x="168.48" y="409.1153125" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#233344" text-anchor="middle">xℓ = (hℓ − μℓ) Eℓ</text>
+<polyline id="path_0050" points="36.000,427.680 298.080,427.680" fill="none" stroke="#B7C3CF" stroke-width="0.8"/>
+<text id="text_0051_0" x="168.48" y="452.976015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="bold" fill="#233344" text-anchor="middle">Teacher-CE supervision</text>
+<rect id="rect_0052" x="30.96" y="471.59999999999997" width="46.800000000000004" height="31.68" rx="5.040000000000001" fill="#E5EEF5" stroke="#367AB5" stroke-width="1"/>
+<text id="text_0053_0" x="54.36" y="491.856015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Eℓ</text>
+<polyline id="path_0054" points="78.480,487.440 90.720,487.440" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="90.720,487.440 86.040,489.686 86.040,485.194" fill="#233344"/>
+<rect id="rect_0055" x="92.16" y="471.59999999999997" width="46.800000000000004" height="31.68" rx="5.040000000000001" fill="#E5EEF5" stroke="#367AB5" stroke-width="1"/>
+<text id="text_0056_0" x="115.56" y="491.856015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Dℓ</text>
+<polyline id="path_0057" points="139.680,487.440 151.920,487.440" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="151.920,487.440 147.240,489.686 147.240,485.194" fill="#233344"/>
+<rect id="rect_0058" x="153.35999999999999" y="466.56000000000006" width="86.39999999999999" height="41.76" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0059_0" x="196.55999999999997" y="483.471953125" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="normal" fill="#233344" text-anchor="middle">Frozen</text>
+<text id="text_0059_1" x="196.55999999999997" y="498.161953125" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="normal" fill="#233344" text-anchor="middle">Qwen suffix</text>
+<polyline id="path_0060" points="240.480,487.440 254.880,487.440" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="254.880,487.440 250.200,489.686 250.200,485.194" fill="#233344"/>
+<text id="text_0061_0" x="279.71999999999997" y="483.16671875" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="bold" fill="#B86565" text-anchor="middle">soft</text>
+<text id="text_0061_1" x="279.71999999999997" y="498.98671874999997" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="bold" fill="#B86565" text-anchor="middle">CE</text>
+<text id="text_0062_0" x="167.04" y="530.631953125" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="normal" fill="#63758A" text-anchor="middle">Covariance whitening; then freeze</text>
+<text id="text_0062_1" x="167.04" y="545.3219531249999" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="normal" fill="#63758A" text-anchor="middle">the representation for flow training.</text>
+<rect id="rect_0063" x="349.2" y="16.560000000000002" width="295.2" height="42.48" rx="5.76" fill="#F3F6F9" stroke="#F3F6F9" stroke-width="1"/>
+<text id="text_0064_0" x="369.36" y="42.175078125" font-family="DejaVu Sans, Arial, sans-serif" font-size="21" font-weight="bold" fill="#63758A" text-anchor="middle">2</text>
+<text id="text_0065_0" x="384.48" y="41.39578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#233344" text-anchor="start">Flow training</text>
+<rect id="rect_0066" x="359.28" y="79.2" width="77.76" height="33.120000000000005" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0067_0" x="398.15999999999997" y="99.91624999999999" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Question</text>
+<polyline id="path_0068" points="438.480,95.760 471.600,95.760" fill="none" stroke="#7965AA" stroke-width="1.3"/>
+<polygon points="471.600,95.760 466.920,98.006 466.920,93.514" fill="#7965AA"/>
+<rect id="trainable_prompt_encoder" x="474.48" y="74.88" width="160.56" height="41.76" rx="5.040000000000001" fill="#EFEDF5" stroke="#7965AA" stroke-width="1"/>
+<text id="trainable_prompt_encoder_label_0" x="554.76" y="90.57101562500002" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Prompt encoder</text>
+<text id="trainable_prompt_encoder_label_1" x="554.76" y="109.78101562500001" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Pφ</text>
+<polyline id="clean_prompt_condition_path" points="554.400,118.080 554.400,142.560 398.880,142.560 398.880,190.080" fill="none" stroke="#7965AA" stroke-width="1.2"/>
+<polygon points="398.880,190.080 396.634,185.400 401.126,185.400" fill="#7965AA"/>
+<text id="text_0072_0" x="406.43999999999994" y="176.43671875000004" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="normal" fill="#7965AA" text-anchor="middle">clean prompt c</text>
+<rect id="rect_0073" x="483.84" y="152.64000000000001" width="151.20000000000002" height="34.56" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0074_0" x="559.4399999999999" y="174.59578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="normal" fill="#233344" text-anchor="middle">x + noise ε</text>
+<polyline id="path_0075" points="558.000,188.640 558.000,198.720" fill="none" stroke="#63758A" stroke-width="1.3"/>
+<polygon points="558.000,198.720 555.754,194.040 560.246,194.040" fill="#63758A"/>
+<rect id="clean_prompt_tokens" x="365.03999999999996" y="200.88" width="69.12" height="39.6" rx="0" fill="#E2DDEC" stroke="#7965AA" stroke-width="1"/>
+<text id="text_0077_0" x="399.59999999999997" y="223.975078125" font-family="DejaVu Sans, Arial, sans-serif" font-size="21" font-weight="normal" fill="#7965AA" text-anchor="middle">c</text>
+<rect id="training_noisy_answer_L16_r0_c0" x="434.87999999999994" y="200.88" width="32.4" height="4.95" rx="0" fill="#BBC2C9" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r0_c1" x="467.28" y="200.88" width="32.4" height="4.95" rx="0" fill="#828C95" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r0_c2" x="499.67999999999995" y="200.88" width="32.4" height="4.95" rx="0" fill="#8B99A5" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r0_c3" x="532.0799999999999" y="200.88" width="32.4" height="4.95" rx="0" fill="#9BA2A8" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r0_c4" x="564.4799999999999" y="200.88" width="32.4" height="4.95" rx="0" fill="#B9C4CD" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r0_c5" x="596.8799999999999" y="200.88" width="32.4" height="4.95" rx="0" fill="#ABB9C5" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r1_c0" x="434.87999999999994" y="205.83" width="32.4" height="4.95" rx="0" fill="#C5D0D9" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r1_c1" x="467.28" y="205.83" width="32.4" height="4.95" rx="0" fill="#7C8A96" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r1_c2" x="499.67999999999995" y="205.83" width="32.4" height="4.95" rx="0" fill="#AAB2B8" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r1_c3" x="532.0799999999999" y="205.83" width="32.4" height="4.95" rx="0" fill="#828D96" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r1_c4" x="564.4799999999999" y="205.83" width="32.4" height="4.95" rx="0" fill="#8795A1" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L16_r1_c5" x="596.8799999999999" y="205.83" width="32.4" height="4.95" rx="0" fill="#B1B8BF" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r0_c0" x="434.87999999999994" y="210.78000000000003" width="32.4" height="4.95" rx="0" fill="#9B948B" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r0_c1" x="467.28" y="210.78000000000003" width="32.4" height="4.95" rx="0" fill="#A69C8F" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r0_c2" x="499.67999999999995" y="210.78000000000003" width="32.4" height="4.95" rx="0" fill="#C6B9A8" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r0_c3" x="532.0799999999999" y="210.78000000000003" width="32.4" height="4.95" rx="0" fill="#C4BDB4" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r0_c4" x="564.4799999999999" y="210.78000000000003" width="32.4" height="4.95" rx="0" fill="#A89E91" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r0_c5" x="596.8799999999999" y="210.78000000000003" width="32.4" height="4.95" rx="0" fill="#C2B5A4" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r1_c0" x="434.87999999999994" y="215.73000000000002" width="32.4" height="4.95" rx="0" fill="#D6CCBE" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r1_c1" x="467.28" y="215.73000000000002" width="32.4" height="4.95" rx="0" fill="#948876" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r1_c2" x="499.67999999999995" y="215.73000000000002" width="32.4" height="4.95" rx="0" fill="#D8D1C8" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r1_c3" x="532.0799999999999" y="215.73000000000002" width="32.4" height="4.95" rx="0" fill="#CDC3B6" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r1_c4" x="564.4799999999999" y="215.73000000000002" width="32.4" height="4.95" rx="0" fill="#AEA190" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L24_r1_c5" x="596.8799999999999" y="215.73000000000002" width="32.4" height="4.95" rx="0" fill="#A59E95" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r0_c0" x="434.87999999999994" y="220.68" width="32.4" height="4.95" rx="0" fill="#D3DDDB" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r0_c1" x="467.28" y="220.68" width="32.4" height="4.95" rx="0" fill="#99A8A5" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r0_c2" x="499.67999999999995" y="220.68" width="32.4" height="4.95" rx="0" fill="#7B908C" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r0_c3" x="532.0799999999999" y="220.68" width="32.4" height="4.95" rx="0" fill="#909B99" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r0_c4" x="564.4799999999999" y="220.68" width="32.4" height="4.95" rx="0" fill="#C0D0CD" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r0_c5" x="596.8799999999999" y="220.68" width="32.4" height="4.95" rx="0" fill="#A3B7B4" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r1_c0" x="434.87999999999994" y="225.63" width="32.4" height="4.95" rx="0" fill="#BDCDCA" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r1_c1" x="467.28" y="225.63" width="32.4" height="4.95" rx="0" fill="#ADC2BE" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r1_c2" x="499.67999999999995" y="225.63" width="32.4" height="4.95" rx="0" fill="#B2BDBB" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r1_c3" x="532.0799999999999" y="225.63" width="32.4" height="4.95" rx="0" fill="#CADAD7" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r1_c4" x="564.4799999999999" y="225.63" width="32.4" height="4.95" rx="0" fill="#91A6A2" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r1_c5" x="596.8799999999999" y="225.63" width="32.4" height="4.95" rx="0" fill="#B3BEBC" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r2_c0" x="434.87999999999994" y="230.58" width="32.4" height="4.95" rx="0" fill="#B5C9C6" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r2_c1" x="467.28" y="230.58" width="32.4" height="4.95" rx="0" fill="#B8C3C1" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r2_c2" x="499.67999999999995" y="230.58" width="32.4" height="4.95" rx="0" fill="#C1D1CE" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r2_c3" x="532.0799999999999" y="230.58" width="32.4" height="4.95" rx="0" fill="#A1B6B2" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r2_c4" x="564.4799999999999" y="230.58" width="32.4" height="4.95" rx="0" fill="#BFCAC8" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r2_c5" x="596.8799999999999" y="230.58" width="32.4" height="4.95" rx="0" fill="#82918F" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r3_c0" x="434.87999999999994" y="235.52999999999997" width="32.4" height="4.95" rx="0" fill="#9AA5A3" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r3_c1" x="467.28" y="235.52999999999997" width="32.4" height="4.95" rx="0" fill="#95A5A2" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r3_c2" x="499.67999999999995" y="235.52999999999997" width="32.4" height="4.95" rx="0" fill="#7A8F8B" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r3_c3" x="532.0799999999999" y="235.52999999999997" width="32.4" height="4.95" rx="0" fill="#9AA5A3" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r3_c4" x="564.4799999999999" y="235.52999999999997" width="32.4" height="4.95" rx="0" fill="#869693" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_L32_r3_c5" x="596.8799999999999" y="235.52999999999997" width="32.4" height="4.95" rx="0" fill="#899E9B" stroke="none" stroke-width="0"/>
+<rect id="training_noisy_answer_outline" x="434.87999999999994" y="200.88" width="194.4" height="39.6" rx="0" fill="none" stroke="#B7C3CF" stroke-width="0.6"/>
+<text id="text_0127_0" x="493.55999999999995" y="198.136953125" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="normal" fill="#63758A" text-anchor="middle">noisy zt</text>
+<polyline id="path_0128" points="500.400,242.640 500.400,290.160" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="500.400,290.160 498.154,285.480 502.646,285.480" fill="#233344"/>
+<rect id="rect_0129" x="362.15999999999997" y="256.32" width="97.2" height="23.04" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0130_0" x="410.75999999999993" y="270.9571874999999" font-family="DejaVu Sans, Arial, sans-serif" font-size="12" font-weight="normal" fill="#233344" text-anchor="middle">self-condition</text>
+<polyline id="path_0131" points="460.800,267.840 498.240,267.840" fill="none" stroke="#63758A" stroke-width="1.3"/>
+<polygon points="498.240,267.840 493.560,270.086 493.560,265.594" fill="#63758A"/>
+<rect id="rect_0132" x="534.24" y="252.71999999999997" width="107.28" height="30.96" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0133_0" x="587.8799999999999" y="264.53718749999996" font-family="DejaVu Sans, Arial, sans-serif" font-size="12" font-weight="normal" fill="#233344" text-anchor="middle">t · mode ·</text>
+<text id="text_0133_1" x="587.8799999999999" y="278.09718749999996" font-family="DejaVu Sans, Arial, sans-serif" font-size="12" font-weight="normal" fill="#233344" text-anchor="middle">SCCFG</text>
+<polyline id="path_0134" points="532.800,267.840 503.280,267.840" fill="none" stroke="#63758A" stroke-width="1.3"/>
+<polygon points="503.280,267.840 507.960,265.594 507.960,270.086" fill="#63758A"/>
+<rect id="shared_elf_transformer" x="375.84" y="295.2" width="252.0" height="72.0" rx="5.040000000000001" fill="#F1F6FA" stroke="#367AB5" stroke-width="1.5"/>
+<text id="text_0136_0" x="501.8399999999999" y="324.67484375000004" font-family="DejaVu Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#233344" text-anchor="middle">Shared ELF</text>
+<text id="text_0137_0" x="501.8399999999999" y="351.29648437500003" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#63758A" text-anchor="middle">Bidirectional Transformer</text>
+<polyline id="path_0138" points="501.840,368.640 501.840,386.640 425.520,386.640 425.520,402.480" fill="none" stroke="#233344" stroke-width="1.2"/>
+<polygon points="425.520,402.480 423.274,397.800 427.766,397.800" fill="#233344"/>
+<polyline id="path_0139" points="501.840,368.640 501.840,386.640 573.120,386.640 573.120,402.480" fill="none" stroke="#233344" stroke-width="1.2"/>
+<polygon points="573.120,402.480 570.874,397.800 575.366,397.800" fill="#233344"/>
+<rect id="rect_0140" x="360.71999999999997" y="403.92" width="131.76" height="35.28" rx="5.040000000000001" fill="#E7EFF6" stroke="#367AB5" stroke-width="1"/>
+<text id="text_0141_0" x="426.59999999999997" y="425.71625" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Flow head → x̂</text>
+<rect id="rect_0142" x="506.87999999999994" y="403.92" width="131.76" height="35.28" rx="5.040000000000001" fill="#E6F2F0" stroke="#2C917F" stroke-width="1"/>
+<text id="text_0143_0" x="572.76" y="425.976015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Token head</text>
+<polyline id="path_0144" points="426.240,441.360 426.240,457.920" fill="none" stroke="#367AB5" stroke-width="1.3"/>
+<polygon points="426.240,457.920 423.994,453.240 428.486,453.240" fill="#367AB5"/>
+<polyline id="path_0145" points="572.400,441.360 572.400,457.920" fill="none" stroke="#2C917F" stroke-width="1.3"/>
+<polygon points="572.400,457.920 570.154,453.240 574.646,453.240" fill="#2C917F"/>
+<text id="text_0146_0" x="426.59999999999997" y="478.95531250000005" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#367AB5" text-anchor="middle">Flow MSE</text>
+<text id="text_0147_0" x="572.76" y="478.95531250000005" font-family="DejaVu Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#2C917F" text-anchor="middle">Token CE</text>
+<text id="text_0148_0" x="496.79999999999995" y="514.11671875" font-family="DejaVu Sans, Arial, sans-serif" font-size="14" font-weight="normal" fill="#63758A" text-anchor="middle">80% flow rows · 20% decoder rows</text>
+<rect id="rect_0149" x="352.79999999999995" y="532.8000000000001" width="288.0" height="28.8" rx="5.040000000000001" fill="#F6F4F9" stroke="none" stroke-width="1"/>
+<text id="text_0150_0" x="496.79999999999995" y="549.0070703125" font-family="DejaVu Sans, Arial, sans-serif" font-size="12.5" font-weight="normal" fill="#7965AA" text-anchor="middle">Teacher prompt → MSE warm start → joint</text>
+<rect id="rect_0151" x="680.4" y="16.560000000000002" width="295.2" height="42.48" rx="5.76" fill="#F3F6F9" stroke="#F3F6F9" stroke-width="1"/>
+<text id="text_0152_0" x="700.5600000000001" y="42.175078125" font-family="DejaVu Sans, Arial, sans-serif" font-size="21" font-weight="bold" fill="#63758A" text-anchor="middle">3</text>
+<text id="text_0153_0" x="715.68" y="41.39578125" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#233344" text-anchor="start">NFT post-training</text>
+<rect id="rect_0154" x="691.92" y="79.2" width="278.64" height="33.839999999999996" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0155_0" x="831.24" y="100.536015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">Supervised ELF + prompt</text>
+<polyline id="path_0156" points="831.600,115.200 831.600,138.240" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="831.600,138.240 829.354,133.560 833.846,133.560" fill="#233344"/>
+<rect id="rect_0157" x="700.56" y="141.12" width="261.36" height="41.76" rx="5.040000000000001" fill="#F1F6FA" stroke="#367AB5" stroke-width="1"/>
+<text id="text_0158_0" x="831.24" y="156.81101562499998" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">15 old-policy samples</text>
+<text id="text_0158_1" x="831.24" y="176.021015625" font-family="DejaVu Sans, Arial, sans-serif" font-size="17" font-weight="normal" fill="#233344" text-anchor="middle">+ 1 cached gold endpoint</text>
+<text id="text_0159_0" x="829.8000000000001" y="211.096953125" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="normal" fill="#63758A" text-anchor="middle">Rollouts: 32 steps, synchronous clocks</text>
+<polyline id="path_0160" points="831.600,223.200 831.600,238.320" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="831.600,238.320 829.354,233.640 833.846,233.640" fill="#233344"/>
+<rect id="rect_0161" x="694.8" y="241.20000000000002" width="275.76" height="50.4" rx="5.040000000000001" fill="#EEF6F5" stroke="#2C917F" stroke-width="1"/>
+<text id="text_0162_0" x="832.68" y="261.821484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">Verifiable rewards</text>
+<text id="text_0162_1" x="832.68" y="278.771484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">correct: 0.75 · wrong: 0 · gold: 1</text>
+<polyline id="path_0163" points="831.600,293.760 831.600,308.880" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="831.600,308.880 829.354,304.200 833.846,304.200" fill="#233344"/>
+<rect id="rect_0164" x="694.8" y="311.04" width="275.76" height="46.800000000000004" rx="5.040000000000001" fill="#F3F6F9" stroke="#B7C3CF" stroke-width="1"/>
+<text id="text_0165_0" x="832.68" y="329.55625000000003" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Filter all-correct groups;</text>
+<text id="text_0165_1" x="832.68" y="347.63625" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">normalize retained rewards</text>
+<polyline id="path_0166" points="831.600,360.000 831.600,375.840" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="831.600,375.840 829.354,371.160 833.846,371.160" fill="#233344"/>
+<rect id="rect_0167" x="694.8" y="378.0" width="275.76" height="46.800000000000004" rx="5.040000000000001" fill="#F4F3F8" stroke="#7965AA" stroke-width="1"/>
+<text id="text_0168_0" x="832.68" y="396.51625" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">Re-noise saved latent endpoints</text>
+<text id="text_0168_1" x="832.68" y="414.59625" font-family="DejaVu Sans, Arial, sans-serif" font-size="16" font-weight="normal" fill="#233344" text-anchor="middle">SCCFG-compatible NFT loss</text>
+<polyline id="path_0169" points="831.600,426.960 831.600,441.360" fill="none" stroke="#233344" stroke-width="1.3"/>
+<polygon points="831.600,441.360 829.354,436.680 833.846,436.680" fill="#233344"/>
+<rect id="rect_0170" x="694.8" y="444.24" width="275.76" height="46.800000000000004" rx="5.040000000000001" fill="#EFF4F9" stroke="#367AB5" stroke-width="1"/>
+<text id="text_0171_0" x="832.68" y="463.061484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">Update ELF + prompt</text>
+<text id="text_0171_1" x="832.68" y="480.011484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">Freeze decoder-only weights</text>
+<text id="text_0172_0" x="832.3199999999999" y="523.901484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#63758A" text-anchor="middle">Forward-process training;</text>
+<text id="text_0172_1" x="832.3199999999999" y="540.851484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#63758A" text-anchor="middle">fixed reference-policy penalty</text>
+</svg>
