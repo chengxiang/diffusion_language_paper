@@ -1,0 +1,51 @@
+% !TEX root = ../main.tex
+\begin{figure}[p]
+\centering
+\setlength{\fboxsep}{8pt}
+\fbox{\begin{minipage}{0.94\linewidth}
+\small
+\textbf{GSM8K: reasoning across successive changes}\par\medskip
+\textbf{Problem.} A new program had 60 downloads in the first month. The number of downloads in the second month was three times as many as the downloads in the first month, but then reduced by 30% in the third month. How many downloads did the program have total over the three months?
+
+\medskip\textbf{Generated solution.}\par\smallskip
+Let's break down the downloads for the program month by month.
+
+In the first month, the program had 60 downloads.
+
+In the second month, the program had three times as many as the downloads in the first month, so it had 60 * 3 = 180 downloads.
+
+In the third month, the downloads were reduced by 30%, which means it had 180 - (180 * 30 / 100) = 180 - 54 = 126 downloads.
+
+To find the total number of downloads over the three months, we add up the downloads from each month: 60 + 180 + 126 = 240 + 126 = 366
+
+Thus, the program had a total of $\boxed{366}$ downloads over the three months.
+\end{minipage}}
+
+\medskip
+\fbox{\begin{minipage}{0.94\linewidth}
+\small
+\setlength{\abovedisplayskip}{4pt}
+\setlength{\belowdisplayskip}{4pt}
+\textbf{MATH500: evaluating a rational function}\par\medskip
+\textbf{Problem.} If $f(x) = \frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.
+
+\medskip\textbf{Generated solution.}\par\smallskip
+To find the value of $f(-2)+f(-1)+f(0)$ we need to substitute $x=-2, x=-1,$ and $x=0$ into the function $f(x)$.
+
+For $f(-2)$:
+\[ f(-2) = \frac{3(-2) - 2}{-2 - 2} = \frac{-6 - 2}{-4} = \frac{-8}{-4} = 2 \]
+
+For $f(-1)$:
+\[ f(-1) = \frac{3(-1) - 2}{-1 - 2} = \frac{-3 - 2}{-3} = \frac{-5}{-3} = \frac{5}{3} \]
+
+For $f(0)$:
+\[ f(0) = \frac{3(0) - 2}{0 - 2} = \frac{-2}{-2} = 1 \]
+
+Now we can add these together to find the sum:
+\[ f(-2) + f(-1) + f(0) = 2 + \frac{5}{3} + 1 = \frac{11}{3} + 1 = \frac{11}{3} + \frac{3}{3} = \frac{14}{3} \]
+
+\[ \boxed{\frac{14}{3}} \]
+\end{minipage}}
+\caption{Correct generations from ELF-L at 64 denoising steps (65 NFEs), async $(2.5,2,1.5)$, SCCFG 2, and seed 42. GSM8K uses NFT update 500; MATH500 uses NFT update 600. Model text is unchanged, with mathematical markup typeset for readability. Both answers and the intermediate calculations are correct.}
+\label{fig:headlineexamples}
+\end{figure}

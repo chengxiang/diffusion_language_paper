@@ -1,0 +1,29 @@
+% !TEX root = ../main.tex
+\begin{table}[t]
+\caption{Reasoning at lower NFE, mean pass@1 (\%). Each column header gives \emph{reference NFE / our NFE}: our 8/16/32/64 denoising steps require 9/17/33/65 backbone calls including terminal decoding. FMLM+ values are its Table~8; REPA+REG values are its Tables~11 and~15 and use early stopping \citep{posterior,scalingdlm}. Our checkpoints are fixed across columns, with SCCFG 2 for GSM8K and SCCFG 3 for MATH500.}
+\label{tab:headlinelownfe}
+\centering\small
+\setlength{\tabcolsep}{7pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Method & 8 / 9 & 16 / 17 & 32 / 33 & 64 / 65\\
+\midrule
+\multicolumn{5}{@{}l}{\textit{GSM8K}}\\
+FMLM+ Init & 15.10 & 26.10 & 31.80 & 33.60\\
+REPA+REG-B & 26.20 & 34.42 & 37.15 & 38.11\\
+ELF-B, pre-NFT (ours) & 26.40 & 34.48 & 37.80 & 39.17\\
+ELF-B, post-NFT (ours) & 30.08 & 37.77 & 41.13 & 42.16\\
+\addlinespace
+REPA+REG-L & 47.34 & 52.89 & 55.04 & 55.96\\
+ELF-L, pre-NFT (ours) & 49.41 & 55.33 & 57.88 & 58.67\\
+ELF-L, post-NFT (ours) & \textbf{54.84} & \textbf{60.55} & \textbf{62.47} & \textbf{63.74}\\
+\midrule
+\multicolumn{5}{@{}l}{\textit{MATH500}}\\
+REPA+REG-L & 9.76 & 11.53 & 12.40 & 13.31\\
+ELF-L, pre-NFT (ours) & 15.23 & 17.93 & 19.65 & 21.18\\
+ELF-L, post-NFT (ours) & \textbf{17.45} & \textbf{20.93} & \textbf{22.60} & \textbf{24.68}\\
+\bottomrule
+\end{tabular}
+\vspace{3pt}
+\parbox{\linewidth}{\footnotesize Our means use the complete available cohorts: 64, 32, 16, and 8 draws per problem from left to right. The one-call difference is retained explicitly; these are neighboring inference budgets, not exactly matched NFE. FMLM+ grades Python solutions, while REPA+REG and our models produce natural-language reasoning. Bold marks the highest displayed accuracy for each benchmark and budget column.}
+\end{table}

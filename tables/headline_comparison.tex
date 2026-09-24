@@ -1,0 +1,36 @@
+% !TEX root = ../main.tex
+\begin{table}[t]
+\caption{Mathematical reasoning, mean pass@1 (\%). Rows are grouped by generation paradigm. Stored parameter counts are in millions: \emph{Embedding} includes both vocabulary input and output maps, counting tied weights once; \emph{Other} gives the remaining weights, with $(+X)$ denoting additional components used once per response. Frozen prompt encoders are included. Our vocabulary lookup and output projection are also used once. $^*$Reported sampling steps where total NFE is unresolved; $^\dagger$Python-execution scoring; $^\ddagger$approximate figure-derived accuracy. A slash separates GSM8K/MATH500 budgets.}
+\label{tab:headlinecomparison}
+\centering\small
+\setlength{\tabcolsep}{2.7pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Model & Embedding & Other $(+\text{once})$ & NFE / steps & GSM8K & MATH500\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Autoregressive}}\\
+Qwen3-0.6B-Base \citep{qwen3} & 155.58 & 440.47 & $T$ & 59.59 & ---\\
+Qwen3-0.6B, thinking \citep{qwen3} & 155.58 & 440.47 & $T$ & --- & 77.60\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Discrete diffusion / blockwise diffusion}}\\
+LLaDA-8B-Base \citep{llada} & 1,035.99 & 6,979.59 & 1,024$^*$ & 70.30 & ---\\
+Dream-v0-Base-7B \citep{dream} & 1,089.99 & 6,525.62 & 256$^*$ & 77.20 & ---\\
+SDAR-1.7B-Chat \citep{sdar} & 622.33 & 1,409.41 & 4/block & 80.10 & 63.20\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow}}\\
+$\mathbb S$-FLM \citep{hyperspherical} & 75.55 & 87.47 & 1,024 & 18.00$^\dagger$ & ---\\
+FMLM+ Init \citep{posterior} & 75.55 & $\sim$92 & 64 & 33.60$^\dagger$ & ---\\
+MLFM \citep{mlfm} & 123.34 & $\sim$1,224 & 256$^*$ & 31.24 & ---\\
+TESS 2, GSM8K FT \citep{tess2} & 262.15 & $\sim$6,738 & 1,000$^*$ & 68.9$^\ddagger$ & ---\\
+REPA+REG-B \citep{scalingdlm} & 311.04 & $\sim$104 $(+441.25)$ & 64 & 38.11 & ---\\
+REPA+REG-L \citep{scalingdlm} & 311.04 & $\sim$652 $(+441.78)$ & 64 / 128 & 55.96 & 13.39\\
+\midrule
+\textbf{ELF-B, pre-NFT (ours)} & 544.69 & 90.44 $(+45.81)$ & 65 & 39.17 & ---\\
+\textbf{ELF-B, post-NFT (ours)} & 544.69 & 90.44 $(+45.81)$ & 65 & 42.16 & ---\\
+\textbf{ELF-L, pre-NFT (ours)} & 544.69 & 638.15 $(+122.65)$ & 65 & 58.67 & 21.18\\
+\textbf{ELF-L, post-NFT (ours)} & 544.69 & 638.15 $(+122.65)$ & 65 & 63.74 & 24.68\\
+\bottomrule
+\end{tabular}
+\vspace{3pt}
+\parbox{\linewidth}{\footnotesize Our rows use eight seeds, async $(2.5,2,1.5)$, SCCFG 2 for GSM8K, and SCCFG 3 for MATH500. All external scores are author-reported; MATH scores on a different test population are not entered as MATH500. GSM8K uses four demonstrations for Qwen and LLaDA and eight for Dream and TESS~2; our models use none. $T$ is autoregressive output length. SDAR uses four steps per four-token block, not four calls per answer. REPA+REG counts add the full frozen Qwen3-0.6B prompt encoder; its rounded non-decoder totals retain the authors' REPA auxiliary projector. Its one-time non-vocabulary count also includes the terminal projection. MLFM includes unmerged adapters; SDAR's released untied vocabulary maps are both counted. NFE excludes separate prompt encoding and does not measure FLOPs.}
+\end{table}
