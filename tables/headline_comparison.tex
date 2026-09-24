@@ -1,9 +1,9 @@
 % !TEX root = ../main.tex
 \begin{table}[t]
-\caption{Mathematical reasoning, mean pass@1 (\%). Parameters are rounded to three significant digits. Embedding parameters include vocabulary input and output maps, counting tied weights once. In Other Params, $(+X)$ denotes additional parameters used once per response, including prompt encoding and terminal projection; frozen components are included. NFE counts diffusion denoising: $^{*}N$ denotes $N-1$ denoising calls for REPA+REG, whose reported budget includes a decoder call. Bold/underline mark first/second place within each of the two sub-billion continuous-backbone groups.}
+\caption{Mathematical reasoning, pass@1 (\%); our entries show mean $\pm$ sampling-seed standard deviation. Parameters are rounded to three significant digits. Embedding parameters include vocabulary input and output maps, counting tied weights once. In Other Params, $(+X)$ denotes additional parameters used once per response, including prompt encoding and terminal projection; frozen components are included. NFE counts diffusion denoising: $^{*}N$ denotes $N-1$ denoising calls for REPA+REG, whose reported budget includes a decoder call. Bold/underline mark first/second place within each of the two sub-billion continuous-backbone groups.}
 \label{tab:headlinecomparison}
 \centering\small
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{2pt}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Model & \shortstack{Embedding\\Params (M)} & \shortstack{Other\\Params (M)} & NFE & GSM8K & MATH500\\
@@ -21,13 +21,13 @@ SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
 $\mathbb S$-FLM \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
 FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
 REPA+REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
-\textbf{ELF-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & ---\\
-\textbf{ELF-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{42.16} & ---\\
+\textbf{ELF-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \accsd{\underline{39.17}}{0.63} & ---\\
+\textbf{ELF-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \accsd{\textbf{42.16}}{0.88} & ---\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone 200M--1B}}\\
 REPA+REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96 & 13.39\\
-\textbf{ELF-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{58.67} & \underline{21.18}\\
-\textbf{ELF-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{63.74} & \textbf{24.68}\\
+\textbf{ELF-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \accsd{\underline{58.67}}{0.69} & \accsd{\underline{21.18}}{0.70}\\
+\textbf{ELF-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \accsd{\textbf{63.74}}{0.83} & \accsd{\textbf{24.68}}{1.27}\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: larger backbones (reference)}}\\
 MLFM \citep{mlfm} & 123 & 1,220 & 256 & 31.24 & ---\\
@@ -35,5 +35,5 @@ TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
-\parbox{\linewidth}{\footnotesize Our rows use eight seeds, async $(2.5,2,1.5)$, SCCFG 2 for GSM8K, and SCCFG 3 for MATH500; standard deviations appear in Appendix~\ref{app:seedvariability}. External accuracies and sampling budgets follow the authors' reports; $^\dagger$Python scoring, $^\ddagger$figure-derived accuracy. GSM8K uses 4-shot Qwen/LLaDA, 8-shot Dream/TESS~2, and zero-shot prompts for ours. SDAR uses four steps per four-token block. A slash separates GSM8K/MATH500 budgets. REPA+REG includes its frozen Qwen prompt encoder and the authors' rounded REPA-projector counts. MLFM includes unmerged adapters; SDAR counts both untied vocabulary maps. Our vocabulary maps are called once. NFE excludes prompt encoding and terminal decoding.}
+\parbox{\linewidth}{\footnotesize Our rows use eight seeds, async $(2.5,2,1.5)$, SCCFG 2 for GSM8K, and SCCFG 3 for MATH500; the standard-deviation definition and full summaries appear in Appendix~\ref{app:seedvariability}. External accuracies and sampling budgets follow the authors' reports; $^\dagger$Python scoring, $^\ddagger$figure-derived accuracy. GSM8K uses 4-shot Qwen/LLaDA, 8-shot Dream/TESS~2, and zero-shot prompts for ours. SDAR uses four steps per four-token block. A slash separates GSM8K/MATH500 budgets. REPA+REG includes its frozen Qwen prompt encoder and the authors' rounded REPA-projector counts. MLFM includes unmerged adapters; SDAR counts both untied vocabulary maps. Our vocabulary maps are called once. NFE excludes prompt encoding and terminal decoding.}
 \end{table}
