@@ -1,9 +1,9 @@
 % !TEX root = ../main.tex
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\textwidth]{figures/pipeline_overview_v2.pdf}
+    \includegraphics[width=\textwidth]{figures/pipeline_overview_v4.pdf}
     \caption{\textbf{A continuous-diffusion reasoning pipeline.}
-    \textbf{Left:} Question and gold-solution tokens enter frozen Qwen from below. Fixed covariance whitening and learned projectors map its 2560-dimensional layer-16/24/32 states to 256/256/512 features per token. Concatenation gives a 1024-dimensional representation; per-layer reconstruction through frozen Qwen suffixes supplies teacher-CE supervision. Snowflakes and flames denote frozen and trained components in the depicted training stage.
+    \textbf{Left:} The layer-16 example compares clean teacher predictions $p$ with predictions $\hat p$ after encoding and reconstructing assistant activations. Teacher cross-entropy trains $E_{16}$ and $D_{16}$ through the frozen Qwen suffix. Layers 24 and 32 are learned analogously; the three encoders are then frozen and their 256/256/512-dimensional outputs concatenated (bottom). Covariance whitening is incorporated in the encoder parameterization and omitted from the schematic. Snowflakes and flames denote frozen and trained components.
     \textbf{Center:} A shared bidirectional ELF backbone supports flow matching and token-decoding CE. Training begins with Qwen prompt features, then introduces an MSE-trained question encoder for joint adaptation. The prompt remains clean while answer latents are corrupted.
     \textbf{Right:} At inference, the question is encoded once. All three representation groups pass through ELF jointly, with local clocks $t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell}$ and $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$. Each bold vertical outline encloses one token; solid colors identify layer groups and black-and-white static illustrates noise. The schematic states exaggerate the separation between groups for visibility; the clock curves show the actual schedule. A terminal ELF/token-head call decodes the answer in parallel.}
     \label{fig:pipelineoverview}
