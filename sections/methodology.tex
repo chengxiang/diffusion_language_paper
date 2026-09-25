@@ -2,7 +2,7 @@
 \section{Methodology}
 \label{sec:methodology}
 
-With the answer representation fixed, we learn a conditional generator over complete reasoning traces. Our denoising and token-decoding objectives closely follow ELF \citep{elf}. The principal changes concern the representation being generated and how the question is encoded and introduced during training (Figure~\ref{fig:pipelineoverview}).
+With the answer representation fixed, we learn a conditional generator over complete reasoning traces. Our denoising and token-decoding objectives closely follow ELF \citep{elf}. The principal changes concern the representation being generated and how the prompt is encoded and introduced during training (Figure~\ref{fig:pipelineoverview}).
 
 \subsection{Flow matching and shared token decoding}
 \label{sec:methodflow}
@@ -14,7 +14,7 @@ Let $x\in\R^{T\times d}$ collect the clean answer latents from Section~\ref{sec:
  \qquad \epsilon\sim\mathcal N(0,I),\quad \sigma=2,\quad t\in[0,1].
  \label{eq:methodinterpolant}
 \end{equation}
-The path starts at noise and ends at the teacher-derived answer. One time is drawn per training example and shared across its tokens and layer groups. Question positions remain clean; a bidirectional Transformer jointly processes the question and noisy answer.
+The path starts at noise and ends at the teacher-derived answer. One time is drawn per training example and shared across its tokens and layer groups. Question positions remain clean; a bidirectional Transformer jointly processes the prompt and noisy answer.
 
 Following ELF, the network $F_\theta$ predicts the clean endpoint. Its inputs include the current state, time, question condition, and an optional previous clean prediction $s$ for self-conditioning. We convert the endpoint prediction to a velocity using ELF's stabilized denominator:
 \begin{equation}
@@ -33,7 +33,7 @@ Away from the clamp, $v^*=x-\sigma\epsilon$ is the path velocity. For a microbat
 All latent coordinates contribute to this loss; padding and question positions are excluded.
 
 \paragraph{Self-conditioning and SCCFG.}
-Self-conditioning supplies an earlier clean prediction to the denoiser, allowing successive predictions to refine one another. We inherit ELF's self-conditioning classifier-free guidance (SCCFG), which strengthens this signal by training the network to produce guided predictions. The guidance scale is an input to the model, so sampling uses one denoiser call per step. In our conditional setup, the comparison underlying SCCFG is between predictions with and without \emph{answer self-conditioning}; the question remains present in both. Training replaces $v^*$ in Eq.~\eqref{eq:methodflowloss} by a detached guidance-adjusted target $\widetilde v^*$. Appendix~\ref{app:methodobjective} gives the target and sampling distributions.
+Self-conditioning supplies an earlier clean prediction to the denoiser, allowing successive predictions to refine one another. We inherit ELF's self-conditioning classifier-free guidance (SCCFG), which strengthens this signal by training the network to produce guided predictions. The guidance scale is an input to the model, so sampling uses one denoiser call per step. In our conditional setup, the comparison underlying SCCFG is between predictions with and without \emph{answer self-conditioning}; the prompt remains present in both. Training replaces $v^*$ in Eq.~\eqref{eq:methodflowloss} by a detached guidance-adjusted target $\widetilde v^*$. Appendix~\ref{app:methodobjective} gives the target and sampling distributions.
 
 \paragraph{Recovering discrete tokens.}
 A token head on the same Transformer backbone maps answer latents to vocabulary probabilities $p_\theta^{\mathrm{dec}}$. Decoder-mode training uses a separate corruption $z^{\mathrm{dec}}$ of the clean answer and same-position token labels $y_j$:
@@ -49,11 +49,11 @@ Each training row selects flow mode with probability $0.8$ or decoder mode with 
 \label{sec:conditionalencoding}
 
 \paragraph{Token embedding versus contextual encoding.}
-An \emph{embedding} is a token-local linear map: for a vocabulary table $B_\psi$, $e_j=B_\psi[q_j]$ depends only on token $q_j$ and is equivalent to multiplying its one-hot vector by a matrix. An \emph{encoding} is a contextual computation, $c_j=P_\phi(e_1,\ldots,e_{L_q})_j$, that combines information across the question using a Transformer. Our learned prompt encoder attends bidirectionally within the question; the original Qwen encoding instead respects the teacher's causal mask. Both supply contextual information beyond a token lookup.
+An \emph{embedding} is a token-local linear map: for a vocabulary table $B_\psi$, $e_j=B_\psi[q_j]$ depends only on token $q_j$ and is equivalent to multiplying its one-hot vector by a matrix. An \emph{encoding} is a contextual computation, $c_j=P_\phi(e_1,\ldots,e_{L_q})_j$, that combines information across the prompt using a Transformer. Our learned prompt encoder attends bidirectionally within the prompt; the original Qwen encoding instead respects the teacher's causal mask. Both supply contextual information beyond a token lookup.
 
-ELF obtains its conditional representations from a frozen T5 encoder \citep{elf}, and REPA+REG retains a frozen Qwen3-0.6B-Base encoder for inference-time prompts \citep{scalingdlm}. This provides informative conditioning but preserves a dependency on an external contextual encoder, whose representation is fixed rather than adapted to the denoiser. We replace the teacher Transformer with a compact, trainable prompt encoder while retaining the frozen Qwen token embedding table. The student has six bidirectional Transformer blocks and outputs the same 1,024-dimensional interface as the teacher features. Once trained, it encodes the question once per response; no Qwen Transformer layers are executed at inference.
+ELF obtains its conditional representations from a frozen T5 encoder \citep{elf}, and REPA+REG retains a frozen Qwen3-0.6B-Base encoder for inference-time prompts \citep{scalingdlm}. This provides informative conditioning but preserves a dependency on an external contextual encoder, whose representation is fixed rather than adapted to the denoiser. We replace the teacher Transformer with a compact, trainable prompt encoder while retaining the frozen Qwen token embedding table. The student has six bidirectional Transformer blocks and outputs the same 1,024-dimensional interface as the teacher features. Once trained, it encodes the prompt once per response; no Qwen Transformer layers are executed at inference.
 
-\paragraph{The question as the condition.}
+\paragraph{The prompt as the condition.}
 We view the prompt encoder as an internal component of a model conditioned on question tokens. Writing its composition with the denoiser as
 \begin{equation}
  V_{\theta,\phi}(z,t,q,s)=v_\theta\bigl(z,t,P_\phi(q),s\bigr),
@@ -63,13 +63,13 @@ the observed condition $q$ remains fixed while both $\theta$ and $\phi$ can be o
 
 \begin{lemma}[Conditional information for denoising]
 \label{lem:conditionalrepresentation}
-Let $Q$ be the question, $W=(Z_t,t)$ the noisy answer and time, and $U$ a square-integrable forward-regression target. Fix a deterministic encoder $C_\phi=P_\phi(Q)$ and the joint law of $(Q,W,U)$. Define $m_Q=\E[U\mid W,Q]$ and $m_\phi=\E[U\mid W,C_\phi]$. Let $\mathcal R_Q^\star$ and $\mathcal R_\phi^\star$ be the minimum squared regression risks among all measurable predictors given $(W,Q)$ and $(W,C_\phi)$, respectively. Then
+Let $Q$ be the prompt, $W=(Z_t,t)$ the noisy answer and time, and $U$ a square-integrable forward-regression target. Fix a deterministic encoder $C_\phi=P_\phi(Q)$ and the joint law of $(Q,W,U)$. Define $m_Q=\E[U\mid W,Q]$ and $m_\phi=\E[U\mid W,C_\phi]$. Let $\mathcal R_Q^\star$ and $\mathcal R_\phi^\star$ be the minimum squared regression risks among all measurable predictors given $(W,Q)$ and $(W,C_\phi)$, respectively. Then
 \begin{equation}
  \mathcal R_\phi^\star-\mathcal R_Q^\star
  =\E\|m_Q-m_\phi\|_2^2.
  \label{eq:conditioningrisk}
 \end{equation}
-In particular, the encoding attains the full-question optimum exactly when it preserves the posterior mean target almost surely.
+In particular, the encoding attains the full-prompt optimum exactly when it preserves the posterior mean target almost surely.
 \end{lemma}
 
 The proof is given in Appendix~\ref{app:conditioninglemma}. Applied to the target in Eq.~\eqref{eq:methodvelocity}, the lemma makes posterior prediction the criterion for a sufficient conditional representation. Exact agreement with the teacher's latent coordinates is unnecessary: a jointly adapted denoiser can interpret a different encoding with the same relevant information. The identity permits noise-dependent encoding error but makes no assumption that higher noise is more forgiving. It describes the population regression objective; the effectiveness of learning this interface with finite models depends on optimization. Our curriculum therefore separates establishing the conditional generator from learning its conditioning interface:
