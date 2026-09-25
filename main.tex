@@ -10,6 +10,7 @@
 \usepackage{xcolor}
 \input{macros}
 \newtheorem{lemma}{Lemma}
+\newcommand{\xc}[1]{{\color{black!10!orange} [x: #1]}}
 
 \title{Mathematical Reasoning with\\ Continuous Latent Diffusion}
 \author{Anonymous authors}
@@ -25,16 +26,16 @@
 The choice and organization of the latent representation are crucial design decisions for continuous diffusion reasoning models. We develop this perspective through a complete reasoning pipeline, connecting representation learning, denoising dynamics, and the timing of prompt adaptation. Our main contributions are:
 
 \begin{enumerate}
-    \item \textbf{A complete recipe for competitive continuous-diffusion reasoning.}
-    We present a practical training and inference recipe for mathematical reasoning and code generation. Our models exceed reported results of recent continuous diffusion models at comparable denoising-backbone scales and achieve competitive performance with selected substantially larger continuous and discrete diffusion models. Strong supervised results, followed by further gains from reward-based post-training, provide evidence that continuous denoising can support challenging reasoning tasks.
+    \item \textbf{A complete recipe for competitive diffusion reasoning in continuous latent space.}
+    We present a practical training and inference recipe for mathematical reasoning and code generation. Our models exceed reported results of recent continuous diffusion models at comparable denoising-backbone scales and achieve competitive performance with selected substantially larger continuous and discrete diffusion models. Strong supervised results, followed by further gains from diffusion reinforcement learning, provide evidence that continuous denoising can support challenging reasoning tasks.
     \emph{[Figure~\ref{fig:pipelineoverview}: pipeline overview; Section~\ref{sec:methodology}: training recipe; Section~\ref{sec:headlineresults} and Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe}: mathematical reasoning; Table~Y: coding results.]}
 
     \item \textbf{Representation design enables structured denoising dynamics.}
-    We show that the space in which denoising occurs is central to reasoning performance. We learn compact, whitened representations from multiple layers of an autoregressive teacher, preserving information relevant to its token predictions. This layer-wise decomposition enables an asynchronous denoising framework in which different representation groups evolve at different rates. We investigate the roles of these spaces through representation comparisons and layer-wise perturbation analyses, connecting the structure of the latent representation to its noise sensitivity and the design of denoising trajectories.
+    We show that the space in which denoising occurs is central to reasoning performance. We learn compact, whitened representations from multiple layers of an autoregressive teacher, preserving information relevant to its token predictions. This layer-wise decomposition further enables an asynchronous denoising framework in which different representation groups evolve at different rates. We investigate the roles of these spaces through representation comparisons and layer-wise perturbation analyses, connecting the structure of the latent representation to its noise sensitivity and the design of denoising trajectories.
     \emph{[Section~\ref{sec:representation}: learned representations; Figure~\ref{fig:representationcomparison}: design comparisons; Figure~\ref{fig:representationcka}: layer structure; Section~Y: asynchronous denoising; Figure~Y: noise sensitivity.]}
 
     \item \textbf{Staged learning of conditional representations.}
-    We develop a curriculum that first establishes the flow model under stable teacher conditioning, then adapts a learned prompt encoder jointly with the established model. This removes the teacher Transformer from inference and addresses the coupled problem of learning a conditional generator and its conditioning representation. Prompt imitation, substitution, and subsequent adaptation reveal the importance of when conditioning becomes learnable, motivating a progression from teacher-provided structure to representations adapted to the learned flow. Our coding extension further investigates this interface through a prompt encoder that reuses a pretrained diffusion backbone.
+    We develop a curriculum that first establishes the flow model under stable teacher conditioning, then adapts a learned prompt encoder jointly with the established model. This removes the teacher Transformer from inference and addresses the coupled problem of learning a conditional generator and its conditioning representation. \xc{The preceding discussion should be adjusted based on our new framing} Prompt imitation, substitution, and subsequent adaptation reveal the importance of when conditioning becomes learnable, motivating a progression from teacher-provided structure to representations adapted to the learned flow. Our coding extension further investigates this interface through a prompt encoder that reuses a pretrained diffusion backbone.
     \emph{[Sections~\ref{sec:conditionalencoding}--\ref{sec:conditioningcurriculum} and Lemma~\ref{lem:conditionalrepresentation}: conditional representation learning; Figure~\ref{fig:promptcurriculum}: training stages and adaptation; Figure~\ref{fig:representationcomparison}: joint training from initialization; Figure~Z: coding encoder comparisons.]}
 
     \item \textbf{Diffusion RL for continuous reasoning.}
@@ -48,11 +49,13 @@ The choice and organization of the latent representation are crucial design deci
 \section{Representation Learning and Construction}
 \label{sec:representation}
 
-The choice of denoising representation determines both what a continuous diffusion model must learn and how its outputs can be converted back to language. Pretrained networks offer a useful starting point: ELF uses contextual embeddings from a bidirectional T5 encoder \citep{elf}, while work on image generation shows how pretrained visual representations can guide diffusion. REPA aligns denoiser features with clean visual features \citep{repa}; Semantic-First Diffusion (SFD) and Latent Forcing instead augment the generated state with semantic representations derived from pretrained vision encoders \citep{sfd,latentforcing}. These successes motivate using a powerful model's output features, but leave open which layers and compression objectives are most suitable for reasoning in language.
+The choice of denoising representation determines both what a continuous diffusion model must learn and how its outputs can be converted back to language. Pretrained networks offer a useful starting point: ELF uses contextual embeddings from a bidirectional T5 encoder \citep{elf} \xc{there are some other related diffusion language model papers which also use qwen encoder. come back to this after we finish the related work section}, while work on image generation shows how pretrained visual representations can guide diffusion. REPA aligns denoiser features with clean visual features \citep{repa}; Semantic-First Diffusion (SFD) and Latent Forcing instead augment the generated state with semantic representations derived from pretrained vision encoders \citep{sfd,latentforcing}. These successes motivate using a powerful model's output features, but leave open which layers and compression objectives are most suitable for reasoning in language.
 
-We use \textbf{teacher-forced hidden activations of Qwen3-4B-Instruct-2507} \citep{qwen2507}. Qwen provides a strong reasoning model: our autoregressive evaluation achieves 92.19\% on GSM8K (Appendix~\ref{app:representationdiagnostics}). Given a question and its complete reference solution, all token activations can be computed in one teacher-forced forward pass. Although these activations come from a causal language model, the generator trained on them need not be causal. Our bidirectional denoiser generates the complete sequence of answer latents jointly, making the teacher's representation available to a different generative process.
+We use \textbf{teacher-forced hidden activations of Qwen3-4B-Instruct-2507} \citep{qwen2507}. Qwen provides a strong reasoning model: for instance, a basic autoregressive evaluation achieves 92.19\% on GSM8K (Appendix~\ref{app:representationdiagnostics}). Given a question and its complete reference solution, all token activations can be computed in one teacher-forced forward pass. Although these activations come from a causal language model, the generator trained on them need not be causal. Our bidirectional denoiser generates the complete sequence of answer latents jointly, making the teacher's representation available to a different generative process.
 
-A useful representation must satisfy two requirements: \textbf{decodability}, retaining the information needed to recover a solution, and \textbf{generatability}, admitting effective conditional denoising within the available model capacity and training budget. Strong decoding alone does not establish the second property. In particular, the effectiveness of final visual-encoder features in prior work does not determine the best depth to use in an autoregressive language model. We describe our learned, multilayer construction in Section~\ref{sec:representationconstruction}, then examine layer selection and projection learning in Section~\ref{sec:representationablations}. Figure~\ref{fig:representationcomparison} summarizes the resulting differences in reasoning performance.
+A useful representation must satisfy two requirements: \textbf{ease-of-decoding} (retaining the information needed to recover a solution) and \textbf{ease-of-generation} (admitting effective conditional denoising within the available model capacity and training budget \xc{emphasis here is not on conditional. The focus should be on "having a structure that can be constructed from iterative denoising steps."}). We present ablation experiments in Section \ref{sec:representationconstruction} and Figure~\ref{fig:representationcomparison}, which show that a representation can be easily decodable, but still be unsuitable for generation.
+
+%Strong decoding alone does not establish the second property. In particular, the effectiveness of final visual-encoder features in prior work does not determine the best depth to use in an autoregressive language model. We describe our learned, multilayer construction in Section~\ref{sec:representationconstruction}, then examine layer selection and projection learning in Section~\ref{sec:representationablations}. Figure~\ref{fig:representationcomparison} summarizes the resulting differences in reasoning performance.
 
 \input{figures/representation_comparison}
 
@@ -60,14 +63,16 @@ A useful representation must satisfy two requirements: \textbf{decodability}, re
 \label{sec:representationconstruction}
 
 \paragraph{Teacher features and latent construction.}
-Let $q$ denote the question prefix, $a=(a_1,\ldots,a_T)$ its solution, and $h_j^{(\ell)}\in\R^{2560}$ the frozen teacher's post-block residual at answer position $j$. The native causal mask gives $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})$; extracting all these states requires one forward pass over $(q,a)$. For $\mathcal S=\{16,24,32\}$, we learn a linear encoder $E_\ell\in\R^{2560\times d_\ell}$ and form
+\xc{The conventional notation for token position index etc in this paper should be established in the preliminary/background section too.}
+
+Let $q$ denote the question prefix, $a=(a_1,\ldots,a_T)$ its solution, and $h_j^{(\ell)}\in\R^{2560}$ the frozen teacher's post-block residual at answer position $j$. The native causal mask gives $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})$; extracting all these states requires a single forward pass over $(q,a)$. For $\mathcal S=\{16,24,32\}$, we learn a linear encoder $E_\ell\in\R^{2560\times d_\ell}$ and form
 \begin{equation}
  z_j^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)E_\ell,
  \qquad
  z_j=\big[z_j^{(16)},z_j^{(24)},z_j^{(32)}\big]\in\R^{1024},
  \label{eq:representationencoding}
 \end{equation}
-where $(d_{16},d_{24},d_{32})=(256,256,512)$ and $\mu_\ell$ is the training assistant-token mean. The same maps encode question-prefix states for the initial flow-training stage. Causal feature extraction ensures that these question states are independent of the subsequent answer. Once learned, the answer representation remains fixed throughout flow training and NFT.
+where $(d_{16},d_{24},d_{32})=(256,256,512)$ and $\mu_\ell$ is the training assistant-token mean. The same maps encode question-prefix states for the initial flow-training stage. Causal feature extraction ensures that these question states do not depend on the subsequent answer tokens. Once learned, the answer representation remains fixed throughout flow training and post-training diffusion RL.
 
 \paragraph{Learning through the teacher's predictions.}
 We train the encoders to preserve the teacher's predictive behavior, as illustrated in the first column of Figure~\ref{fig:pipelineoverview}. For each selected layer, a trainable linear reconstruction decoder $D_\ell\in\R^{2560\times d_\ell}$ maps latents back to the original hidden width:
@@ -98,28 +103,35 @@ where $\operatorname{qf}$ is a differentiable thin QR factorization and $R_\ell$
 \subsection{Which representation should be denoised?}
 \label{sec:representationablations}
 
-We compare ELF-B models trained for six epochs on the same 2.43M-row GSM8K training population, with the same ELF initialization, optimization batch, and synchronous training clocks. All representations have width 1,024 and use covariance whitening. The main comparisons use original Qwen question conditioning, holding the representation fixed during ELF training. We evaluate with a common $t=\tau^2$ clock, 32 denoising steps, and ELF EMA $0.999$. The fourth arm in Figure~\ref{fig:representationcomparison} retains the learned multilayer answer representation but learns its prompt encoder jointly from initialization; it provides context for the separate question of when to learn conditioning.
+We compare ELF-B models trained for six epochs on the same 2.43M-row GSM8K training population, with the same ELF initialization, optimization batch, and synchronous training clocks. All representations have width 1,024 and use covariance whitening. The main comparisons use original Qwen question conditioning, holding the representation fixed during ELF training. We evaluate with a common $t=\tau^2$ clock \xc{clock/schedule and denoising should also be explained in the preliminary section}, 32 denoising steps, and ELF EMA $0.999$. The fourth arm in Figure~\ref{fig:representationcomparison} is for a separate but related ablation that is discussed later in \xc{Section ???}.
 
 \paragraph{A deep layer is readily decodable, yet difficult to generate from alone.}
-A same-position token probe recovers \textbf{99.37\%} of held-out assistant tokens from clean layer-32 activations. Layers 16 and 24 also give high recovery, at 99.63\% and 99.53\%, respectively (Appendix~\ref{app:representationdiagnostics}). These probes use a learned 1,024-dimensional bottleneck on full teacher activations, so they establish clean-token decodability rather than the reconstruction accuracy of the fixed PCA encoders. Nevertheless, training diffusion on the top 1,024 whitened PCA coordinates of layer 32 yields only \textbf{11.20\%} GSM8K accuracy at epoch six. Here layer 32 is a deep-layer control, not Qwen's final block: the teacher has 36 blocks. The combination of easy clean-token recovery and weak downstream generation motivates looking beyond decoding fidelity when choosing the latent space.
+A same-position, 1024-dimension token probe recovers \textbf{99.37\%} of held-out assistant tokens from clean layer-32 activations. \xc{remove this detail from main paper: Layers 16 and 24 also give high recovery, at 99.63\% and 99.53\%, respectively} (Appendix~\ref{app:representationdiagnostics}). \xc{This probe uses a learned 1,024-dimensional bottleneck on full teacher activations, and thus establishes clean-token decodability rather than the reconstruction accuracy of the fixed PCA encoders. --> Maybe too much detail, we can give details in the appendix, but state a clear mathematical formula describing the bottleneck/probe head here to save space.} Nevertheless, training diffusion on the top 1,024 whitened PCA coordinates of layer 32 yields only \textbf{11.20\%} GSM8K accuracy at epoch six. Here layer 32 is a deep-layer control, not Qwen's final block: the teacher has 36 blocks. The combination of easy clean-token recovery and weak downstream generation motivates looking beyond decoding fidelity when choosing the latent space.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.53\linewidth]{figures/cka.pdf}
-\caption{\textbf{Representation structure across Qwen depth.} Linear CKA between teacher-forced post-block activations; white markers identify layers 16, 24, and 32. The transition after layer 16 motivates including it, while layers 24 and 32 sample deeper representations at regular intervals. Activations are pooled within eight relative-position bins and compared across 8,192 problems with equal weight per problem.}
+\caption{\textbf{Representation structure across Qwen depth.} Linear CKA between teacher-forced post-block activations; white markers identify our selected layers: 16, 24, and 32. Activations are pooled within eight relative-position bins and compared across 8,192 problems with equal weight per problem. \xc{We should try to save space with this figure. One idea is to put it in wrap-figure. }}
 \label{fig:representationcka}
 \end{figure}
 
 \paragraph{Combining representations across depth.}
-Figure~\ref{fig:representationcka} uses centered kernel alignment (CKA; \citealp{cka}) to examine the teacher's layer structure. A pronounced change after layer 16 suggests retaining a representation at that boundary. We then choose layers 24 and 32 as regularly spaced deeper features. This is a structural motivation for the triplet, rather than an exhaustive search over layer combinations. With PCA held fixed as the projection method, replacing the layer-32-only representation by 256/256/512 coordinates from layers 16/24/32 raises epoch-six accuracy from \textbf{11.20\% to 28.43\%}, a gain of 17.23 percentage points (paired 95\% problem-bootstrap interval $[15.50,18.97]$). The multilayer PCA model also leads at every evaluated epoch. This decomposition supplies distinct feature groups for the asynchronous denoising framework: representation construction creates the opportunity to assign different dynamics to information extracted at different depths.
+Figure~\ref{fig:representationcka} uses centered kernel alignment (CKA; \citealp{cka}) to examine the teacher's layer structure. A pronounced change after layer 16 suggests retaining a representation at that boundary. We then choose layers 24 and 32 as regularly spaced deeper features. With PCA held fixed as the projection method, replacing the layer-32-only representation by 256/256/512 coordinates from layers 16/24/32 raises epoch-six accuracy from \textbf{11.20\% to 28.43\%} \xc{be consistent and just provide std values in tables/plot error bars. No need to explain in text each time.}. The multilayer PCA model also leads at every evaluated epoch. This decomposition supplies distinct feature groups for the asynchronous denoising framework: representation construction creates the opportunity to assign different dynamics to information extracted at different depths. \xc{we should mention that the presence of earlier layer (16) features may help formation of later layer (32) features.}
 
 \paragraph{Learning a predictive subspace improves on variance preservation.}
-PCA retains directions of largest activation variance, minimizing Euclidean reconstruction error at a fixed rank. High variance, however, need not identify the directions most important to the teacher's token predictions or easiest for a diffusion model to use. Our linear encoder--decoder construction offers an efficient way to adapt the subspace to the former criterion using the frozen teacher's own predictions. Holding layers and dimensions fixed, learning the projectors raises epoch-six accuracy from \textbf{28.43\% to 30.76\%}, a gain of 2.33 points ($[0.87,3.81]$). It also leads multilayer PCA from epoch two onward. The ordering persists with the identity inference clock (Appendix~\ref{app:representationclock}). Together, the comparisons support selecting representations for their downstream generative utility as well as their information content: both the depths represented and the compression objective matter within a matched training budget.
+PCA retains directions of largest activation variance, minimizing Euclidean reconstruction error at a fixed rank. High variance, however, need not identify the directions most important to the teacher's token predictions or easiest for a diffusion model to use. Our linear encoder--decoder construction offers an efficient way to adapt the subspace to the former criterion using the frozen teacher's own predictions. Holding layers and dimensions fixed, learning the projectors raises epoch-six accuracy from \textbf{28.43\% to 30.76\%}. It also leads multilayer PCA from epoch two onward. \xc{The ordering persists with the identity inference clock (Appendix~\ref{app:representationclock}). we should put this statement in the figure caption instead of under one of the arm's discussions} 
+
+
+Together, the comparisons support selecting representations for their downstream generative utility as well as their information content: both the depths represented and the compression objective matter within a matched training budget. 
 % END inlined sections/representation.tex
 
 % BEGIN inlined sections/methodology.tex
 \section{Methodology}
 \label{sec:methodology}
+
+\xc{section title should be improved}
+
+\xc{I think the introduction to the flow-setting should come before we discuss detailed representation construction. Perhaps we should have a separate section, right after intro, where we talk about "preliminary/background", where we introduce the basic flow matching setup, as well as the basic setup specific to this paper "conditional decoding over a block of 1024 tokens".}
 
 With the answer representation fixed, we learn a conditional generator over complete reasoning traces. Our denoising and token-decoding objectives closely follow ELF \citep{elf}. The principal changes concern the representation being generated and how the prompt is encoded and introduced during training (Figure~\ref{fig:pipelineoverview}).
 
@@ -168,12 +180,15 @@ Each training row selects flow mode with probability $0.8$ or decoder mode with 
 \label{sec:conditionalencoding}
 
 \paragraph{Token embedding versus contextual encoding.}
+
+\xc{Too many unexplained letters below, index notation etc very confusing. Again, we should explain a lot of the convention in the preliminary section.}
+
 An \emph{embedding} is a token-local linear map: for a vocabulary table $B_\psi$, $e_j=B_\psi[q_j]$ depends only on token $q_j$ and is equivalent to multiplying its one-hot vector by a matrix. An \emph{encoding} is a contextual computation, $c_j=P_\phi(e_1,\ldots,e_{L_q})_j$, that combines information across the prompt using a Transformer. Our learned prompt encoder attends bidirectionally within the prompt; the original Qwen encoding instead respects the teacher's causal mask. Both supply contextual information beyond a token lookup.
 
-ELF obtains its conditional representations from a frozen T5 encoder \citep{elf}, and REPA+REG retains a frozen Qwen3-0.6B-Base encoder for inference-time prompts \citep{scalingdlm}. This provides informative conditioning but preserves a dependency on an external contextual encoder, whose representation is fixed rather than adapted to the denoiser. We replace the teacher Transformer with a compact, trainable prompt encoder while retaining the frozen Qwen token embedding table. The student has six bidirectional Transformer blocks and outputs the same 1,024-dimensional interface as the teacher features. Once trained, it encodes the prompt once per response; no Qwen Transformer layers are executed at inference.
+ELF obtains its conditional representations from a frozen T5 encoder \citep{elf}, \xc{expand this after we do related work} and REPA+REG retains a frozen Qwen3-0.6B-Base encoder for inference-time prompts \citep{scalingdlm}. This provides informative conditioning but preserves a dependency on an external contextual encoder, whose representation is fixed rather than adapted to the denoiser. We replace the teacher Transformer with a compact, trainable prompt encoder while retaining the frozen Qwen token embedding table. The student has six bidirectional Transformer blocks and outputs the same 1,024-dimensional interface as the teacher features. Once trained, it encodes the prompt once per response; no Qwen Transformer layers are executed at inference.
 
 \paragraph{The prompt as the condition.}
-We view the prompt encoder as an internal component of a model conditioned on question tokens. Writing its composition with the denoiser as
+We view the prompt encoder as an internal component of a model conditioned on question tokens. \xc{we should preface with a higher-level conceptual discussion somewhere. Perhaps after we set up notation in preliminary section for conditional score.} Writing its composition with the denoiser as
 \begin{equation}
  V_{\theta,\phi}(z,t,q,s)=v_\theta\bigl(z,t,P_\phi(q),s\bigr),
  \label{eq:tokenconditionalfield}
@@ -182,6 +197,8 @@ the observed condition $q$ remains fixed while both $\theta$ and $\phi$ can be o
 
 \begin{lemma}[Conditional information for denoising]
 \label{lem:conditionalrepresentation}
+\xc{This lemma is way unnecessarily abstract. We should specialize to scores/conditional scores, which is what we really care about here. You can put the more abstract lemma in the appendix as a step towards proving the more concrete lemma.}
+
 Let $Q$ be the prompt, $W=(Z_t,t)$ the noisy answer and time, and $U$ a square-integrable forward-regression target. Fix a deterministic encoder $C_\phi=P_\phi(Q)$ and the joint law of $(Q,W,U)$. Define $m_Q=\E[U\mid W,Q]$ and $m_\phi=\E[U\mid W,C_\phi]$. Let $\mathcal R_Q^\star$ and $\mathcal R_\phi^\star$ be the minimum squared regression risks among all measurable predictors given $(W,Q)$ and $(W,C_\phi)$, respectively. Then
 \begin{equation}
  \mathcal R_\phi^\star-\mathcal R_Q^\star
@@ -191,10 +208,10 @@ Let $Q$ be the prompt, $W=(Z_t,t)$ the noisy answer and time, and $U$ a square-i
 In particular, the encoding attains the full-prompt optimum exactly when it preserves the posterior mean target almost surely.
 \end{lemma}
 
-The proof is given in Appendix~\ref{app:conditioninglemma}. Applied to the target in Eq.~\eqref{eq:methodvelocity}, the lemma makes posterior prediction the criterion for a sufficient conditional representation. Exact agreement with the teacher's latent coordinates is unnecessary: a jointly adapted denoiser can interpret a different encoding with the same relevant information. The identity permits noise-dependent encoding error but makes no assumption that higher noise is more forgiving. It describes the population regression objective; the effectiveness of learning this interface with finite models depends on optimization. Our curriculum therefore separates establishing the conditional generator from learning its conditioning interface:
+The proof is given in Appendix~\ref{app:conditioninglemma}. \xc{Applied to the target in Eq.~\eqref{eq:methodvelocity}, the lemma makes posterior prediction the criterion for a sufficient conditional representation. Exact agreement with the teacher's latent coordinates is unnecessary: a jointly adapted denoiser can interpret a different encoding with the same relevant information. The above is a bit hard to understand. Perhaps we can give an example: even if the condition is perturbed, if the neural network learns the ideal score and denoising is exact, we still recover the target distribution $p$ exactly at the end of denoising.} The identity permits noise-dependent encoding error but makes no assumption that higher noise is more forgiving. It describes the population regression objective; the effectiveness of learning this interface with finite models depends on optimization. Our curriculum therefore separates establishing the conditional generator from learning its conditioning interface:
 \begin{enumerate}
  \item \textbf{Train ELF under frozen Qwen conditioning.}
- For the first 12 ELF epochs, use the projected question-only teacher states $c_{\mathrm T}(q)$ and optimize the flow/decoder objective. The teacher and representation projectors remain frozen, giving the denoiser a stable, informative condition throughout its initial training.
+ For the first 12 ELF epochs, use the projected question-only teacher states $c_{\mathrm T}(q)$ \xc{slightly confusing notation} and optimize the flow/decoder objective. The teacher and representation projectors remain frozen, giving the denoiser a stable, informative condition throughout its initial training.
 
  \item \textbf{Fit the prompt encoder by imitation.}
  Hold ELF fixed and train $P_\phi$ to match the teacher question states:
@@ -217,9 +234,13 @@ Figure~\ref{fig:promptcurriculum} shows why imitation and downstream adaptation 
 \subsection{Why keep the conditioning fixed initially?}
 \label{sec:conditioningcurriculum}
 
-Learning the conditioning representation and the conditional flow simultaneously couples two difficult problems: the denoiser must learn to interpret a representation that is itself changing, while the encoder receives supervision through an immature denoiser. We therefore use the teacher encoding as a fixed target during the period in which the flow model learns its initial conditional structure, and allow task-specific adaptation only after that structure has formed.
+\xc{change title to "Importance of Fixing Initial Conditioning"}
 
-The joint-from-start control in Figure~\ref{fig:representationcomparison} supports this curriculum. With the same learned answer representation, a randomly initialized prompt encoder trained alongside ELF reaches only \textbf{8.70\%} GSM8K accuracy at epoch six, compared with \textbf{30.76\%} under frozen teacher conditioning. The contrast shows the importance of anchoring early learning in an informative, stable condition within the tested training budget. The subsequent joint-training curves show that the value of this anchor is compatible with later adaptation.
+Learning the conditioning representation and the conditional flow simultaneously couples two difficult problems: the denoiser must learn to interpret a representation that is itself changing, while the encoder receives supervision through an immature denoiser. The joint-from-start control in Figure~\ref{fig:representationcomparison} shows that this can lead to poor training performance. With the same learned answer representation, a randomly initialized prompt encoder trained alongside ELF reaches only \textbf{8.70\%} GSM8K accuracy at epoch six, compared with \textbf{30.76\%} under frozen teacher conditioning. The contrast shows the importance of anchoring early learning in an informative, stable condition within the tested training budget. The subsequent joint-training curves show that the value of this anchor is compatible with later adaptation.
+
+We therefore use the teacher encoding as a fixed target during the period in which the flow model learns its initial conditional structure, and allow task-specific adaptation only after that structure has formed.
+
+\xc{shorten following to 1-2 sentences.}
 
 This perspective connects to REPA \citep{repa}, where external pretrained features ease the representation-learning burden of a diffusion model and accelerate training. Here the teacher supplies structure through the \emph{conditioning interface}. We interpret the comparison as evidence for a related curriculum principle: establish the conditional generative model under stable teacher guidance before asking it to reshape that guidance. The precise contribution of feature drift versus the initial quality of the prompt representation remains an open mechanism; the practical implication is that \emph{when conditioning becomes learnable} is an important design choice alongside its architecture.
 
@@ -255,7 +276,7 @@ Training uses one shared time and one learned time-embedding function $e_\theta(
  \qquad e_\theta^{(\ell)}=e_\theta.
  \label{eq:asynctimeembedding}
 \end{equation}
-The copies require no further training, and equal local times recover the original embedding. We average the \emph{embeddings}, rather than first reducing the local times to one scalar; these operations differ because the embedding function is nonlinear. A historical conditioning control favored this interface over a single embedding at the geometric-mean local time (Appendix~\ref{app:inferenceclocks}).
+The copies require no further training, and equal local times recover the original embedding. \xc{delete: We average the \emph{embeddings}, rather than first reducing the local times to one scalar; these operations differ because the embedding function is nonlinear. A historical conditioning control favored this interface over a single embedding at the geometric-mean local time (Appendix~\ref{app:inferenceclocks}).}
 
 Let $\widehat x_k$ be the resulting clean prediction at global time $\tau_k$. Each group follows its own endpoint-to-velocity conversion and clock derivative:
 \begin{equation}
@@ -270,9 +291,13 @@ Question states remain clean, and recurrent self-conditioning carries the previo
 \paragraph{Schedule choice and reasoning accuracy.}
 Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$. This choice is consistent with the highest observed accuracy in the six-schedule MATH development sweep: 18.70\%, versus 17.80\% for $(2,2,2)$ and 15.40\% for $(1,1,1)$, at ELF-L epoch 21 and 32 steps. The 500-problem MATH development set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K development set comprises held-out original training questions. We therefore regard the MATH development comparison as more directly matched to its benchmark's source distribution; the two development sets need not favor the same schedule.
 
+\xc{rename "development" to "validation"}
+
 \input{tables/inference_clocks}
 
-Table~\ref{tab:inferenceclocks} compares four schedules under a common test protocol. The shared-square clock substantially improves on the identity clock: from 52.96\% to 57.51\% on GSM8K and from 15.50\% to 17.40\% on MATH500. The $(2.5,2,1.5)$ allocation has the highest mean among these four on both benchmarks, and reversing the exponent assignment reduces accuracy. Its gain over the shared-square clock is larger on GSM8K (+1.74 percentage points) than MATH500 (+0.50 points). The full sweep and shorter-step comparison in Appendix~\ref{app:inferenceclocks} show that this ordering is conditional on the checkpoint, schedule candidates, and inference budget.
+Table~\ref{tab:inferenceclocks} compares four schedules under a common test protocol. The shared-square clock substantially improves on the identity clock: from 52.96\% to 57.51\% on GSM8K and from 15.50\% to 17.40\% on MATH500. The $(2.5,2,1.5)$ allocation has the highest mean among these four on both benchmarks, and reversing the exponent assignment reduces accuracy. Its gain over the shared-square clock is larger on GSM8K (+1.74 percentage points) than MATH500 (+0.50 points). \xc{maybe shorten: The full sweep and shorter-step comparison in Appendix~\ref{app:inferenceclocks} show that this ordering is conditional on the checkpoint, schedule candidates, and inference budget.}
+
+\xc{given limited space, perhaps move the rest of this section to appendix, leave a reference here "preliminary experiments show that layer 16 is more sensitive/important ... We provide details in appendix."}
 
 \paragraph{What does the layer decomposition capture?}
 We probe a trained ELF-B model by corrupting one group of clean gold-solution latents, predicting the clean representation, and decoding it to tokens. A matched control replaces the layer groups by eight random partitions of the same 256/256/512 widths, keeping the assigned times and injected Gaussian energy fixed. Figure~\ref{fig:layerreconstruction} shows that the actual groups have different reconstruction sensitivities: perturbing layer-16 features is more damaging than perturbing deeper features, with the clearest contrast against layer 24. Random grouping attenuates these contrasts. The layer decomposition thus exposes structure that is obscured when coordinates are grouped arbitrarily.
