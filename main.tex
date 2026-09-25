@@ -481,7 +481,7 @@ The benefit is less uniform when success is measured by high-$k$ oracle coverage
 
 Voting makes the benefit more visible than high-$k$ oracle coverage, although the size of the gain depends on the allocation. For MATH500 at 64 steps and eight samples, NFT raises vote accuracy from 26.34\% to 32.42\% ($+6.07$ points, paired 95\% interval $[3.04,8.98]$). At eight steps and 64 samples, voting rises from 24.09\% to 25.79\% despite the nearly unchanged oracle coverage, but the smaller gain has interval $[-0.45,3.85]$. These patterns are consistent with improved concentration on correct answers. Voting depends on the correct answer's frequency relative to competing answer groups, whereas oracle selection needs only one successful draw. For independent samples with problem-specific success probability $p_i$, oracle success is $1-(1-p_i)^k$: at large $k$, gains saturate on problems already solved frequently. Thus increased correctness probability, its distribution across problems, and the distribution of competing answers can affect the two metrics differently. The curves motivate this interpretation but do not by themselves establish a loss of reasoning diversity after NFT. Appendix~\ref{app:budgetvalues} gives the full numerical comparisons and uncertainty.
 
-Appendix~\ref{app:generations} illustrates the generated reasoning with correct GSM8K and MATH500 solutions; Appendix~\ref{app:trajectories} visualizes intermediate states of these generations.
+Appendix~\ref{app:generations} illustrates the generated reasoning with correct GSM8K and MATH500 solutions; Appendix~\ref{app:trajectories} visualizes intermediate states of the GSM8K example.
 % END inlined sections/headline_results.tex
 
 \clearpage
@@ -497,12 +497,12 @@ Figure~\ref{fig:headlineexamples} presents one correct GSM8K generation and one 
 
 \input{tables/headline_examples}
 
-\section{Intermediate generation trajectories}
+\section{Intermediate generation trajectory}
 \label{app:trajectories}
 
-Figures~\ref{fig:gsmtrajectory} and~\ref{fig:mathtrajectory} show steps 20, 40, 49, 60, 62, and 64 of the examples in Figure~\ref{fig:headlineexamples}. After sampling, we apply the terminal decoder (time $1$, SCCFG~2, zero decoder self-conditioning) to each saved state. These premature readouts neither feed back into sampling nor represent intermediate clean-latent predictions. Final texts exactly reproduce the archived generations.
+Figure~\ref{fig:gsmtrajectory} shows steps 20, 40, 49, 60, 62, and 64 of the GSM8K example in Figure~\ref{fig:headlineexamples}. After sampling, we apply the terminal decoder (time $1$, SCCFG~2, zero decoder self-conditioning) to each saved state. These premature readouts neither feed back into sampling nor represent intermediate clean-latent predictions. The final text exactly reproduces the archived generation.
 
-Light blue marks exact token-ID equality at the same position in the final answer, before its EOS; matches need not persist. Panels label the local clocks $(t_{16},t_{24},t_{32})$: $0$ is noise and $1$ is clean. Each readout retains its native extraction and EOS; only whitespace layout changes. MATH500 panels continue across pages without truncation.
+Light blue marks exact token-ID equality at the same position in the final answer, before its EOS; matches need not persist. Panels label the local clocks $(t_{16},t_{24},t_{32})$: $0$ is noise and $1$ is clean. Each readout retains its native extraction and EOS; only whitespace layout changes.
 
 \clearpage
 \begin{figure}[p]
@@ -510,54 +510,6 @@ Light blue marks exact token-ID equality at the same position in the final answe
 \includegraphics[width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/gsm8k_trajectory_steps20_40_49_60_62_64.pdf}
 \caption{\textbf{GSM8K generation trajectory.} Steps 20, 40, 49, 60, 62, and 64, from top to bottom, for the GSM8K example in Figure~\ref{fig:headlineexamples}. ELF-L NFT update 500; ELF/prompt EMA $.99/.99$; seed 42; async $(2.5,2,1.5)$; 64 denoising steps; CFG~1 and SCCFG~2. Light blue identifies tokens matching the final answer at the same position.}
 \label{fig:gsmtrajectory}
-\end{figure}
-\clearpage
-
-\begin{figure}[p]
-\centering
-\includegraphics[page=1,width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/math500_trajectory_steps20_40_49_60_62_64.pdf}
-\caption{\textbf{MATH500 generation trajectory: step 20.} The MATH500 example in Figure~\ref{fig:headlineexamples}, using ELF-L NFT update 600 with the same inference settings as Figure~\ref{fig:gsmtrajectory}. The following pages show steps 40, 49, 60, 62, and 64 in order. Highlighting follows the same positional token-ID comparison.}
-\label{fig:mathtrajectory}
-\end{figure}
-\clearpage
-
-\begin{figure}[p]
-\centering
-\includegraphics[page=2,width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/math500_trajectory_steps20_40_49_60_62_64.pdf}
-\par\medskip
-\parbox{\linewidth}{\small Figure~\ref{fig:mathtrajectory} (continued): MATH500, step 40 of 64.}
-\end{figure}
-\clearpage
-
-\begin{figure}[p]
-\centering
-\includegraphics[page=3,width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/math500_trajectory_steps20_40_49_60_62_64.pdf}
-\par\medskip
-\parbox{\linewidth}{\small Figure~\ref{fig:mathtrajectory} (continued): MATH500, step 49 of 64.}
-\end{figure}
-\clearpage
-
-\begin{figure}[p]
-\centering
-\includegraphics[page=4,width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/math500_trajectory_steps20_40_49_60_62_64.pdf}
-\par\medskip
-\parbox{\linewidth}{\small Figure~\ref{fig:mathtrajectory} (continued): MATH500, step 60 of 64.}
-\end{figure}
-\clearpage
-
-\begin{figure}[p]
-\centering
-\includegraphics[page=5,width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/math500_trajectory_steps20_40_49_60_62_64.pdf}
-\par\medskip
-\parbox{\linewidth}{\small Figure~\ref{fig:mathtrajectory} (continued): MATH500, step 62 of 64.}
-\end{figure}
-\clearpage
-
-\begin{figure}[p]
-\centering
-\includegraphics[page=6,width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/math500_trajectory_steps20_40_49_60_62_64.pdf}
-\par\medskip
-\parbox{\linewidth}{\small Figure~\ref{fig:mathtrajectory} (continued): MATH500, step 64 of 64 (final answer).}
 \end{figure}
 \clearpage
 
