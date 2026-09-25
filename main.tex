@@ -6,6 +6,7 @@
 \usepackage{amsmath,amssymb,amsfonts,bm}
 \usepackage{amsthm}
 \usepackage{graphicx,booktabs,multirow,array}
+\usepackage{wrapfig}
 \usepackage{hyperref,url}
 \usepackage{xcolor}
 \input{macros}
@@ -186,7 +187,7 @@ We train the encoders to preserve the teacher's predictive behavior, as illustra
  \widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}.
  \label{eq:representationreconstruction}
 \end{equation}
-We replace the assistant-content activations at layer $\ell$ by these reconstructions and run the remaining frozen Qwen blocks, final normalization, and vocabulary head. Write $p_j^{\mathrm{teacher}}$ for the unmodified teacher's next-token distribution and $p_{\ell,j}^{\mathrm{recon}}$ for this intervened branch. Both predict $a_{j+1}$ from the state at $a_j$; this differs from ELF's same-position token decoder. The representation objective is full-vocabulary categorical cross-entropy:
+We replace the assistant-content activations at layer $\ell$ by these reconstructions and run the remaining frozen Qwen blocks, final normalization, and vocabulary head. Write $p_j^{\mathrm{teacher}}$ for the unmodified teacher's next-token distribution and $p_{\ell,j}^{\mathrm{recon}}$ for this intervened branch. Both predict $a_{j+1}$ from the state at $a_j$; this differs from ELF's same-position token decoder. The representation objective is full-vocabulary cross-entropy:
 \begin{equation}
  \mathcal L_{\mathrm{repr}}
  =\sum_{\ell\in\mathcal S}\E_{q,a,j}
@@ -214,18 +215,20 @@ We compare ELF-B models trained for six epochs on the same 2.43M-row GSM8K train
 \paragraph{A deep layer is readily decodable, yet difficult to generate from alone.}
 A same-position, 1024-dimension token probe recovers \textbf{99.37\%} of held-out assistant tokens from clean layer-32 activations. \xc{remove this detail from main paper: Layers 16 and 24 also give high recovery, at 99.63\% and 99.53\%, respectively} (Appendix~\ref{app:representationdiagnostics}). \xc{This probe uses a learned 1,024-dimensional bottleneck on full teacher activations, and thus establishes clean-token decodability rather than the reconstruction accuracy of the fixed PCA encoders. --> Maybe too much detail, we can give details in the appendix, but state a clear mathematical formula describing the bottleneck/probe head here to save space.} Nevertheless, training diffusion on the top 1,024 whitened PCA coordinates of layer 32 yields only \textbf{11.20\%} GSM8K accuracy at epoch six. Here layer 32 is a deep-layer control, not Qwen's final block: the teacher has 36 blocks. The combination of easy clean-token recovery and weak downstream generation motivates looking beyond decoding fidelity when choosing the latent space.
 
-\begin{figure}[htbp]
+\begin{wrapfigure}{r}{.38\textwidth}
+\vspace{-\baselineskip}
 \centering
-\includegraphics[width=.53\linewidth]{figures/cka.pdf}
-\caption{\textbf{Representation structure across Qwen depth.} Linear CKA between teacher-forced post-block activations; white markers identify our selected layers: 16, 24, and 32. Activations are pooled within eight relative-position bins and compared across 8,192 problems with equal weight per problem. \xc{We should try to save space with this figure. One idea is to put it in wrap-figure. }}
+\includegraphics[width=\linewidth]{figures/cka.pdf}
+\caption{\textbf{Qwen layer structure.} Linear CKA of teacher-forced activations. White markers select layers 16, 24, and 32; details in Appendix~\ref{app:representationdiagnostics}.}
 \label{fig:representationcka}
-\end{figure}
+\vspace{-\baselineskip}
+\end{wrapfigure}
 
 \paragraph{Combining representations across depth.}
-Figure~\ref{fig:representationcka} uses centered kernel alignment (CKA; \citealp{cka}) to examine the teacher's layer structure. A pronounced change after layer 16 suggests retaining a representation at that boundary. We then choose layers 24 and 32 as regularly spaced deeper features. With PCA held fixed as the projection method, replacing the layer-32-only representation by 256/256/512 coordinates from layers 16/24/32 raises epoch-six accuracy from \textbf{11.20\% to 28.43\%} \xc{be consistent and just provide std values in tables/plot error bars. No need to explain in text each time.}. The multilayer PCA model also leads at every evaluated epoch. This decomposition supplies distinct feature groups for the asynchronous denoising framework: representation construction creates the opportunity to assign different dynamics to information extracted at different depths. \xc{we should mention that the presence of earlier layer (16) features may help formation of later layer (32) features.}
+Figure~\ref{fig:representationcka} uses centered kernel alignment (CKA; \citealp{cka}) to examine the teacher's layer structure. A pronounced change after layer 16 suggests retaining a representation at that boundary. We then choose layers 24 and 32 as regularly spaced deeper features. With PCA held fixed as the projection method, replacing the layer-32-only representation by 256/256/512 coordinates from layers 16/24/32 raises epoch-six accuracy from \textbf{11.20\% to 28.43\%}. The multilayer PCA model also leads at every evaluated epoch. This decomposition supplies distinct feature groups for the asynchronous denoising framework: representation construction creates the opportunity to assign different dynamics to information extracted at different depths. \xc{we should mention that the presence of earlier layer (16) features may help formation of later layer (32) features.}
 
 \paragraph{Learning a predictive subspace improves on variance preservation.}
-PCA retains directions of largest activation variance, minimizing Euclidean reconstruction error at a fixed rank. High variance, however, need not identify the directions most important to the teacher's token predictions or easiest for a diffusion model to use. Our linear encoder--decoder construction offers an efficient way to adapt the subspace to the former criterion using the frozen teacher's own predictions. Holding layers and dimensions fixed, learning the projectors raises epoch-six accuracy from \textbf{28.43\% to 30.76\%}. It also leads multilayer PCA from epoch two onward. \xc{The ordering persists with the identity inference clock (Appendix~\ref{app:representationclock}). we should put this statement in the figure caption instead of under one of the arm's discussions} 
+PCA retains directions of largest activation variance, minimizing Euclidean reconstruction error at a fixed rank. High variance, however, need not identify the directions most important to the teacher's token predictions or easiest for a diffusion model to use. Our linear encoder--decoder construction offers an efficient way to adapt the subspace to the former criterion using the frozen teacher's own predictions. Holding layers and dimensions fixed, learning the projectors raises epoch-six accuracy from \textbf{28.43\% to 30.76\%}. It also leads multilayer PCA from epoch two onward.
 
 
 Together, the comparisons support selecting representations for their downstream generative utility as well as their information content: both the depths represented and the compression objective matter within a matched training budget. 
@@ -338,22 +341,14 @@ At step $r$, let $z_r=\bar z_{\tau_r}$ and $\widehat z_{\mathrm{clean},r}$ be th
 Question states remain clean, and recurrent self-conditioning carries the previous endpoint prediction to the next call. All groups are updated in the same denoiser forward, so asynchrony does not multiply NFE. The terminal token-decoding call is separate. Unlike the shared reparameterization in Eq.~\eqref{eq:sharedclock}, this extends the model to unequal group times that were not explicitly presented during synchronous training.
 
 \paragraph{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$. This choice is consistent with the highest observed accuracy in the six-schedule MATH development sweep: 18.70\%, versus 17.80\% for $(2,2,2)$ and 15.40\% for $(1,1,1)$, at ELF-L epoch 21 and 32 steps. The 500-problem MATH development set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K development set comprises held-out original training questions. We therefore regard the MATH development comparison as more directly matched to its benchmark's source distribution; the two development sets need not favor the same schedule.
-
-\xc{rename "development" to "validation"}
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$. This choice is consistent with the highest observed accuracy in the six-schedule MATH validation sweep: 18.70\%, versus 17.80\% for $(2,2,2)$ and 15.40\% for $(1,1,1)$, at ELF-L epoch 21 and 32 steps. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution; the two validation sets need not favor the same schedule.
 
 \input{tables/inference_clocks}
 
-Table~\ref{tab:inferenceclocks} compares four schedules under a common test protocol. The shared-square clock substantially improves on the identity clock: from 52.96\% to 57.51\% on GSM8K and from 15.50\% to 17.40\% on MATH500. The $(2.5,2,1.5)$ allocation has the highest mean among these four on both benchmarks, and reversing the exponent assignment reduces accuracy. Its gain over the shared-square clock is larger on GSM8K (+1.74 percentage points) than MATH500 (+0.50 points). \xc{maybe shorten: The full sweep and shorter-step comparison in Appendix~\ref{app:inferenceclocks} show that this ordering is conditional on the checkpoint, schedule candidates, and inference budget.}
+Table~\ref{tab:inferenceclocks} compares four schedules under a common test protocol. The shared-square clock substantially improves on the identity clock: from 52.96\% to 57.51\% on GSM8K and from 15.50\% to 17.40\% on MATH500. The $(2.5,2,1.5)$ allocation has the highest mean among these four on both benchmarks, and reversing the exponent assignment reduces accuracy. Its gain over the shared-square clock is larger on GSM8K (+1.74 percentage points) than MATH500 (+0.50 points). The broader sweep and 16-step results show that the ordering depends on the evaluation setting (Appendix~\ref{app:inferenceclocks}).
 
-\xc{given limited space, perhaps move the rest of this section to appendix, leave a reference here "preliminary experiments show that layer 16 is more sensitive/important ... We provide details in appendix."}
+Preliminary reconstruction probes find greater sensitivity to perturbing layer-16 latents than deeper-layer latents, with weaker contrasts after random coordinate grouping. Appendix~\ref{app:inferenceclocks} reports the probes and controls (Figure~\ref{fig:layerreconstruction}); they do not establish why a particular sampling schedule works best.
 
-\paragraph{What does the layer decomposition capture?}
-We probe a trained ELF-B model by corrupting one group of clean gold-solution latents, predicting the clean representation, and decoding it to tokens. A matched control replaces the layer groups by eight random partitions of the same 256/256/512 widths, keeping the assigned times and injected Gaussian energy fixed. Figure~\ref{fig:layerreconstruction} shows that the actual groups have different reconstruction sensitivities: perturbing layer-16 features is more damaging than perturbing deeper features, with the clearest contrast against layer 24. Random grouping attenuates these contrasts. The layer decomposition thus exposes structure that is obscured when coordinates are grouped arbitrarily.
-
-\input{figures/layer_reconstruction_random}
-
-For $0<\tau<1$, our chosen powers give $t_{16}<t_{24}<t_{32}$: layer 16 becomes clean relatively later, while all groups reach their endpoint together. One possible explanation is that the more sensitive layer-16 representation benefits from being reconstructed with cleaner deeper-layer features available as context. This is a hypothesis about coordination between representations, rather than a consequence of the local probe. In particular, a separate generation control that assigns the clocks to random coordinates gives nearly identical GSM8K accuracy (Appendix~\ref{app:inferenceclocks}). The probe motivates investigating layer-dependent denoising, but further experiments are needed to establish whether this proposed mechanism explains its sampling benefits.
 % END continuous diffusion framework and design choices
 
 % BEGIN inlined sections/nft.tex
@@ -497,6 +492,15 @@ Figure~\ref{fig:headlineexamples} presents one correct GSM8K generation and one 
 
 \clearpage
 \appendix
+\section{Evaluation details and reporting conventions}
+\label{app:experimentdetails}
+
+\paragraph{Benchmarks and scoring.}
+Each generation seed evaluates all 1,319 GSM8K test problems or all 500 MATH500 problems in fixed benchmark order. GSM8K uses the canonical numerical-answer scorer, with boxed-answer-first extraction. Math-Verify is the primary MATH scorer throughout, including the schedule comparison in Table~\ref{tab:inferenceclocks}; PRM800K scores are retained as a secondary diagnostic. Validation comparisons use the separate fixed 1,000-problem GSM8K and 500-problem MATH panels described in Appendix~\ref{app:inferenceclocks}. Checkpoint, EMA, clock, guidance, and seed choices are specified with each comparison.
+
+\paragraph{Uncertainty notation.}
+\emph{Seed SD} denotes the sample standard deviation of full-benchmark accuracies across generation seeds at a fixed checkpoint, using denominator $n-1$ (Appendix~\ref{app:seedvariability}). Bars in the representation learning curves are $\pm1$ seed SD; small parenthesized values in the accompanying table report the same statistic. \emph{95\% CI} denotes a pointwise problem-bootstrap interval with 4,000 replicates: complete problems, including their saved draws, are resampled together. This convention applies to the prompt curriculum, reconstruction probe, and SCCFG-sensitivity figures. Paired comparisons resample the same problems in both conditions. The numerical inference-allocation tables instead report bootstrap standard errors, as detailed in Appendix~\ref{app:budgetvalues}. None of these measures estimates variability across independent training runs.
+
 % BEGIN inlined sections/representation_appendix.tex
 \section{Representation construction details}
 \label{app:representationimplementation}
@@ -523,7 +527,7 @@ Our native Qwen3-4B-Instruct-2507 evaluation solves 1,216/1,319 GSM8K test probl
 Each probe maps a full 2,560-dimensional post-block activation through a learned 1,024-dimensional linear bottleneck, GELU, and a vocabulary projection to its same-position token. We train the three probes for two epochs with identical seed-42 initialization, batches, and optimization settings; the final raw weights are evaluated on 12,436 held-out solution rows from 4,647 prompt groups, comprising 2,112,672 assistant-content tokens. Splits are disjoint by prompt. First assistant tokens are included, while prompt, terminal, and padding tokens are excluded. Token-weighted accuracies are 99.6314\%, 99.5330\%, and 99.3658\% for layers 16, 24, and 32. These probes evaluate clean full-layer information through a learned bottleneck, without a fixed PCA transform or diffusion noise.
 
 \paragraph{Layer similarity.}
-The CKA study uses disjoint discovery and confirmation panels of 4,096 problems each. For each problem, teacher-forced assistant activations are mean-pooled into eight relative-position bins and concatenated before computing linear CKA. Figure~\ref{fig:representationcka} shows the combined panel. The layer-16/17 CKA is 0.038; the selected-layer similarities are 0.124 (16/24), 0.543 (16/32), and 0.842 (24/32). We use the transition after layer 16 and regular spacing thereafter to motivate the representation, without claiming that CKA identifies an optimal triplet.
+The CKA study uses disjoint discovery and confirmation panels of 4,096 problems each, totaling 8,192 equally weighted problems. For each problem, teacher-forced assistant activations are mean-pooled into eight relative-position bins and concatenated before computing linear CKA. Figure~\ref{fig:representationcka} shows the combined panel. The layer-16/17 CKA is 0.038; the selected-layer similarities are 0.124 (16/24), 0.543 (16/32), and 0.842 (24/32). We use the transition after layer 16 and regular spacing thereafter to motivate the representation, without claiming that CKA identifies an optimal triplet.
 
 \section{Representation comparisons under the identity clock}
 \label{app:representationclock}
@@ -533,7 +537,7 @@ Figure~\ref{fig:representationidentity} changes the evaluation clock to $t=\tau$
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.66\linewidth]{figures/representation_identity_sd.pdf}
-\caption{\textbf{Identity-clock robustness.} The four models from Figure~\ref{fig:representationcomparison}, evaluated with $t=\tau$ and 32 steps. Points average seeds 42/123 and bars show $\pm1$ sample standard deviation across seed accuracies. Each epoch uses one trained checkpoint per arm.}
+\caption{\textbf{Identity-clock robustness.} The four models from Figure~\ref{fig:representationcomparison}, evaluated with $t=\tau$ and 32 steps. Points average seeds 42/123 (bars: seed SD). Each epoch uses one trained checkpoint per arm.}
 \label{fig:representationidentity}
 \end{figure}
 
@@ -637,16 +641,24 @@ We retain the full $f'_\ell(\tau)$ factor in Eq.~\eqref{eq:asyncsampler}. The th
 The historical single-clock control holds physical powers $(2.5,2,1.5)$, Euler derivatives, 32-step grid, and seed 42 fixed. Replacing $[e^{\mathrm{time}}(\tau^{2.5})+e^{\mathrm{time}}(\tau^2)+e^{\mathrm{time}}(\tau^{1.5})]/3$ by $e^{\mathrm{time}}((t_{16}t_{24}t_{32})^{1/3})=e^{\mathrm{time}}(\tau^2)$ reduces ELF-B epoch-18 GSM8K accuracy from 508/1,319 (38.51\%) to 497/1,319 (37.68\%). This is a single-seed comparison against a \emph{geometric}-mean scalar clock; it does not test embedding the arithmetic mean of the times. It uses the historical ELF/prompt EMA $0.9999/0.999$ and native-dtype embedding reduction, so we keep it separate from the later matched tables.
 
 \paragraph{Schedule evidence and operating-point dependence.}
-Table~\ref{tab:inferenceclockfull} reports all six schedules in the matched epoch-21 development and test sweeps. The MATH development result corroborates the headline allocation retrospectively; it was not the original selection experiment. The highest GSM8K development mean instead uses $(1.5,2,2.5)$. On the test set, the two additional shared-power schedules achieve higher MATH500 point estimates than the four schedules in the main table. Thus the main comparison supports the usefulness of time reparameterization and the chosen operating point, without identifying a universally optimal exponent vector.
+Table~\ref{tab:inferenceclockfull} reports all six schedules in the matched epoch-21 validation and test sweeps. The MATH validation result corroborates the headline allocation retrospectively; it was not the original selection experiment. The highest GSM8K validation mean instead uses $(1.5,2,2.5)$. On the test set, the two additional shared-power schedules achieve higher MATH500 point estimates than the four schedules in the main table. Thus the main comparison supports the usefulness of time reparameterization and the chosen operating point, without identifying a universally optimal exponent vector.
 
 \input{tables/inference_clocks_full}
 
 For the 32-step test comparison, async $(2.5,2,1.5)$ minus sync $(2,2,2)$ gives +1.74 percentage points on GSM8K (paired 95\% CI $[+0.72,+2.73]$) and +0.50 on MATH500 ($[-0.90,+1.90]$). Repeating the same two-seed comparison at 16 steps gives 55.57\% versus 54.74\% on GSM8K, a difference of +0.83 points ($[-0.15,+1.82]$), and 16.60\% versus 16.90\% on MATH500, a difference of $-0.30$ points ($[-2.00,+1.40]$). All use SCCFG 2. These are pointwise paired problem-bootstrap intervals with 4,000 replicates, conditional on the fixed checkpoints and generation seeds; the standard deviations in the main table instead describe dispersion across full-benchmark seed accuracies.
 
+\paragraph{What does the layer decomposition capture?}
+We probe a trained ELF-B model by corrupting one group of clean gold-solution latents, predicting the clean representation, and decoding it to tokens. A matched control replaces the layer groups by eight random partitions of the same 256/256/512 widths, keeping the assigned times and injected Gaussian energy fixed. Figure~\ref{fig:layerreconstruction} shows that the actual groups have different reconstruction sensitivities: perturbing layer-16 features is more damaging than perturbing deeper features, with the clearest contrast against layer 24. Random grouping attenuates these contrasts. The layer decomposition thus exposes structure that is obscured when coordinates are grouped arbitrarily.
+
+\input{figures/layer_reconstruction_random}
+
 \paragraph{Reconstruction intervention.}
-Figure~\ref{fig:layerreconstruction} uses ELF-B epoch 18, ELF/prompt EMA $0.9999/0.9999$, SCCFG 1, noise seeds 42/123, and a fixed 64-problem GSM8K development panel. For a selected group $\ell$, we set $t_\ell=2/[2+\eta\,\mathrm{RMS}(z_{\mathrm{clean}}^{(\ell)})]$ and replace its assistant-content coordinates by $t_\ell z_{\mathrm{clean}}^{(\ell)}+2(1-t_\ell)\epsilon^{(\ell)}$, for $\eta\in\{0.8,1.6,2,3\}$. Other coordinates, question positions, terminal tokens, and padding remain clean. The model predicts the full clean latent, which its own token head decodes. The second pass reuses the same corrupted input with the first prediction as self-conditioning; it is not another integration step. CE averages gold-token losses within each problem, then noise seeds and problems equally. Negative changes mean lower CE than the clean-input \emph{prediction} baseline, not a negative loss.
+Figure~\ref{fig:layerreconstruction} uses ELF-B epoch 18, ELF/prompt EMA $0.9999/0.9999$, SCCFG 1, noise seeds 42/123, and a fixed 64-problem GSM8K validation panel. For a selected group $\ell$, we set $t_\ell=2/[2+\eta\,\mathrm{RMS}(z_{\mathrm{clean}}^{(\ell)})]$ and replace its assistant-content coordinates by $t_\ell z_{\mathrm{clean}}^{(\ell)}+2(1-t_\ell)\epsilon^{(\ell)}$, for $\eta\in\{0.8,1.6,2,3\}$. Other coordinates, question positions, terminal tokens, and padding remain clean. The model predicts the full clean latent, which its own token head decodes. The second pass reuses the same corrupted input with the first prediction as self-conditioning; it is not another integration step. CE averages gold-token losses within each problem, then noise seeds and problems equally. Negative changes mean lower CE than the clean-input \emph{prediction} baseline, not a negative loss.
 
 The random control uses eight fixed NumPy PCG64 partitions (seeds 20260918--20260925). Each control slot retains its true-group time and injected Gaussian energy; random-subset RMS is recorded but does not recalibrate the intervention. At $\eta=3$, after self-conditioning, the true-group layer-16 minus layer-24 CE contrast exceeds the corresponding mean-random contrast by 0.967 nats/token (paired 95\% CI $[0.168,1.890]$). The layer-16 minus layer-32 excess is 1.149 ($[0.061,2.241]$), with weaker evidence at lower noise and in the first prediction. Random partitions are averaged within problem before resampling; they are not additional independent problems.
+
+\paragraph{Interpretation.}
+For $0<\tau<1$, our chosen powers give $t_{16}<t_{24}<t_{32}$: layer 16 becomes clean relatively later, while all groups reach their endpoint together. One possible explanation is that the more sensitive layer-16 representation benefits from being reconstructed with cleaner deeper-layer features available as context. This is a hypothesis about coordination between representations, rather than a consequence of the local probe. In particular, a separate generation control that assigns the clocks to random coordinates gives nearly identical GSM8K accuracy (below). The probe motivates investigating layer-dependent denoising, but further experiments are needed to establish whether this proposed mechanism explains its sampling benefits.
 
 \paragraph{Random-coordinate clocks during generation.}
 A separate ELF-L epoch-21 GSM8K control assigns $(2.5,2,1.5)$ to a random 256/256/512 partition for each of seeds 42/123/456/789, keeping that partition fixed throughout generation. At 32 steps and SCCFG 2, actual layer groups yield 58.53\% mean pass@1 and random groups 58.40\%; random minus actual is $-0.13$ points (paired 95\% CI $[-0.80,+0.51]$). This comparison does not demonstrate an accuracy advantage from matching the clocks to the teacher-layer boundaries. Together, the probes establish a distinction between measured local reconstruction geometry and a causal explanation of end-to-end sampling gains.
@@ -801,7 +813,7 @@ In this initial two-seed sweep, SCCFG 3 gives the highest observed mean on both 
 
 \subsection{Expanded MATH500 comparison}
 \label{app:mathsccfg3}
-We subsequently compare SCCFG 3 against 2 on MATH500 at both epoch 21 and NFT update 600, matching checkpoints, prompts, scoring, arithmetic, and ordered seed lists. At 8, 16, 32, and 64 denoising steps, each checkpoint has 64, 32, 16, and 8 draws per problem, respectively. The coefficient changes during both denoising and terminal decoding; all other settings, including ELF/prompt EMA $.9999/.9999$ before NFT and $.99/.99$ afterward, remain fixed. Math-Verify is the primary scorer. This follow-up measures sensitivity on the same test benchmark; it is not an independent development-set selection of guidance.
+We subsequently compare SCCFG 3 against 2 on MATH500 at both epoch 21 and NFT update 600, matching checkpoints, prompts, scoring, arithmetic, and ordered seed lists. At 8, 16, 32, and 64 denoising steps, each checkpoint has 64, 32, 16, and 8 draws per problem, respectively. The coefficient changes during both denoising and terminal decoding; all other settings, including ELF/prompt EMA $.9999/.9999$ before NFT and $.99/.99$ afterward, remain fixed. Math-Verify is the primary scorer. This follow-up measures sensitivity on the same test benchmark; it is not an independent validation-set selection of guidance.
 
 \input{tables/math_sccfg3}
 
