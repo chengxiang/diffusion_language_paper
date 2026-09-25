@@ -48,13 +48,59 @@ The choice and organization of the latent representation are crucial design deci
 \label{sec:relatedwork}
 
 \paragraph{Diffusion language models.}
-Continuous diffusion generates embeddings or latents, whereas discrete diffusion reverses categorical corruption, as in masked-token generation \citep{plaid,mdlm,llada}. Continuous reasoning models include simplex-based TESS~2 and hyperspherical $\mathbb S$-FLM \citep{tess2,hyperspherical}. ELF denoises contextual representations with a shared denoiser and decoder. Concurrent to this paper, \cite{scalingdlm} propose ELF-REG, which adds alignment to teacher features and a jointly denoised global representation \citep{elf,scalingdlm} for training diffusion reasoning models. Both ELF and ELF-REG rely on external contextual encoder for conditional generation. We retain ELF's foundation while learning the answer representation and progressively replacing teacher conditioning with a trainable prompt encoder. A separate line of work investigates CDLMs \xc{define cdlm as continuous diffusion language model} trained to do few-step generation \citep{posterior,mlfm,dbtm}. PlaidQ distills continuous code generation into few-step and one-step models \citep{plaidq}, while ELF-REG uses early-stop decoding without dedicated few-step training \citep{scalingdlm}.
+Continuous diffusion language models (CDLMs) generate embeddings or latents, whereas discrete diffusion reverses categorical corruption, as in masked-token generation \citep{plaid,mdlm,llada}. Continuous reasoning models include simplex-based TESS~2 and hyperspherical $\mathbb S$-FLM \citep{tess2,hyperspherical}. ELF denoises contextual representations with a shared denoiser and decoder. Concurrent to this paper, \cite{scalingdlm} propose ELF-REG, which adds alignment to teacher features and a jointly denoised global representation \citep{elf,scalingdlm} for training diffusion reasoning models. Both ELF and ELF-REG rely on external contextual encoder for conditional generation. We retain ELF's foundation while learning the answer representation and progressively replacing teacher conditioning with a trainable prompt encoder. A separate line of work investigates CDLMs trained to do few-step generation \citep{posterior,mlfm,dbtm}. PlaidQ distills continuous code generation into few-step and one-step models \citep{plaidq}, while ELF-REG uses early-stop decoding without dedicated few-step training \citep{scalingdlm}.
 
 \paragraph{Representation design and denoising order.}
 REPA guides diffusion through pretrained feature alignment \citep{repa}. TextLDM aligns a text VAE with an autoregressive teacher, while LDLM jointly learns the latent space and diffusion model using a warmup \citep{textldm,ldlm}. These works motivate distinguishing \emph{decodability} from \emph{suitability for denoising}: accurate reconstruction alone need not imply effective generation. We investigate this distinction through teacher-predictive compression and multilayer representations. In vision, Semantic-First Diffusion and Latent Forcing use separate schedules for different representation components \citep{sfd,latentforcing}, motivating our study of denoising order across groups derived from different language-model layers.
 
 \paragraph{Diffusion reinforcement learning.}
 Reward-based diffusion reasoning includes d1, LLaDA~1.5, and LaDi-RL \citep{d1,llada15,ladirl}. We build on DiffusionNFT's forward-process objective \citep{diffusionnft}, adapting it to learned self-conditioning guidance and gold-solution anchoring while jointly optimizing the flow model and prompt encoder.
+
+\section{Preliminaries}
+\label{sec:preliminaries}
+
+\paragraph{Tokens, encodings, and latents.}
+Let $\mathcal V$ be the vocabulary, $q=(q_1,\ldots,q_{L_q})$ the formatted prompt, and $a=(a_1,\ldots,a_T)$ its answer, including the terminal token. We use $j$ for a position within either sequence, $\ell$ for a teacher layer, and $d$ for latent width. An answer encoder $\mathcal E$ maps $(q,a)$ to clean latents $x=\mathcal E(q,a)$, with $x_j\in\R^d$ corresponding to $a_j$; padding is implicit. A prompt encoder separately maps $q$ to $c=P_\phi(q)\in\R^{L_q\times d}$ without access to the answer. Unlike a token embedding lookup $e_j=B_\psi[q_j]$, this encoding combines information across prompt positions. We reserve $\psi$ for frozen teacher parameters, $\phi$ for the learned prompt encoder, and $\theta$ for ELF. A decoder $p_{\theta,j}^{\mathrm{dec}}(v\mid x,c)$ assigns vocabulary probabilities at answer position $j$, enabling all answer tokens to be decoded in parallel.
+
+\paragraph{Flow matching.}
+Flow matching learns a velocity field transporting noise to data \citep{flowmatching}. We use a linear Gaussian path, oriented from noise at $t=0$ to clean answer latents at $t=1$:
+\begin{equation}
+ z_t=t x+(1-t)\sigma\epsilon,
+ \qquad \epsilon\sim\mathcal N(0,I),\qquad
+ \frac{\mathrm d z_t}{\mathrm d t}=x-\sigma\epsilon.
+ \label{eq:methodinterpolant}
+\end{equation}
+Here $t$ is the corruption time, $\sigma>0$ the noise scale, and $z_t$ the noisy answer; the prompt remains clean. Sampling paired $(q,a)$, independent noise, and $t\sim\pi(t)$ gives the basic conditional objective
+\begin{equation}
+ \mathcal L_{\mathrm{FM}}^{\mathrm{basic}}(\theta,\phi)
+ =\E\!\left[\left\|v_\theta\bigl(z_t,t,P_\phi(q)\bigr)
+ -(x-\sigma\epsilon)\right\|_F^2\right],
+ \label{eq:basicflowloss}
+\end{equation}
+where $\pi$ is the training-time sampling density and the Frobenius norm sums over answer positions and latent coordinates. Omitting the prompt condition recovers unconditional flow matching. Our masked, normalized objective and ELF-specific modifications are given in Section~\ref{sec:methodflow}.
+
+\paragraph{What is the condition?}
+The observed condition is the text $q$; $c=P_\phi(q)$ is an internal representation used by the model. Thus $V_{\theta,\phi}(z,t,q)=v_\theta(z,t,P_\phi(q))$ is one text-conditioned field, even when both networks are trained. Write $p_t(z\mid q)$ for the distribution induced by Eq.~\eqref{eq:methodinterpolant} and $\mathsf{s}_t(z\mid q)=\nabla_z\log p_t(z\mid q)$ for its conditional score. For $0<t<1$, the population-optimal field satisfies
+\begin{equation}
+ v_t^\star(z\mid q)
+ =\E[x-\sigma\epsilon\mid z_t=z,q]
+ =\frac{z+\sigma^2(1-t)\mathsf{s}_t(z\mid q)}{t}.
+ \label{eq:conditionalflowscore}
+\end{equation}
+Conditioning only on an encoding $c$ instead gives the corresponding posterior given $c$, which can merge prompts with different answer distributions. The learning objective is therefore to preserve the information needed for conditional denoising, rather than any particular teacher coordinates. Section~\ref{sec:conditionalencoding} makes this distinction precise.
+
+\paragraph{Sampling under a different clock.}
+Inference integrates the learned field from Gaussian noise. Let $\tau\in[0,1]$ be a solver clock and $t=f(\tau)$ an increasing differentiable map with $f(0)=0$ and $f(1)=1$. The sampled state $\bar z_\tau$ follows
+\begin{equation}
+ \frac{\mathrm d\bar z_\tau}{\mathrm d\tau}
+ =f'(\tau)V_{\theta,\phi}\bigl(\bar z_\tau,f(\tau),q\bigr),
+ \qquad \bar z_0\sim\mathcal N(0,\sigma^2I).
+ \label{eq:sharedclock}
+\end{equation}
+For $f(\tau)=\tau^2$, the multiplier is $2\tau$. An exactly integrated field has the same endpoint under either clock, but finite-step accuracy can change. Euler sampling evaluates the right-hand side on a grid $\tau_0,\ldots,\tau_K$; $k$ indexes solver steps and $K$ counts denoising evaluations. Changing this inference clock does not change the training density $\pi$. Section~\ref{sec:clocks} extends the shared clock to separate clocks for different latent groups.
+
+\paragraph{Our fixed-canvas setup.}
+Figure~\ref{fig:pipelineoverview} summarizes the pipeline. Each example occupies $N=1024$ text positions in total: prompt, answer, then padding. The latent width is separately $d=1024$. For full-canvas token labels $y_i$, define $M_i=1$ when $L_q<i\leq L_q+T$ and zero otherwise; $r$ indexes examples in a microbatch. Training uses $\sigma=2$ and one shared corruption time per example, restores clean prompt states, and scores only valid answer positions, including the terminal token. ELF alternates flow regression and same-position decoder cross-entropy with probabilities $0.8/0.2$ (Section~\ref{sec:methodflow}). At inference, the unknown answer region occupies all $N-L_q$ remaining positions, is denoised jointly, and is decoded in one terminal call; the first terminal token determines the returned answer length. Denoising NFE excludes this final decoding call. The ideal unguided field above supplies the background for ELF's practical self-conditioning, guidance, and endpoint stabilization.
 
 \input{figures/pipeline_overview_v1}
 % BEGIN inlined sections/representation.tex
@@ -75,13 +121,12 @@ A useful representation must satisfy two requirements: \textbf{ease-of-decoding}
 \label{sec:representationconstruction}
 
 \paragraph{Teacher features and latent construction.}
-\xc{The conventional notation for token position index etc in this paper should be established in the preliminary/background section too.}
 
-Let $q$ denote the question prefix, $a=(a_1,\ldots,a_T)$ its solution, and $h_j^{(\ell)}\in\R^{2560}$ the frozen teacher's post-block residual at answer position $j$. The native causal mask gives $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})$; extracting all these states requires a single forward pass over $(q,a)$. For $\mathcal S=\{16,24,32\}$, we learn a linear encoder $E_\ell\in\R^{2560\times d_\ell}$ and form
+Using the token convention of Section~\ref{sec:preliminaries}, let $h_j^{(\ell)}\in\R^{2560}$ be the frozen teacher's post-block residual at answer position $j$. The native causal mask gives $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})$; extracting all these states requires a single forward pass over $(q,a)$. For $\mathcal S=\{16,24,32\}$, we learn a linear encoder $E_\ell\in\R^{2560\times d_\ell}$ and form
 \begin{equation}
- z_j^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)E_\ell,
+ x_j^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)E_\ell,
  \qquad
- z_j=\big[z_j^{(16)},z_j^{(24)},z_j^{(32)}\big]\in\R^{1024},
+ x_j=\big[x_j^{(16)},x_j^{(24)},x_j^{(32)}\big]\in\R^{1024},
  \label{eq:representationencoding}
 \end{equation}
 where $(d_{16},d_{24},d_{32})=(256,256,512)$ and $\mu_\ell$ is the training assistant-token mean. The same maps encode question-prefix states for the initial flow-training stage. Causal feature extraction ensures that these question states do not depend on the subsequent answer tokens. Once learned, the answer representation remains fixed throughout flow training and post-training diffusion RL.
@@ -89,7 +134,7 @@ where $(d_{16},d_{24},d_{32})=(256,256,512)$ and $\mu_\ell$ is the training assi
 \paragraph{Learning through the teacher's predictions.}
 We train the encoders to preserve the teacher's predictive behavior, as illustrated in the first column of Figure~\ref{fig:pipelineoverview}. For each selected layer, a trainable linear reconstruction decoder $D_\ell\in\R^{2560\times d_\ell}$ maps latents back to the original hidden width:
 \begin{equation}
- \widehat h_j^{(\ell)}=\mu_\ell+z_j^{(\ell)}D_\ell^\top.
+ \widehat h_j^{(\ell)}=\mu_\ell+x_j^{(\ell)}D_\ell^\top.
  \label{eq:representationreconstruction}
 \end{equation}
 We replace the assistant-content activations at layer $\ell$ by these reconstructions and run the remaining frozen Qwen blocks, final normalization, and vocabulary head. Write $p_j^{\mathrm{teacher}}$ for the unmodified teacher's next-token distribution and $p_{\ell,j}^{\mathrm{recon}}$ for this intervened branch. The representation objective is full-vocabulary categorical cross-entropy:
@@ -115,7 +160,7 @@ where $\operatorname{qf}$ is a differentiable thin QR factorization and $R_\ell$
 \subsection{Which representation should be denoised?}
 \label{sec:representationablations}
 
-We compare ELF-B models trained for six epochs on the same 2.43M-row GSM8K training population, with the same ELF initialization, optimization batch, and synchronous training clocks. All representations have width 1,024 and use covariance whitening. The main comparisons use original Qwen question conditioning, holding the representation fixed during ELF training. We evaluate with a common $t=\tau^2$ clock \xc{clock/schedule and denoising should also be explained in the preliminary section}, 32 denoising steps, and ELF EMA $0.999$. The fourth arm in Figure~\ref{fig:representationcomparison} is for a separate but related ablation that is discussed later in \xc{Section ???}.
+We compare ELF-B models trained for six epochs on the same 2.43M-row GSM8K training population, with the same ELF initialization, optimization batch, and synchronous training clocks. All representations have width 1,024 and use covariance whitening. The main comparisons use original Qwen question conditioning, holding the representation fixed during ELF training. We evaluate with a common $t=\tau^2$ clock (Section~\ref{sec:preliminaries}), 32 denoising steps, and ELF EMA $0.999$. The fourth arm in Figure~\ref{fig:representationcomparison} is for a separate but related ablation that is discussed later in \xc{Section ???}.
 
 \paragraph{A deep layer is readily decodable, yet difficult to generate from alone.}
 A same-position, 1024-dimension token probe recovers \textbf{99.37\%} of held-out assistant tokens from clean layer-32 activations. \xc{remove this detail from main paper: Layers 16 and 24 also give high recovery, at 99.63\% and 99.53\%, respectively} (Appendix~\ref{app:representationdiagnostics}). \xc{This probe uses a learned 1,024-dimensional bottleneck on full teacher activations, and thus establishes clean-token decodability rather than the reconstruction accuracy of the fixed PCA encoders. --> Maybe too much detail, we can give details in the appendix, but state a clear mathematical formula describing the bottleneck/probe head here to save space.} Nevertheless, training diffusion on the top 1,024 whitened PCA coordinates of layer 32 yields only \textbf{11.20\%} GSM8K accuracy at epoch six. Here layer 32 is a deep-layer control, not Qwen's final block: the teacher has 36 blocks. The combination of easy clean-token recovery and weak downstream generation motivates looking beyond decoding fidelity when choosing the latent space.
@@ -143,21 +188,13 @@ Together, the comparisons support selecting representations for their downstream
 
 \xc{section title should be improved}
 
-\xc{I think the introduction to the flow-setting should come before we discuss detailed representation construction. Perhaps we should have a separate section, right after intro, where we talk about "preliminary/background", where we introduce the basic flow matching setup, as well as the basic setup specific to this paper "conditional decoding over a block of 1024 tokens".}
-
 With the answer representation fixed, we learn a conditional generator over complete reasoning traces. Our denoising and token-decoding objectives closely follow ELF \citep{elf}. The principal changes concern the representation being generated and how the prompt is encoded and introduced during training (Figure~\ref{fig:pipelineoverview}).
 
 \subsection{Flow matching and shared token decoding}
 \label{sec:methodflow}
 
 \paragraph{Continuous denoising.}
-Let $x\in\R^{T\times d}$ collect the clean answer latents from Section~\ref{sec:representation}, with $d=1024$, and let $c$ denote the clean question representation. Flow matching \citep{flowmatching} learns a vector field that transports a simple noise distribution to the conditional data distribution. We use the linear interpolation
-\begin{equation}
- z_t=t x+(1-t)\sigma\epsilon,
- \qquad \epsilon\sim\mathcal N(0,I),\quad \sigma=2,\quad t\in[0,1].
- \label{eq:methodinterpolant}
-\end{equation}
-The path starts at noise and ends at the teacher-derived answer. One time is drawn per training example and shared across its tokens and layer groups. Question positions remain clean; a bidirectional Transformer jointly processes the prompt and noisy answer.
+We apply Eq.~\eqref{eq:methodinterpolant} to the learned answer latents with $\sigma=2$. One time is drawn per training example and shared across its tokens and layer groups. A bidirectional Transformer jointly processes the clean prompt and noisy answer.
 
 Following ELF, the network $F_\theta$ predicts the clean endpoint. Its inputs include the current state, time, question condition, and an optional previous clean prediction $s$ for self-conditioning. We convert the endpoint prediction to a velocity using ELF's stabilized denominator:
 \begin{equation}
@@ -166,11 +203,11 @@ Following ELF, the network $F_\theta$ predicts the clean endpoint. Its inputs in
  \qquad \Delta_t=\max(1-t,0.05).
  \label{eq:methodvelocity}
 \end{equation}
-Away from the clamp, $v^*=x-\sigma\epsilon$ is the path velocity. For a microbatch of examples $r$ with response mask $M_{rj}$, the basic flow-matching loss is
+Away from the clamp, $v^*=x-\sigma\epsilon$ is the path velocity. For a microbatch of examples $r$ with response mask $M_{ri}$, the basic flow-matching loss is
 \begin{equation}
  \mathcal L_{\mathrm{FM}}=
- \E\!\left[\frac{\sum_{rj} M_{rj}\|v_{\theta,rj}-v_{rj}^*\|_2^2}
- {d\sum_{rj} M_{rj}}\right].
+ \E\!\left[\frac{\sum_{ri} M_{ri}\|v_{\theta,ri}-v_{ri}^*\|_2^2}
+ {d\sum_{ri} M_{ri}}\right].
  \label{eq:methodflowloss}
 \end{equation}
 All latent coordinates contribute to this loss; padding and question positions are excluded.
@@ -179,11 +216,11 @@ All latent coordinates contribute to this loss; padding and question positions a
 Self-conditioning supplies an earlier clean prediction to the denoiser, allowing successive predictions to refine one another. We inherit ELF's self-conditioning classifier-free guidance (SCCFG), which strengthens this signal by training the network to produce guided predictions. The guidance scale is an input to the model, so sampling uses one denoiser call per step. In our conditional setup, the comparison underlying SCCFG is between predictions with and without \emph{answer self-conditioning}; the prompt remains present in both. Training replaces $v^*$ in Eq.~\eqref{eq:methodflowloss} by a detached guidance-adjusted target $\widetilde v^*$. Appendix~\ref{app:methodobjective} gives the target and sampling distributions.
 
 \paragraph{Recovering discrete tokens.}
-A token head on the same Transformer backbone maps answer latents to vocabulary probabilities $p_\theta^{\mathrm{dec}}$. Decoder-mode training uses a separate corruption $z^{\mathrm{dec}}$ of the clean answer and same-position token labels $y_j$:
+A token head on the same Transformer backbone maps answer latents to vocabulary probabilities $p_\theta^{\mathrm{dec}}$. Decoder-mode training uses a separate corruption $z^{\mathrm{dec}}$ of the clean answer and same-position token labels $y_i$:
 \begin{equation}
  \mathcal L_{\mathrm{CE}}=
- \E\!\left[-\frac{\sum_{rj} M_{rj}\log p_\theta^{\mathrm{dec}}(y_{rj}\mid z_r^{\mathrm{dec}},c_r)}
- {\sum_{rj} M_{rj}}\right].
+ \E\!\left[-\frac{\sum_{ri} M_{ri}\log p_\theta^{\mathrm{dec}}(y_{ri}\mid z_r^{\mathrm{dec}},c_r)}
+ {\sum_{ri} M_{ri}}\right].
  \label{eq:methoddecoderloss}
 \end{equation}
 Each training row selects flow mode with probability $0.8$ or decoder mode with probability $0.2$. Thus the expected mixture is $0.8\mathcal L_{\mathrm{FM}}^{\mathrm{SCCFG}}+0.2\mathcal L_{\mathrm{CE}}$, using a common valid-token normalization in each microbatch. The backbone is shared between modes, with separate continuous and vocabulary output heads. At generation time, states remain continuous throughout denoising; a final call through the backbone and token head decodes the complete answer in parallel. This training construction remains close to the original ELF formulation, with the exact masks and decoder corruption specified in Appendix~\ref{app:methodobjective}.
@@ -193,37 +230,37 @@ Each training row selects flow mode with probability $0.8$ or decoder mode with 
 
 \paragraph{Token embedding versus contextual encoding.}
 
-\xc{Too many unexplained letters below, index notation etc very confusing. Again, we should explain a lot of the convention in the preliminary section.}
-
-An \emph{embedding} is a token-local linear map: for a vocabulary table $B_\psi$, $e_j=B_\psi[q_j]$ depends only on token $q_j$ and is equivalent to multiplying its one-hot vector by a matrix. An \emph{encoding} is a contextual computation, $c_j=P_\phi(e_1,\ldots,e_{L_q})_j$, that combines information across the prompt using a Transformer. Our learned prompt encoder attends bidirectionally within the prompt; the original Qwen encoding instead respects the teacher's causal mask. Both supply contextual information beyond a token lookup.
+Following Section~\ref{sec:preliminaries}, $P_\phi(q)$ denotes the complete prompt encoder, including the frozen lookup $B_\psi$ and the trainable contextual network. Our learned encoder attends bidirectionally within the prompt; the original Qwen encoding respects the teacher's causal mask. Both provide contextual information beyond a token lookup.
 
 ELF obtains its conditional representations from a frozen T5 encoder \citep{elf}, and ELF-REG retains a frozen Qwen3-0.6B-Base encoder for inference-time prompts \citep{scalingdlm}. The latter is distinct from its training-only Qwen3-1.7B-Base alignment teacher. This provides informative conditioning but preserves a dependency on an external contextual encoder, whose representation is fixed rather than adapted to the denoiser. We replace the teacher Transformer with a compact, trainable prompt encoder while retaining the frozen Qwen token embedding table. The student has six bidirectional Transformer blocks and outputs the same 1,024-dimensional interface as the teacher features. Once trained, it encodes the prompt once per response; no Qwen Transformer layers are executed at inference.
 
 \paragraph{The prompt as the condition.}
-We view the prompt encoder as an internal component of a model conditioned on question tokens. \xc{we should preface with a higher-level conceptual discussion somewhere. Perhaps after we set up notation in preliminary section for conditional score.} Writing its composition with the denoiser as
+Extending the text-conditioned field of Section~\ref{sec:preliminaries} to include answer self-conditioning $s$, we write
 \begin{equation}
- V_{\theta,\phi}(z,t,q,s)=v_\theta\bigl(z,t,P_\phi(q),s\bigr),
+ V_{\theta,\phi}(z,t,q,s)=v_\theta\bigl(z,t,P_\phi(q),s\bigr).
  \label{eq:tokenconditionalfield}
 \end{equation}
-the observed condition $q$ remains fixed while both $\theta$ and $\phi$ can be optimized. The answer representation and forward corruption also remain fixed. This viewpoint allows the conditioning interface to adapt to the generative task after imitation. The following regression identity characterizes the information that the interface must preserve.
+The observed condition $q$ remains fixed while both $\theta$ and $\phi$ can be optimized. The answer representation and forward corruption also remain fixed. The following identity makes the requirement on the learned interface explicit in terms of conditional scores.
 
-\begin{lemma}[Conditional information for denoising]
+\begin{lemma}[Preserving the text-conditional score]
 \label{lem:conditionalrepresentation}
-\xc{This lemma is way unnecessarily abstract. We should specialize to scores/conditional scores, which is what we really care about here. You can put the more abstract lemma in the appendix as a step towards proving the more concrete lemma.}
-
-Let $Q$ be the prompt, $W=(Z_t,t)$ the noisy answer and time, and $U$ a square-integrable forward-regression target. Fix a deterministic encoder $C_\phi=P_\phi(Q)$ and the joint law of $(Q,W,U)$. Define $m_Q=\E[U\mid W,Q]$ and $m_\phi=\E[U\mid W,C_\phi]$. Let $\mathcal R_Q^\star$ and $\mathcal R_\phi^\star$ be the minimum squared regression risks among all measurable predictors given $(W,Q)$ and $(W,C_\phi)$, respectively. Then
+Let $X$ and $Q$ denote the clean answer latents and prompt, with $\E\|X\|_F^2<\infty$, and fix a deterministic encoder $C=P_\phi(Q)$. Let $\mathsf{s}_t(z\mid c)$ denote the score conditioned on $C=c$. Under the independent Gaussian corruption in Eq.~\eqref{eq:methodinterpolant}, for $0<t<1$ and $c=P_\phi(q)$,
 \begin{equation}
- \mathcal R_\phi^\star-\mathcal R_Q^\star
- =\E\|m_Q-m_\phi\|_2^2.
- \label{eq:conditioningrisk}
+\begin{split}
+ \mathsf{s}_t(z\mid q)-\mathsf{s}_t(z\mid c)
+ =\frac{t}{\sigma^2(1-t)^2}
+ \bigl(&\E[X\mid Z_t=z,Q=q]\\
+       &-\E[X\mid Z_t=z,C=c]\bigr).
+\end{split}
+ \label{eq:conditionalscoredifference}
 \end{equation}
-In particular, the encoding attains the full-prompt optimum exactly when it preserves the posterior mean target almost surely.
+Thus an encoder preserves the full-prompt score exactly when it preserves the posterior mean clean answer. If this holds along the path, the optimal unguided field also agrees by Eq.~\eqref{eq:conditionalflowscore}, giving the same conditional endpoint law under exact integration whenever the flow is well-defined.
 \end{lemma}
 
-The proof is given in Appendix~\ref{app:conditioninglemma}. \xc{Applied to the target in Eq.~\eqref{eq:methodvelocity}, the lemma makes posterior prediction the criterion for a sufficient conditional representation. Exact agreement with the teacher's latent coordinates is unnecessary: a jointly adapted denoiser can interpret a different encoding with the same relevant information. The above is a bit hard to understand. Perhaps we can give an example: even if the condition is perturbed, if the neural network learns the ideal score and denoising is exact, we still recover the target distribution $p$ exactly at the end of denoising.} The identity permits noise-dependent encoding error but makes no assumption that higher noise is more forgiving. It describes the population regression objective; the effectiveness of learning this interface with finite models depends on optimization. Our curriculum therefore separates establishing the conditional generator from learning its conditioning interface:
+Appendix~\ref{app:conditioninglemma} proves the identity and gives the general regression result. For example, an invertible change of a sufficient prompt encoding can incur nonzero teacher-imitation MSE while preserving the conditional score and ideal sampling distribution. Matching the teacher's coordinates is therefore an initialization strategy, rather than the final generative objective. Reaching a useful interface with finite networks still depends on optimization, motivating three stages:
 \begin{enumerate}
  \item \textbf{Train ELF under frozen Qwen conditioning.}
- For the first 12 ELF epochs, use the projected question-only teacher states $c_{\mathrm T}(q)$ \xc{slightly confusing notation} and optimize the flow/decoder objective. The teacher and representation projectors remain frozen, giving the denoiser a stable, informative condition throughout its initial training.
+ For the first 12 ELF epochs, use the projected question-only teacher states, denoted $c_{\mathrm T}(q)$, and optimize the flow/decoder objective. The teacher and representation projectors remain frozen, giving the denoiser a stable, informative condition throughout its initial training.
 
  \item \textbf{Fit the prompt encoder by imitation.}
  Hold ELF fixed and train $P_\phi$ to match the teacher question states:
@@ -259,23 +296,16 @@ This perspective connects to REPA \citep{repa}, where external pretrained featur
 \subsection{Asynchronous denoising through local clocks}
 \label{sec:clocks}
 
-Our representation separates features from three depths of the teacher. Besides changing what the model learns to generate, this decomposition allows us to control \emph{when} each group becomes clean. We first explain a shared time reparameterization, then extend it to different clocks for the three representation groups. Both are inference-time changes to a model trained with synchronous corruption.
+Our representation separates features from three depths of the teacher, allowing us to control \emph{when} each group becomes clean. We extend the shared-clock construction of Section~\ref{sec:preliminaries} to separate clocks at inference, while retaining synchronous training.
 
 \paragraph{From a shared clock to local clocks.}
-Let $\tau\in[0,1]$ denote the integration clock and $t=f(\tau)$ the physical interpolation time in Eq.~\eqref{eq:methodinterpolant}. By the chain rule, the synchronous sampling ODE becomes
-\begin{equation}
- \frac{\mathrm dz_\tau}{\mathrm d\tau}
- = f'(\tau)\,v_\theta(z_\tau,f(\tau),c,s),
- \qquad f(0)=0,\quad f(1)=1.
- \label{eq:sharedclock}
-\end{equation}
-The identity schedule uses $f(\tau)=\tau$. A simple alternative is $f(\tau)=\tau^2$, with multiplier $2\tau$. For an ideal continuous vector field, this reparameterizes the same synchronous flow without changing its endpoints. Our finite-step sampler instead queries the model and updates recurrent self-conditioning at discrete times; changing their physical-time spacing can improve generation. We use the same base $\tau$ grid when comparing schedules.
+With one common map $t=f(\tau)$, Eq.~\eqref{eq:sharedclock} applies to all groups. Our finite-step sampler also updates recurrent self-conditioning at each query, so changing the clock alters both the integration grid in $t$ and the prediction history. We hold the base $\tau$ grid fixed across schedule comparisons.
 
-Asynchronous inference assigns each group $\ell\in\{16,24,32\}$ its own local clock,
+Asynchronous inference assigns each group $\ell\in\{16,24,32\}$ its own local clock. The corresponding forward corruption describes the local noise levels:
 \begin{equation}
  t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell},
  \qquad
- z_\tau^{(\ell)}=t_\ell x^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}.
+ z_{\bm t}^{(\ell)}=t_\ell x^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}.
  \label{eq:localclocks}
 \end{equation}
 Equal exponents recover a synchronous schedule. Unequal exponents allow groups to have different noise levels at the same global step, while a single bidirectional denoiser processes their concatenation. This creates an opportunity to reconstruct one feature group using cleaner information from another, rather than requiring every part of the representation to progress together.
@@ -290,7 +320,7 @@ Training uses one shared time and one learned time-embedding function $e_\theta(
 \end{equation}
 The copies require no further training, and equal local times recover the original embedding. \xc{delete: We average the \emph{embeddings}, rather than first reducing the local times to one scalar; these operations differ because the embedding function is nonlinear. A historical conditioning control favored this interface over a single embedding at the geometric-mean local time (Appendix~\ref{app:inferenceclocks}).}
 
-Let $\widehat x_k$ be the resulting clean prediction at global time $\tau_k$. Each group follows its own endpoint-to-velocity conversion and clock derivative:
+Write $z_k=\bar z_{\tau_k}$ for the sampled state and $\widehat x_k$ for its clean prediction at global time $\tau_k$. Each group follows its own endpoint-to-velocity conversion and clock derivative:
 \begin{equation}
  z_{k+1}^{(\ell)}=z_k^{(\ell)}+
  (\tau_{k+1}-\tau_k)\,\gamma_\ell\tau_k^{\gamma_\ell-1}
@@ -521,18 +551,18 @@ The question is present in both auxiliary branches. All auxiliary predictions an
 \paragraph{Decoder corruption and mixed objective.}
 Each row independently draws $b_r\sim\mathrm{Bernoulli}(0.2)$ to choose decoder mode. At each position of a decoder row, sample
 \[
- \lambda_{rj}=\operatorname{sigmoid}(0.8+0.8\xi_{rj}),\qquad
- z^{\mathrm{dec}}_{rj}=\lambda_{rj}x_{rj}+(1-\lambda_{rj})\epsilon'_{rj},
+ \lambda_{ri}=\operatorname{sigmoid}(0.8+0.8\xi_{ri}),\qquad
+ z^{\mathrm{dec}}_{ri}=\lambda_{ri}x_{ri}+(1-\lambda_{ri})\epsilon'_{ri},
 \]
-where $\xi_{rj}$ and $\epsilon'_{rj}$ are standard Gaussian. Decoder noise scale is one. The model receives decoder mode, time one, zero answer self-conditioning, and the clean question prefix. Token CE predicts the original token at each position, without a next-token shift.
+where $\xi_{ri}$ and $\epsilon'_{ri}$ are standard Gaussian. Decoder noise scale is one. The model receives decoder mode, time one, zero answer self-conditioning, and the clean question prefix. Token CE predicts the original token at each position, without a next-token shift.
 
-For valid response mask $M_{rj}$, including the terminal token and excluding question/padding positions, a rank-local microbatch minimizes
+For valid response mask $M_{ri}$, including the terminal token and excluding question/padding positions, a rank-local microbatch minimizes
 \begin{equation}
  \mathcal L_{\mathrm{ELF}}^{\mathrm{micro}}=
- \frac{\sum_{rj}M_{rj}\left[
- (1-b_r)\|v_{\theta,rj}-\widetilde v^*_{rj}\|_2^2/d
- -b_r\log p_{\theta,rj}^{\mathrm{dec}}(y_{rj})\right]}
- {\sum_{rj}M_{rj}}.
+ \frac{\sum_{ri}M_{ri}\left[
+ (1-b_r)\|v_{\theta,ri}-\widetilde v^*_{ri}\|_2^2/d
+ -b_r\log p_{\theta,ri}^{\mathrm{dec}}(y_{ri})\right]}
+ {\sum_{ri}M_{ri}}.
  \label{eq:methodmicroobjective}
 \end{equation}
 There is one denominator across both row types, with no additional normalization by mode probability. The flow term averages all 1,024 coordinates, preserving the relative 256/256/512 group widths. Gradients are averaged over data-parallel ranks and accumulation microsteps. ELF-B uses 12 bidirectional blocks of width 768 and ELF-L uses 32 blocks of width 1,280; both share their backbone between flow and token-decoder modes.
@@ -546,7 +576,18 @@ Figure~\ref{fig:promptcurriculum} uses the same two-seed pre-NFT evaluations as 
 \subsection{Conditional representation: proof and scope}
 \label{app:conditioninglemma}
 
-\begin{proof}[Proof of Lemma~\ref{lem:conditionalrepresentation}]
+\begin{lemma}[General conditional regression]
+\label{lem:conditionalregression}
+Let $Q$ be the prompt, $W=(Z_t,t)$ the noisy answer and time, and $U$ a square-integrable forward-regression target. Fix a deterministic encoder $C_\phi=P_\phi(Q)$ and the joint law of $(Q,W,U)$. Define $m_Q=\E[U\mid W,Q]$ and $m_\phi=\E[U\mid W,C_\phi]$. Let $\mathcal R_Q^\star$ and $\mathcal R_\phi^\star$ be the minimum squared regression risks among all measurable predictors given $(W,Q)$ and $(W,C_\phi)$, respectively. Then
+\begin{equation}
+ \mathcal R_\phi^\star-\mathcal R_Q^\star
+ =\E\|m_Q-m_\phi\|_2^2.
+ \label{eq:conditioningrisk}
+\end{equation}
+In particular, the encoding attains the full-prompt optimum exactly when it preserves the posterior mean target almost surely.
+\end{lemma}
+
+\begin{proof}[Proof of Lemma~\ref{lem:conditionalregression}]
 Because $C_\phi$ is a deterministic function of $Q$, the information in $(W,C_\phi)$ is contained in that of $(W,Q)$. The tower property gives $m_\phi=\E[m_Q\mid W,C_\phi]$. For any square-integrable predictor $f(W,C_\phi)$, conditional-expectation orthogonality yields
 \begin{equation}
 \begin{split}
@@ -559,6 +600,16 @@ Because $C_\phi$ is a deterministic function of $Q$, the information in $(W,C_\p
 The first term is $\mathcal R_Q^\star$. Minimizing over $f$ removes the final term and gives Eq.~\eqref{eq:conditioningrisk}. Equality of the two optimal risks is equivalent to $m_Q=m_\phi$ almost surely.
 \end{proof}
 
+\begin{proof}[Proof of Lemma~\ref{lem:conditionalrepresentation}]
+For fixed $0<t<1$, differentiating the Gaussian mixture induced by the forward path gives
+\begin{equation}
+ \mathsf{s}_t(z\mid q)
+ =\frac{t\,\E[X\mid Z_t=z,Q=q]-z}{\sigma^2(1-t)^2}.
+ \label{eq:gaussianconditionalscore}
+\end{equation}
+The same identity holds with $C=P_\phi(Q)$ in place of $Q$. Subtracting gives Eq.~\eqref{eq:conditionalscoredifference}; its scalar factor is nonzero on $(0,1)$. Moreover, $X-\sigma\epsilon=(X-Z_t)/(1-t)$ on the forward path, so substituting Eq.~\eqref{eq:gaussianconditionalscore} into its conditional expectation gives Eq.~\eqref{eq:conditionalflowscore}. Equal scores therefore give equal optimal unguided fields. Starting from the same Gaussian prior, their exact flows have the same endpoint law under the usual existence and uniqueness assumptions, interpreting the endpoint as a limit if necessary. Applying Lemma~\ref{lem:conditionalregression} to the endpoint or velocity target also identifies posterior-mean preservation with equality of the optimal regression risks.
+\end{proof}
+
 \paragraph{Posterior sufficiency and teacher imitation.}
 For $U=(X-Z_t)/\Delta_t$, the posterior mean is $(\E[X\mid Z_t,t,Q]-Z_t)/\Delta_t$. Thus preserving the posterior mean clean endpoint suffices for this regression target, including where the deterministic denominator clamp is active. Equality of the conditional distributions of $X$ given $Q$ and $P_\phi(Q)$ is a sufficient condition. The criterion is independent of the coordinate system used by the teacher: an invertible change of encoding coordinates preserves the available information and can be compensated by the denoiser. The finite network class may limit that compensation. Prompt MSE supplies a useful initialization for the existing denoiser, while subsequent training can adapt the interface through the downstream objective.
 
@@ -569,10 +620,10 @@ Conditioning Eq.~\eqref{eq:conditioningdecomposition} on time defines an excess 
 \label{app:inferenceclocks}
 
 \paragraph{Sampling grid and conditioning.}
-For $S$ denoising steps, we set $\tau_0=0$, $\tau_S=1$, and use the same logit-normal-quantile grid across schedules:
+For $K$ denoising steps, we set $\tau_0=0$, $\tau_K=1$, and use the same logit-normal-quantile grid across schedules:
 \begin{equation}
- \tau_k=\operatorname{sigmoid}\!\left[-1.5+0.8\Phi^{-1}(k/S)\right],
- \qquad 0<k<S.
+ \tau_k=\operatorname{sigmoid}\!\left[-1.5+0.8\Phi^{-1}(k/K)\right],
+ \qquad 0<k<K.
 \end{equation}
 We retain the full $f'_\ell(\tau)$ factor in Eq.~\eqref{eq:asyncsampler}. The three time embedders are identical copies of the selected scalar-time checkpoint weights; all other tensors are unchanged. Their outputs are weighted equally, irrespective of the 256/256/512 group widths, with the mean accumulated in FP64 before casting back to model dtype. The resulting embedding is a shared network condition, not a separate Transformer for each group. In particular, permuting the three exponents preserves this conditioning average while changing the coordinate groups to which the local velocity factors apply. Because the group widths differ, that permutation need not preserve total latent noise energy.
 
