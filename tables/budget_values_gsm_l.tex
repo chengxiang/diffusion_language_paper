@@ -1,0 +1,40 @@
+% !TEX root = ../main.tex
+\begin{table}[p]
+\caption{GSM8K, ELF-L: every point in Figure~\ref{fig:headlinestages}, with SCCFG 2. Entries are accuracy percentages with problem-bootstrap SDs in parentheses, not across-seed SDs (Appendix~\ref{app:budgetvalues}). Each denoising depth uses $n=512/S$ saved draws per problem; $k$-subset averaging uses all $n$.}
+\label{tab:budgetvaluesgsml}
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}rrr rrrr@{}}
+\toprule
+& & & \multicolumn{2}{c}{Oracle pass@$k$} & \multicolumn{2}{c}{Majority vote} \\
+\cmidrule(lr){4-5}\cmidrule(l){6-7}
+NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
+\midrule
+8 & 1 & 8 & 49.41 {\scriptsize (1.04)} & 54.84 {\scriptsize (1.09)} & 49.41 {\scriptsize (1.04)} & 54.84 {\scriptsize (1.09)} \\
+8 & 2 & 16 & 60.21 {\scriptsize (1.08)} & 63.89 {\scriptsize (1.11)} & 49.41 {\scriptsize (1.04)} & 54.84 {\scriptsize (1.09)} \\
+8 & 4 & 32 & 68.84 {\scriptsize (1.05)} & 70.85 {\scriptsize (1.08)} & 56.11 {\scriptsize (1.15)} & 60.04 {\scriptsize (1.17)} \\
+8 & 8 & 64 & 76.01 {\scriptsize (0.99)} & 76.53 {\scriptsize (1.02)} & 59.92 {\scriptsize (1.18)} & 62.69 {\scriptsize (1.20)} \\
+8 & 16 & 128 & 81.85 {\scriptsize (0.92)} & 81.34 {\scriptsize (0.95)} & 62.05 {\scriptsize (1.21)} & 64.07 {\scriptsize (1.24)} \\
+8 & 32 & 256 & 86.41 {\scriptsize (0.85)} & 85.39 {\scriptsize (0.90)} & 63.31 {\scriptsize (1.25)} & 64.76 {\scriptsize (1.27)} \\
+8 & 64 & 512 & 89.84 {\scriptsize (0.83)} & 88.78 {\scriptsize (0.88)} & 64.21 {\scriptsize (1.31)} & 64.84 {\scriptsize (1.31)} \\
+\midrule
+16 & 1 & 16 & 55.33 {\scriptsize (1.06)} & 60.55 {\scriptsize (1.11)} & 55.33 {\scriptsize (1.06)} & 60.55 {\scriptsize (1.11)} \\
+16 & 2 & 32 & 65.34 {\scriptsize (1.08)} & 68.39 {\scriptsize (1.10)} & 55.33 {\scriptsize (1.06)} & 60.55 {\scriptsize (1.11)} \\
+16 & 4 & 64 & 73.08 {\scriptsize (1.04)} & 74.39 {\scriptsize (1.05)} & 61.38 {\scriptsize (1.15)} & 64.67 {\scriptsize (1.17)} \\
+16 & 8 & 128 & 79.17 {\scriptsize (0.98)} & 79.34 {\scriptsize (1.00)} & 64.51 {\scriptsize (1.18)} & 66.55 {\scriptsize (1.20)} \\
+16 & 16 & 256 & 84.02 {\scriptsize (0.92)} & 83.42 {\scriptsize (0.95)} & 66.09 {\scriptsize (1.22)} & 67.42 {\scriptsize (1.23)} \\
+16 & 32 & 512 & 87.95 {\scriptsize (0.89)} & 86.58 {\scriptsize (0.94)} & 66.98 {\scriptsize (1.29)} & 67.92 {\scriptsize (1.27)} \\
+\midrule
+32 & 1 & 32 & 57.88 {\scriptsize (1.08)} & 62.47 {\scriptsize (1.10)} & 57.88 {\scriptsize (1.08)} & 62.47 {\scriptsize (1.10)} \\
+32 & 2 & 64 & 67.45 {\scriptsize (1.08)} & 70.38 {\scriptsize (1.08)} & 57.88 {\scriptsize (1.08)} & 62.47 {\scriptsize (1.10)} \\
+32 & 4 & 128 & 74.83 {\scriptsize (1.03)} & 76.49 {\scriptsize (1.03)} & 63.54 {\scriptsize (1.16)} & 66.45 {\scriptsize (1.16)} \\
+32 & 8 & 256 & 80.73 {\scriptsize (0.99)} & 81.65 {\scriptsize (0.97)} & 66.26 {\scriptsize (1.19)} & 68.31 {\scriptsize (1.20)} \\
+32 & 16 & 512 & 85.37 {\scriptsize (0.97)} & 85.90 {\scriptsize (0.96)} & 67.17 {\scriptsize (1.28)} & 69.47 {\scriptsize (1.26)} \\
+\midrule
+64 & 1 & 64 & 58.67 {\scriptsize (1.10)} & 63.74 {\scriptsize (1.12)} & 58.67 {\scriptsize (1.10)} & 63.74 {\scriptsize (1.12)} \\
+64 & 2 & 128 & 68.17 {\scriptsize (1.11)} & 71.48 {\scriptsize (1.09)} & 58.67 {\scriptsize (1.10)} & 63.74 {\scriptsize (1.12)} \\
+64 & 4 & 256 & 75.13 {\scriptsize (1.10)} & 77.34 {\scriptsize (1.06)} & 64.43 {\scriptsize (1.18)} & 67.59 {\scriptsize (1.17)} \\
+64 & 8 & 512 & 80.21 {\scriptsize (1.11)} & 81.96 {\scriptsize (1.06)} & 67.09 {\scriptsize (1.26)} & 68.84 {\scriptsize (1.24)} \\
+\bottomrule
+\end{tabular}
+\end{table}

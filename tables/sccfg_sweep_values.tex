@@ -1,0 +1,22 @@
+% !TEX root = ../main.tex
+\begin{table}[htbp]
+\caption{Numerical values for Figure~\ref{fig:sccfgsweep}. Pass@1 reports mean accuracy with across-seed SD in parentheses; individual seeds are also shown. Differences from SCCFG 2 have paired 95\% problem-bootstrap intervals. Accuracy and differences are in percentage points.}
+\label{tab:sccfgsweepvalues}
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrl@{}}
+\toprule
+Dataset / SCCFG & Seed 42 & Seed 123 & Pass@1 (SD) & Pass@2 & $\Delta$ vs.\ 2 [95\% CI] \\
+\midrule
+GSM8K / 1 & 53.37 & 53.60 & 53.49 {\scriptsize (0.16)} & 64.22 & $-5.76$ $[-7.13, -4.36]$ \\
+GSM8K / 2 & 59.36 & 59.14 & 59.25 {\scriptsize (0.16)} & 68.31 & --- \\
+GSM8K / 3 & 59.59 & 60.35 & 59.97 {\scriptsize (0.54)} & 69.52 & $+0.72$ $[-0.49, 1.93]$ \\
+GSM8K / 4 & 59.36 & 59.82 & 59.59 {\scriptsize (0.32)} & 67.85 & $+0.34$ $[-1.02, 1.74]$ \\
+\midrule
+MATH500 / 1 & 16.20 & 18.80 & 17.50 {\scriptsize (1.84)} & 26.20 & $-0.40$ $[-2.50, 1.70]$ \\
+MATH500 / 2 & 17.00 & 18.80 & 17.90 {\scriptsize (1.27)} & 26.40 & --- \\
+MATH500 / 3 & 19.40 & 20.00 & 19.70 {\scriptsize (0.42)} & 29.60 & $+1.80$ $[-0.20, 3.80]$ \\
+MATH500 / 4 & 16.40 & 16.20 & 16.30 {\scriptsize (0.14)} & 24.80 & $-1.60$ $[-3.80, 0.50]$ \\
+\bottomrule
+\end{tabular}
+\end{table}

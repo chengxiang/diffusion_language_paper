@@ -18,6 +18,30 @@ Figure~\ref{fig:elfbstages} complements the ELF-L comparison in Figure~\ref{fig:
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/appendix_elf_b_stages_sccfg2.pdf}
-\caption{GSM8K ELF-B before and after NFT. Upper panels show oracle pass@$k$; lower panels show majority-vote accuracy. Colors denote denoising NFE per sample. The same 64/32/16/8 sample cohorts and total budget of 512 denoising calls are used as in Figure~\ref{fig:headlinestages}.}
+\caption{GSM8K ELF-B before and after NFT. Upper panels show oracle pass@$k$; lower panels show majority-vote accuracy. Colors denote denoising NFE per sample. The same 64/32/16/8 sample cohorts and total budget of 512 denoising calls are used as in Figure~\ref{fig:headlinestages}. Table~\ref{tab:budgetvaluesgsmb} gives every plotted value with problem-bootstrap SDs.}
 \label{fig:elfbstages}
 \end{figure}
+
+\section{Numerical inference-allocation results}
+\label{app:budgetvalues}
+
+Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb} give every oracle and voting point in Figures~\ref{fig:headlinestages} and~\ref{fig:elfbstages}, at SCCFG 2 throughout. Each table pairs supervised and NFT checkpoints at identical denoising depths, sample counts, and ordered generation seeds. The underlying populations contain all 1,319 GSM8K or 500 MATH500 test problems. With $n$ saved draws and $c_i$ correct draws for problem $i$, the oracle estimator is
+\begin{equation}
+ \widehat{\operatorname{pass@}k}
+ =\frac{1}{N}\sum_{i=1}^{N}
+ \left[1-\frac{\binom{n-c_i}{k}}{\binom{n}{k}}\right],
+ \qquad \binom{n-c_i}{k}=0\quad\text{if }n-c_i<k.
+\end{equation}
+Thus every available draw contributes to each supported $k$, rather than selecting one arbitrary group of $k$ seeds. At $k=n$, this becomes the fraction of problems with any correct saved answer.
+
+\paragraph{Voting and answer equivalence.}
+We average voting accuracy over uniformly selected $k$-subsets of the same draws. Numerical normalization groups GSM8K answers; the pinned mutual Math-Verify comparison groups MATH500 answers. Invalid extractions abstain, and an all-invalid subset fails. Ties among the largest answer groups are resolved uniformly, with a uniformly selected representative within the chosen group; the reported accuracy averages over these choices. Gold correctness labels score the selected representative but do not determine the selection. Equivalence partitions permit exact hypergeometric subset averaging. For nontransitive MATH comparisons, we recluster within each subset, enumerating up to 65,536 subsets and otherwise using a fixed 16,384-subset approximation. At $k=1$, voting and oracle accuracy coincide; with two valid answers, uniform tie-breaking also prevents a systematic voting advantage over a single draw.
+
+\paragraph{Standard deviations and paired uncertainty.}
+Parentheses in these tables report the standard deviation of the benchmark mean across 4,000 problem-bootstrap replicates, using bootstrap seed 20260918. Each replicate resamples whole problems with replacement while preserving their complete draw sets. These are bootstrap standard errors conditional on the checkpoints and saved generations, not the across-generation-seed SDs in Table~\ref{tab:headlineseedsd}. In particular, the largest-$k$ point uses the entire draw pool and does not provide repeated independent $k$-sample groups from which to estimate a seed-group SD. The bootstrap does not add training-run variability or uncertainty from the fixed voting-subset approximation. All values are rounded independently from full precision.
+
+For pre/post comparisons, we resample the same problem indices in both stages and form the difference within each replicate. The pointwise 95\% percentile intervals reported in Section~\ref{sec:nftresults} therefore use paired differences. At eight steps and 64 samples, the NFT-minus-supervised oracle differences are $-1.06$ points on GSM8K ELF-L ($[-2.35,0.23]$) and $-0.60$ on MATH500 ($[-3.80,2.60]$). Both intervals include zero. At 64 steps and eight samples, voting improves by $1.75$ points on GSM8K ELF-L ($[0.22,3.29]$) and $6.07$ on MATH500 ($[3.04,8.98]$). These intervals are conditional on the evaluated checkpoints and draws and are not adjusted for multiple comparisons.
+
+\input{tables/budget_values_gsm_l}
+\input{tables/budget_values_math_l}
+\input{tables/budget_values_gsm_b}

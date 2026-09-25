@@ -1,21 +1,22 @@
 % !TEX root = ../main.tex
-\begin{table}[t]
-\caption{MATH500 pass@1 sensitivity to SCCFG at the same checkpoints and matched generation seeds. Accuracy is in percent; differences are SCCFG 3 minus 2 in percentage points, with pointwise paired 95\% problem-bootstrap intervals. Each step count uses the full available draw cohort.}
+\begin{table}[htbp]
+\caption{MATH500 pass@1 sensitivity to SCCFG at matched checkpoints and generation seeds. Entries are mean accuracy percentages with across-seed SDs in parentheses. Differences are SCCFG 3 minus 2 in percentage points, with paired 95\% problem-bootstrap intervals. Each NFE uses the complete draw cohort.}
 \label{tab:mathsccfg3}
 \centering\small
-\begin{tabular}{lrrrrl}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lrrrrl@{}}
 \toprule
-Checkpoint & Steps & Draws & SCCFG 2 & SCCFG 3 & Difference [95\% CI] \\
+Checkpoint & NFE & Draws & SCCFG 2 (SD) & SCCFG 3 (SD) & Difference [95\% CI] \\
 \midrule
-Pre-NFT & 8 & 64 & 13.88 & 15.23 & $+1.34$ $[0.97, 1.73]$ \\
-Pre-NFT & 16 & 32 & 16.39 & 17.93 & $+1.53$ $[1.07, 2.01]$ \\
-Pre-NFT & 32 & 16 & 17.89 & 19.65 & $+1.76$ $[0.99, 2.56]$ \\
-Pre-NFT & 64 & 8 & 18.85 & 21.18 & $+2.33$ $[1.27, 3.43]$ \\
+Pre-NFT & 8 & 64 & 13.88 {\scriptsize (1.19)} & 15.23 {\scriptsize (1.16)} & $+1.34$ $[0.97, 1.73]$ \\
+Pre-NFT & 16 & 32 & 16.39 {\scriptsize (1.20)} & 17.93 {\scriptsize (1.30)} & $+1.53$ $[1.07, 2.01]$ \\
+Pre-NFT & 32 & 16 & 17.89 {\scriptsize (1.31)} & 19.65 {\scriptsize (1.37)} & $+1.76$ $[0.99, 2.56]$ \\
+Pre-NFT & 64 & 8 & 18.85 {\scriptsize (1.38)} & 21.18 {\scriptsize (0.70)} & $+2.33$ $[1.27, 3.43]$ \\
 \midrule
-NFT 600 & 8 & 64 & 16.31 & 17.45 & $+1.14$ $[0.76, 1.53]$ \\
-NFT 600 & 16 & 32 & 20.09 & 20.93 & $+0.84$ $[0.31, 1.39]$ \\
-NFT 600 & 32 & 16 & 22.08 & 22.60 & $+0.53$ $[-0.19, 1.29]$ \\
-NFT 600 & 64 & 8 & 23.60 & 24.68 & $+1.08$ $[0.00, 2.20]$ \\
+NFT 600 & 8 & 64 & 16.31 {\scriptsize (1.36)} & 17.45 {\scriptsize (1.33)} & $+1.14$ $[0.76, 1.53]$ \\
+NFT 600 & 16 & 32 & 20.09 {\scriptsize (1.23)} & 20.93 {\scriptsize (1.26)} & $+0.84$ $[0.31, 1.39]$ \\
+NFT 600 & 32 & 16 & 22.08 {\scriptsize (1.41)} & 22.60 {\scriptsize (1.58)} & $+0.53$ $[-0.19, 1.29]$ \\
+NFT 600 & 64 & 8 & 23.60 {\scriptsize (1.79)} & 24.68 {\scriptsize (1.27)} & $+1.08$ $[0.00, 2.20]$ \\
 \bottomrule
 \end{tabular}
 \end{table}
