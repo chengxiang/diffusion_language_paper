@@ -481,9 +481,7 @@ The benefit is less uniform when success is measured by high-$k$ oracle coverage
 
 Voting makes the benefit more visible than high-$k$ oracle coverage, although the size of the gain depends on the allocation. For MATH500 at 64 steps and eight samples, NFT raises vote accuracy from 26.34\% to 32.42\% ($+6.07$ points, paired 95\% interval $[3.04,8.98]$). At eight steps and 64 samples, voting rises from 24.09\% to 25.79\% despite the nearly unchanged oracle coverage, but the smaller gain has interval $[-0.45,3.85]$. These patterns are consistent with improved concentration on correct answers. Voting depends on the correct answer's frequency relative to competing answer groups, whereas oracle selection needs only one successful draw. For independent samples with problem-specific success probability $p_i$, oracle success is $1-(1-p_i)^k$: at large $k$, gains saturate on problems already solved frequently. Thus increased correctness probability, its distribution across problems, and the distribution of competing answers can affect the two metrics differently. The curves motivate this interpretation but do not by themselves establish a loss of reasoning diversity after NFT. Appendix~\ref{app:budgetvalues} gives the full numerical comparisons and uncertainty.
 
-\subsection{Generated solutions}
-\input{tables/headline_examples}
-Figure~\ref{fig:headlineexamples} presents one correct GSM8K generation and one correct MATH500 generation from the post-NFT ELF-L models. The solutions combine intermediate calculations into a final answer: successive multiplicative changes in the GSM8K example, and substitution followed by rational arithmetic in the MATH500 example. Both are drawn from saved benchmark generations and retain the original model text.
+Appendix~\ref{app:generations} illustrates the generated reasoning with correct GSM8K and MATH500 solutions.
 % END inlined sections/headline_results.tex
 
 \clearpage
@@ -492,6 +490,13 @@ Figure~\ref{fig:headlineexamples} presents one correct GSM8K generation and one 
 
 \clearpage
 \appendix
+\section{Generated solutions}
+\label{app:generations}
+
+Figure~\ref{fig:headlineexamples} presents one correct GSM8K generation and one correct MATH500 generation from the post-NFT ELF-L models. The solutions combine intermediate calculations into a final answer: successive multiplicative changes in the GSM8K example, and substitution followed by rational arithmetic in the MATH500 example. Both are drawn from saved benchmark generations and retain the original model text.
+
+\input{tables/headline_examples}
+
 \section{Evaluation details and reporting conventions}
 \label{app:experimentdetails}
 
