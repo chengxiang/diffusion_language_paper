@@ -53,7 +53,26 @@ An \emph{embedding} is a token-local linear map: for a vocabulary table $B_\psi$
 
 ELF obtains its conditional representations from a frozen T5 encoder \citep{elf}, and REPA+REG retains a frozen Qwen3-0.6B-Base encoder for inference-time prompts \citep{scalingdlm}. This provides informative conditioning but preserves a dependency on an external contextual encoder, whose representation is fixed rather than adapted to the denoiser. We replace the teacher Transformer with a compact, trainable prompt encoder while retaining the frozen Qwen token embedding table. The student has six bidirectional Transformer blocks and outputs the same 1,024-dimensional interface as the teacher features. Once trained, it encodes the question once per response; no Qwen Transformer layers are executed at inference.
 
-Our curriculum separates establishing the conditional generator from learning its conditioning interface:
+\paragraph{The question as the condition.}
+We view the prompt encoder as an internal component of a model conditioned on question tokens. Writing its composition with the denoiser as
+\begin{equation}
+ V_{\theta,\phi}(z,t,q,s)=v_\theta\bigl(z,t,P_\phi(q),s\bigr),
+ \label{eq:tokenconditionalfield}
+\end{equation}
+the observed condition $q$ remains fixed while both $\theta$ and $\phi$ can be optimized. The answer representation and forward corruption also remain fixed. This viewpoint allows the conditioning interface to adapt to the generative task after imitation. The following regression identity characterizes the information that the interface must preserve.
+
+\begin{lemma}[Conditional information for denoising]
+\label{lem:conditionalrepresentation}
+Let $Q$ be the question, $W=(Z_t,t)$ the noisy answer and time, and $U$ a square-integrable forward-regression target. Fix a deterministic encoder $C_\phi=P_\phi(Q)$ and the joint law of $(Q,W,U)$. Define $m_Q=\E[U\mid W,Q]$ and $m_\phi=\E[U\mid W,C_\phi]$. Let $\mathcal R_Q^\star$ and $\mathcal R_\phi^\star$ be the minimum squared regression risks among all measurable predictors given $(W,Q)$ and $(W,C_\phi)$, respectively. Then
+\begin{equation}
+ \mathcal R_\phi^\star-\mathcal R_Q^\star
+ =\E\|m_Q-m_\phi\|_2^2.
+ \label{eq:conditioningrisk}
+\end{equation}
+In particular, the encoding attains the full-question optimum exactly when it preserves the posterior mean target almost surely.
+\end{lemma}
+
+The proof is given in Appendix~\ref{app:conditioninglemma}. Applied to the target in Eq.~\eqref{eq:methodvelocity}, the lemma makes posterior prediction the criterion for a sufficient conditional representation. Exact agreement with the teacher's latent coordinates is unnecessary: a jointly adapted denoiser can interpret a different encoding with the same relevant information. The identity permits noise-dependent encoding error but makes no assumption that higher noise is more forgiving. It describes the population regression objective; the effectiveness of learning this interface with finite models depends on optimization. Our curriculum therefore separates establishing the conditional generator from learning its conditioning interface:
 \begin{enumerate}
  \item \textbf{Train ELF under frozen Qwen conditioning.}
  For the first 12 ELF epochs, use the projected question-only teacher states $c_{\mathrm T}(q)$ and optimize the flow/decoder objective. The teacher and representation projectors remain frozen, giving the denoiser a stable, informative condition throughout its initial training.

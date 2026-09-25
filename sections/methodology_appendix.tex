@@ -38,6 +38,28 @@ The frozen Qwen token table maps vocabulary IDs to 2,560-dimensional vectors. Th
 \paragraph{Training-curve cohorts.}
 Figure~\ref{fig:promptcurriculum} uses the same two-seed pre-NFT evaluations as the original training-curve campaign: epochs 4, 8, 12 before prompt substitution; epoch 12 immediately after substitution; and epochs 16/18 for ELF-B or 16/20/21 for ELF-L. All 20 plotted points retain their saved predictions, canonical scores, and 4,000-replicate problem-bootstrap intervals. Both epoch-12 conditions share identical ELF weights. These curves use 32 steps and SCCFG 2, whereas the headline results use 64 steps and SCCFG 3 for MATH500. The joint-from-start comparison in Figure~\ref{fig:representationcomparison} instead uses the common $t=\tau^2$ clock and ELF EMA $0.999$ for its six-epoch controls; its four-seed endpoint means are not points on the curriculum curves.
 
+\subsection{Conditional representation: proof and scope}
+\label{app:conditioninglemma}
+
+\begin{proof}[Proof of Lemma~\ref{lem:conditionalrepresentation}]
+Because $C_\phi$ is a deterministic function of $Q$, the information in $(W,C_\phi)$ is contained in that of $(W,Q)$. The tower property gives $m_\phi=\E[m_Q\mid W,C_\phi]$. For any square-integrable predictor $f(W,C_\phi)$, conditional-expectation orthogonality yields
+\begin{equation}
+\begin{split}
+ \E\|U-f(W,C_\phi)\|_2^2
+ ={}&\E\|U-m_Q\|_2^2+\E\|m_Q-m_\phi\|_2^2\\
+ &+\E\|m_\phi-f(W,C_\phi)\|_2^2.
+\end{split}
+\label{eq:conditioningdecomposition}
+\end{equation}
+The first term is $\mathcal R_Q^\star$. Minimizing over $f$ removes the final term and gives Eq.~\eqref{eq:conditioningrisk}. Equality of the two optimal risks is equivalent to $m_Q=m_\phi$ almost surely.
+\end{proof}
+
+\paragraph{Posterior sufficiency and teacher imitation.}
+For $U=(X-Z_t)/\Delta_t$, the posterior mean is $(\E[X\mid Z_t,t,Q]-Z_t)/\Delta_t$. Thus preserving the posterior mean clean endpoint suffices for this regression target, including where the deterministic denominator clamp is active. Equality of the conditional distributions of $X$ given $Q$ and $P_\phi(Q)$ is a sufficient condition. The criterion is independent of the coordinate system used by the teacher: an invertible change of encoding coordinates preserves the available information and can be compensated by the denoiser. The finite network class may limit that compensation. Prompt MSE supplies a useful initialization for the existing denoiser, while subsequent training can adapt the interface through the downstream objective.
+
+\paragraph{Noise, masks, and optimization.}
+Conditioning Eq.~\eqref{eq:conditioningdecomposition} on time defines an excess risk $\Delta_\phi(t)=\E[\|m_Q-m_\phi\|_2^2\mid t]$. The identity imposes no monotonicity on $\Delta_\phi(t)$. For a token-weighted objective, the same argument applies under the induced probability measure over scored positions, including the position index among the observed variables; all conditional expectations must use that same measure. The lemma assumes that the answer targets and corruption law do not depend on the encoder parameters, as in our joint stage. It justifies the conditional-model parameterization and characterizes its information requirement. It does not assert that joint training from initialization reaches the optimum, or identify a learned SCCFG sampling field with the unguided posterior field.
+
 \section{Inference clocks and reconstruction diagnostics}
 \label{app:inferenceclocks}
 
