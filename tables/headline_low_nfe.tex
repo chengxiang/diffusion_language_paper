@@ -1,6 +1,6 @@
 % !TEX root = ../main.tex
 \begin{table}[t]
-\caption{Reasoning at lower denoising NFE, mean pass@1 (\%). Bold/underline indicate first/second place within each benchmark and backbone-scale block. A leading $^{*}$ marks a result with one fewer denoising call than the column heading: REPA+REG includes terminal decoding in its reported NFE. FMLM+ values are from its Table~8; REPA+REG values are from its Tables~11 and~15 and use early stopping \citep{posterior,scalingdlm}.}
+\caption{Reasoning at lower denoising NFE, mean pass@1 (\%). Bold/underline indicate first/second place within each benchmark and backbone-scale block. A leading $^{*}$ marks a result with one fewer denoising call than the column heading: ELF-REG includes terminal decoding in its reported NFE. FMLM+ values are from its Table~8; ELF-REG values are from its Tables~13 and~17 and use early stopping \citep{posterior,scalingdlm}.}
 \label{tab:headlinelownfe}
 \centering\small
 \setlength{\tabcolsep}{7pt}
@@ -10,21 +10,21 @@ Method & 8 NFE & 16 NFE & 32 NFE & 64 NFE\\
 \midrule
 \multicolumn{5}{@{}l}{\textit{GSM8K: approximately 100M denoising backbone}}\\
 FMLM+ Init & 15.10 & 26.10 & 31.80 & 33.60\\
-REPA+REG-B & $^{*}$26.20 & $^{*}$34.42 & $^{*}$37.15 & $^{*}$38.11\\
+ELF-REG-B & $^{*}$26.20 & $^{*}$34.42 & $^{*}$37.15 & $^{*}$38.11\\
 ELF-B, pre-NFT (ours) & \underline{26.40} & \underline{34.48} & \underline{37.80} & \underline{39.17}\\
 ELF-B, post-NFT (ours) & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.16}\\
 \midrule
 \multicolumn{5}{@{}l}{\textit{GSM8K: approximately 650M denoising backbone}}\\
-REPA+REG-L & $^{*}$47.34 & $^{*}$52.89 & $^{*}$55.04 & $^{*}$55.96\\
+ELF-REG-L & $^{*}$47.34 & $^{*}$52.89 & $^{*}$55.04 & $^{*}$55.96\\
 ELF-L, pre-NFT (ours) & \underline{49.41} & \underline{55.33} & \underline{57.88} & \underline{58.67}\\
 ELF-L, post-NFT (ours) & \textbf{54.84} & \textbf{60.55} & \textbf{62.47} & \textbf{63.74}\\
 \midrule
 \multicolumn{5}{@{}l}{\textit{MATH500: approximately 650M denoising backbone}}\\
-REPA+REG-L & $^{*}$9.76 & $^{*}$11.53 & $^{*}$12.40 & $^{*}$13.31\\
+ELF-REG-L & $^{*}$9.76 & $^{*}$11.53 & $^{*}$12.40 & $^{*}$13.31\\
 ELF-L, pre-NFT (ours) & \underline{15.23} & \underline{17.93} & \underline{19.65} & \underline{21.18}\\
 ELF-L, post-NFT (ours) & \textbf{17.45} & \textbf{20.93} & \textbf{22.60} & \textbf{24.68}\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
-\parbox{\linewidth}{\footnotesize Our checkpoints are fixed across columns, using SCCFG 2 for GSM8K and SCCFG 3 for MATH500. Means use 64, 32, 16, and 8 sampling seeds from left to right; Appendix~\ref{app:seedvariability} reports their standard deviations. FMLM+ grades Python solutions; REPA+REG and our models produce natural-language reasoning.}
+\parbox{\linewidth}{\footnotesize Our checkpoints are fixed across columns, using SCCFG 2 for GSM8K and SCCFG 3 for MATH500. Means use 64, 32, 16, and 8 sampling seeds from left to right; Appendix~\ref{app:seedvariability} reports their standard deviations. FMLM+ grades Python solutions; ELF-REG and our models produce natural-language reasoning.}
 \end{table}
