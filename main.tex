@@ -151,24 +151,14 @@ At inference, encode the prompt once and keep it clean through $S$ Euler steps w
 \subsection{Learning the denoising representation}
 \label{sec:representation}
 
-The denoising representation must support both generation and recovery of answer tokens. We extract \textbf{teacher-forced hidden activations of Qwen3-4B-Instruct-2507} \citep{qwen2507} in one forward pass over the question and reference solution. Although these features are causal, our bidirectional denoiser generates the complete answer representation jointly. Section~\ref{sec:representationconstruction} describes the learned representation; Section~\ref{sec:representationablations} examines layer selection and projection learning (Figure~\ref{fig:representationcomparison}).
+The denoising representation must support both generation and recovery of answer tokens. We extract \textbf{teacher-forced Qwen3-4B-Instruct-2507 activations} \citep{qwen2507} in one forward pass; although these features are causal, our bidirectional denoiser generates the complete answer representation jointly.
 
-\subsubsection{Learning compact, teacher-predictive representations}
+\paragraph{Latent construction.}
 \label{sec:representationconstruction}
+Let $h_j^{(\ell)}$ be the frozen teacher's post-block activation at answer position $j$. We concatenate centered linear projections as $z_{\mathrm{clean},j}=\big[(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}\big]_{\ell\in\mathcal S}$ for $\mathcal S=\{16,24,32\}$, with block widths $(d_{16},d_{24},d_{32})=(256,256,512)$ and fixed layer means $\mu_\ell$. The same maps initially encode prompt states; the answer representation stays fixed during flow training and NFT.
 
-\paragraph{Teacher features and latent construction.}
-
-Let $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$ denote the frozen teacher's post-block residual at answer position $j$, with $d_{\mathrm{teacher}}=2560$. For $\mathcal S=\{16,24,32\}$, we learn linear encoders $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$, giving $z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}$, and concatenate their outputs as $z_{\mathrm{clean},j}=\big[z_{\mathrm{clean},j}^{(\ell)}\big]_{\ell\in\mathcal S}$.
-
-Here brackets concatenate layers in ascending order, $(d_{16},d_{24},d_{32})=(256,256,512)$, and $\mu_\ell$ is the training assistant-token mean. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask. The learned answer representation remains fixed during flow training and NFT.
-
-\paragraph{Learning through the teacher's predictions.}
-We learn each encoder with a linear reconstruction decoder $W_\ell^{\mathrm{rec}}\in\R^{d_\ell\times d_{\mathrm{teacher}}}$, giving $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}$ (Figure~\ref{fig:pipelineoverview}, left). Replacing layer-$\ell$ answer activations by these reconstructions and running the frozen Qwen suffix yields $p_{\ell,j}^{\mathrm{recon}}$. We match the unmodified teacher distribution $p_j^{\mathrm{teacher}}$ using $\mathcal L_{\mathrm{repr}}=\sum_{\ell\in\mathcal S}\E_{q,a,j}\,\CE(p_j^{\mathrm{teacher}},p_{\ell,j}^{\mathrm{recon}})$, where $\CE$ is full-vocabulary soft cross-entropy. These distributions predict the next token, whereas LFRM's token decoder predicts the same-position token.
-
-Each layer is intervened on independently. The teacher target is detached; gradients through the frozen suffix train only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$. The reconstruction decoders and Qwen suffixes are used only to learn the representation. We initialize from PCA and maintain whitened latents within each layer group; Appendix~\ref{app:representationimplementation} gives the parameterization and scoring details.
-
-\subsubsection{Which representation should be denoised?}
-\label{sec:representationablations}
+\paragraph{Learning the projectors.}
+Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}$ (Figure~\ref{fig:pipelineoverview}, left). Replacing layer-$\ell$ answer activations with these reconstructions and running the frozen Qwen suffix yields next-token predictions $p_{\ell,j}^{\mathrm{recon}}$. We preserve the teacher's predictions through $\mathcal L_{\mathrm{repr}}=\sum_{\ell\in\mathcal S}\E_{q,a,j}\,\CE(p_j^{\mathrm{teacher}},p_{\ell,j}^{\mathrm{recon}})$, where $\CE$ is full-vocabulary soft cross-entropy. Only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$ are learned; the reconstruction decoders are used only at this stage. Appendix~\ref{app:representationimplementation} gives initialization, whitening, and scoring details.
 
 % BEGIN inlined figures/representation_comparison.tex
 \begin{wrapfigure}{R}{.44\textwidth}
@@ -183,16 +173,20 @@ Each layer is intervened on independently. The teacher target is detached; gradi
 
 The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch LFRM-B training and evaluation settings; Table~\ref{tab:representationcurvevalues} gives the four-seed endpoint results used below.
 
-\paragraph{Good decoding does not ensure good generation.}
+\paragraph{Decoding versus generation.}
+\label{sec:representationablations}
 Layer-32 activations support \textbf{99.37\%} token-reconstruction accuracy (Appendix~\ref{app:representationdiagnostics}), yet a diffusion model using only their PCA projection achieves \textbf{11.20\%} GSM8K accuracy (Figure~\ref{fig:representationcomparison}). This motivates evaluating representations for generation beyond their clean-token decodability.
 
-\paragraph{Combining representations across depth.}
+\paragraph{Layer selection.}
 We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationdiagnostics} gives the plot and detailed motivation. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy from \textbf{11.20\% to 28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
 
-\paragraph{Learning the projection subspace.}
+\paragraph{Learned versus PCA.}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
-% End the completed representation wrap before the next subsection.
+% Reserve the remaining figure height before the full-width subsection.
 \par
+\ifnum\value{WF@wrappedlines}>1
+  \vspace{\dimexpr\value{WF@wrappedlines}\baselineskip\relax}
+\fi
 \WFclear
 % END inlined sections/representation.tex
 
@@ -578,6 +572,9 @@ Parameter counts include frozen components. Our inherited Qwen vocabulary input/
 \section{Representation construction details}
 \label{app:representationimplementation}
 
+\paragraph{Feature geometry.}
+The frozen teacher's post-block residual is $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$, with $d_{\mathrm{teacher}}=2560$. Each encoder $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$ produces $z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}$, and its reconstruction decoder has shape $W_\ell^{\mathrm{rec}}\in\R^{d_\ell\times d_{\mathrm{teacher}}}$. Brackets in Section~\ref{sec:representation} concatenate layer blocks in ascending order. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask.
+
 \paragraph{Whitening and initialization.}
 The linear encoder and reconstruction decoder admit changes of latent scale that leave reconstruction unchanged. We fix this freedom before applying isotropic diffusion noise. For each selected layer, estimate the mean $\mu_\ell$ and covariance $\Sigma_\ell$ over training assistant-content tokens. Write $\Sigma_\ell=U_\ell\Lambda_\ell U_\ell^\top$, with eigenvalues in descending order, and define
 \[
@@ -611,7 +608,7 @@ The three reconstruction branches run frozen Qwen blocks 17--36, 25--36, and 33-
  \log p_{\ell,j}^{\mathrm{recon}}(w)\right].
  \label{eq:representationloss}
 \end{equation}
-Both distributions predict $a_{j+1}$ from the state at $a_j$. The clean teacher distribution is detached. Teacher-to-reconstruction KL differs from this objective only by the fixed teacher entropy. These reconstruction decoders are separate from LFRM's token decoder.
+Each layer is intervened on independently. Both distributions predict $a_{j+1}$ from the state at $a_j$, whereas LFRM's token decoder predicts the same-position token. The clean teacher distribution is detached; gradients through the frozen suffix train only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$. Teacher-to-reconstruction KL differs from this objective only by the fixed teacher entropy. These reconstruction decoders are separate from LFRM's token decoder and, together with the Qwen suffixes, are used only to learn the representation.
 
 \section{Representation diagnostics}
 \label{app:representationdiagnostics}
