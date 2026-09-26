@@ -84,7 +84,7 @@ Reward-based post-training has also been explored for diffusion reasoning \citep
 \label{sec:preliminaries}
 
 \paragraph{Tokens, encodings, and latents.}
-Let $q=(q_1,\ldots,q_{L_q})$ be the formatted prompt and $a=(a_1,\ldots,a_{L_a})$ its answer, including the terminal token, with tokens in vocabulary $\mathcal V$. The padded sequence $y=(q,a,\mathrm{padding})$ has capacity $L$; $i$ indexes its positions and $j$ denotes an answer-relative position, so $y_{L_q+j}=a_j$. An answer encoder produces clean latents $z_{\mathrm{clean}}=\mathcal E(q,a)\in\R^{L_a\times d}$. Individual token vectors are rows; sequences stack these rows. Capital letters in probabilistic statements denote the corresponding random variables. A prompt encoder gives $c_\phi(q)=P_\phi(q)\in\R^{L_q\times d}$ without answer access. Unlike a lookup $e_i^{\mathrm{tok}}=B_\psi[q_i]$, it combines information across prompt positions. Here $\psi$ denotes frozen teacher parameters, $\phi$ the learned prompt encoder, and $\theta$ the shared denoising/decoding network; $\Theta=(\theta,\phi)$ denotes the complete conditional model. The token decoder $p_{\theta,i}^{\mathrm{tok}}(w\mid z,c)$ predicts vocabulary token $w$ at the same canvas position $i$ in parallel. We reserve $\ell$ for a teacher layer, $d_\ell$ for its latent width, and $d$ for the concatenated width.
+Let $q=(q_1,\ldots,q_{L_q})$ and $a=(a_1,\ldots,a_{L_a})$ be prompt and answer tokens in vocabulary $\mathcal V$, with the answer including its terminal token. Their padded canvas $y=(q,a,\mathrm{padding})$ has length $L$; canvas index $i$ and answer index $j$ satisfy $y_{L_q+j}=a_j$. An answer encoder gives $z_{\mathrm{clean}}=\mathcal E(q,a)\in\R^{L_a\times d}$, and a prompt-only encoder gives $c_\phi(q)=P_\phi(q)\in\R^{L_q\times d}$; rows are token vectors. Unlike the teacher's tokenwise lookup $B_\psi[q_i]$, $P_\phi$ uses prompt context. Parameters $\psi$ are frozen teacher weights, $\phi$ the prompt encoder, and $\theta$ the shared denoising/decoding network, with $\Theta=(\theta,\phi)$. Teacher layer $\ell$ contributes width $d_\ell$ to total latent width $d$. Uppercase letters denote random variables.
 
 \paragraph{Flow matching.}
 Flow matching learns a velocity field transporting noise to data \citep{flowmatching}. Our linear Gaussian path runs from noise at $t=0$ to clean answer latents at $t=1$:
@@ -94,13 +94,13 @@ Flow matching learns a velocity field transporting noise to data \citep{flowmatc
  u_t:=\frac{\mathrm d z_t}{\mathrm d t}=z_{\mathrm{clean}}-\sigma\epsilon.
  \label{eq:methodinterpolant}
 \end{equation}
-Here $t$ is interpolation time, $\sigma>0$ the noise scale, and $u_t$ the sample-level velocity target. Sampling paired $(q,a)$, independent noise, and $t\sim\pi(t)$ gives the basic conditional objective
+For noise scale $\sigma>0$, interpolation time $t\sim\pi(t)$, and independent Gaussian noise, the basic conditional objective is
 \begin{equation}
  \mathcal L_{\mathrm{FM}}^{\mathrm{basic}}(\Theta)
  =\E\!\left[\left\|v_\theta\bigl(z_t,t;c_\phi(q)\bigr)-u_t\right\|_F^2\right].
  \label{eq:basicflowloss}
 \end{equation}
-The Frobenius norm sums over answer positions and latent coordinates, and $\pi$ is the training-time sampling density. A semicolon separates the condition from state and time; dropping the condition recovers unconditional flow matching. The prompt remains clean. Section~\ref{sec:methodflow} gives masking, normalization, and the inherited ELF modifications.
+The expectation samples training pairs $(q,a)$, time, and noise; the Frobenius norm sums over answer positions and latent coordinates. A semicolon separates the clean prompt condition from state and time.
 
 \paragraph{Text and encoded conditioning.}
 The external condition is the text $q$, while $c_\phi(q)$ is the model's internal encoding. Define the complete field by $v_\Theta(z,t;q):=v_\theta(z,t;c_\phi(q))$. Write $p_t(z\mid q)$ for the forward-path density and $s^\star(z,t\mid q)=\nabla_z\log p_t(z\mid q)$ for its exact conditional score. For $0<t<1$, the population-optimal velocity is
@@ -110,7 +110,7 @@ The external condition is the text $q$, while $c_\phi(q)$ is the model's interna
  =\frac{z+\sigma^2(1-t)s^\star(z,t\mid q)}{t}.
  \label{eq:conditionalflowscore}
 \end{equation}
-Thus $u_t$ is a training sample's target, $v_\theta$ is a learned field, and $\star$ marks ideal or optimal quantities. Conditioning only on an encoding $c$ gives the posterior given $c$, which can merge prompts with different answer distributions. The encoding must therefore preserve information needed for denoising, rather than particular teacher coordinates (Section~\ref{sec:conditionalencoding}).
+Here $\star$ denotes a population optimum. Conditioning on $c_\phi(q)$ may merge distinct prompts; Section~\ref{sec:conditionalencoding} characterizes when the encoding preserves the text-conditional score.
 
 \paragraph{Sampling under a different clock.}
 Let $\tau\in[0,1]$ be the solver clock and $t=f(\tau)$ an increasing differentiable map with $f(0)=0$ and $f(1)=1$. The sampled trajectory $\bar z_\tau$ obeys
@@ -120,19 +120,14 @@ Let $\tau\in[0,1]$ be the solver clock and $t=f(\tau)$ an increasing differentia
  \qquad \bar z_0\sim\mathcal N(0,\sigma^2I).
  \label{eq:sharedclock}
 \end{equation}
-For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration gives the same endpoint under either clock, but finite-step accuracy can change. With $S$ denoising calls, Euler evaluates at $\tau_r$, $r=0,\ldots,S-1$, and advances to $\tau_S=1$; $z_r:=\bar z_{\tau_r}$ denotes a discrete sampled state. We reserve $k$ for the number of attempts in pass@$k$, giving total denoising cost $kS$. Changing the inference clock leaves the training density $\pi$ unchanged. Section~\ref{sec:clocks} extends this construction to separate group clocks.
-
-\paragraph{Our fixed-canvas setup.}
-Figure~\ref{fig:pipelineoverview} summarizes the pipeline. We use $L=1024$ total prompt/answer/padding positions and latent width $d=1024$, with $L_q+L_a\le L$. Define $M_i=1$ on $L_q<i\le L_q+L_a$ and zero elsewhere. In full-canvas losses, answer latents and velocities are placed at $i=L_q+j$; prompt and padding entries do not contribute. The index $b$ denotes a training example. Flow training uses $\sigma=2$ and one time per example, restoring clean prompt states. LFRM alternates flow regression and same-position token CE with probabilities $0.8/0.2$, scoring valid answer positions including the terminal token (Section~\ref{sec:methodflow}). At inference, all $L-L_q$ available answer positions are denoised jointly and decoded in one terminal call; the first terminal token determines the returned length. Denoising NFE excludes this decoding call. The ideal unguided field above supplies the background for practical self-conditioning, guidance, and endpoint stabilization.
+For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration preserves the endpoint, while finite-step accuracy can change. We write $z_r=\bar z_{\tau_r}$ for solver states and $S$ for denoising calls; $k$ attempts cost $kS$ calls. Changing the inference clock leaves the training density $\pi$ unchanged. Section~\ref{sec:clocks} extends this construction to separate group clocks.
 
 % BEGIN continuous diffusion framework and design choices
 \section{Continuous Diffusion Reasoning}
 \label{sec:methodology}
 \label{sec:methodflow}
 
-We first describe the complete conditional generator for a general text representation. Let $\mathcal E$ map a prompt and answer to token-aligned continuous latents $z_{\mathrm{clean}}=\mathcal E(q,a)$, and let $c=c(q)$ encode the prompt alone. The map $\mathcal E$ may use context throughout $(q,a)$ and is held fixed while the flow model is trained. Its construction is left unspecified here: the model learns to generate these latents and decode them back to answer tokens. The denoising and token-decoding objectives closely follow ELF~\citep{elf}.
-
-Figure~\ref{fig:pipelineoverview} summarizes our instantiation. Section~\ref{sec:representation} constructs and learns $\mathcal E$; Section~\ref{sec:conditionalencoding} develops the prompt encoding $c(q)$; Section~\ref{sec:clocks} uses the representation's decomposition to adapt the inference clocks.
+For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding $c=c(q)$, LFRM follows ELF's denoising and token-decoding formulation~\citep{elf}. We use canvas length $L=1024$, latent width $d=1024$, and noise scale $\sigma=2$. Figure~\ref{fig:pipelineoverview} summarizes our pipeline: Section~\ref{sec:representation} learns $\mathcal E$, Section~\ref{sec:conditionalencoding} develops $c(q)$, and Section~\ref{sec:clocks} uses the representation's structure to adapt inference clocks.
 
 % BEGIN inlined figures/pipeline_overview_v1.tex
 \begin{figure}[t]
@@ -147,43 +142,29 @@ Figure~\ref{fig:pipelineoverview} summarizes our instantiation. Section~\ref{sec
 % END inlined figures/pipeline_overview_v1.tex
 
 \paragraph{Continuous denoising.}
-We apply Eq.~\eqref{eq:methodinterpolant} to $z_{\mathrm{clean}}=\mathcal E(q,a)$, using $\sigma=2$. One time is drawn per training example and shared across all answer positions and latent coordinates. A bidirectional Transformer jointly processes the clean prompt and noisy answer.
-
-Following ELF, the network $F_\theta$ predicts a clean endpoint from the noisy state, time, prompt encoding $c$, self-conditioning input $\widehat z_{\mathrm{sc}}$, and SCCFG scale $g$:
-\begin{equation}
- \widehat z_{\mathrm{clean}}=F_\theta(z_t,t;c,\widehat z_{\mathrm{sc}},g),
- \qquad \Delta_t=\max(1-t,0.05),
- \label{eq:methodendpoint}
-\end{equation}
+A bidirectional Transformer jointly processes the clean prompt and noisy answer, with one shared time $t$ per training example. Following ELF, it predicts the endpoint $\widehat z_{\mathrm{clean}}=F_\theta(z_t,t;c,\widehat z_{\mathrm{sc}},g)$, where $\widehat z_{\mathrm{sc}}$ is a self-conditioning prediction and $g$ the guidance scale. Prediction and target are converted to velocities as
 \begin{equation}
  v_\theta=\frac{\widehat z_{\mathrm{clean}}-z_t}{\Delta_t},
  \qquad u_t^{\mathrm{stab}}=\frac{z_{\mathrm{clean}}-z_t}{\Delta_t}.
  \label{eq:methodvelocity}
 \end{equation}
-We suppress fixed network inputs below. The stabilized sample target $u_t^{\mathrm{stab}}$ equals the exact path target $u_t$ outside the clamp. For examples $b$, token positions $i$, and masks $M_{bi}$, the normalized flow loss is
-\begin{equation}
- \mathcal L_{\mathrm{FM}}=
- \E\!\left[\frac{\sum_{bi} M_{bi}\|v_{\theta,bi}-u_{bi}^{\mathrm{stab}}\|_2^2}
- {d\sum_{bi} M_{bi}}\right].
- \label{eq:methodflowloss}
-\end{equation}
-Here $u_{bi}^{\mathrm{stab}}$ is the target at example $b$'s sampled time $t_b$. All latent coordinates contribute; padding and prompt positions are excluded.
+where $\Delta_t=\max(1-t,0.05)$ stabilizes the endpoint; outside the clamp, $u_t^{\mathrm{stab}}=u_t$. The regression in Eq.~\eqref{eq:basicflowloss} uses this stabilized target, with valid-token normalization specified in Appendix~\ref{app:methodobjective}.
 
 \paragraph{Self-conditioning and SCCFG.}
-Self-conditioning supplies an earlier clean prediction to the denoiser, allowing successive predictions to refine one another. We inherit ELF's self-conditioning classifier-free guidance (SCCFG), which strengthens this signal by training the network to produce guided predictions. The guidance scale is an input to the model, so sampling uses one denoiser call per step. In our conditional setup, the comparison underlying SCCFG is between predictions with and without \emph{answer self-conditioning}; the prompt remains present in both. Training replaces $u_t^{\mathrm{stab}}$ in Eq.~\eqref{eq:methodflowloss} by a detached guidance-adjusted target $\widetilde u_t$. Appendix~\ref{app:methodobjective} gives the target and sampling distributions.
+Self-conditioning supplies an earlier clean prediction. ELF's self-conditioning classifier-free guidance (SCCFG) trains the network to amplify its effect at the requested scale $g$, using a detached guidance-adjusted target $\widetilde u_t$ in place of $u_t^{\mathrm{stab}}$ (Appendix~\ref{app:methodobjective}). The underlying comparison uses predictions with and without \emph{answer self-conditioning}, retaining the prompt in both. Guidance is learned within the field, so sampling requires one denoiser call per step.
 
 \paragraph{Recovering discrete tokens.}
-A token head on the same Transformer backbone maps answer latents to vocabulary probabilities $p_\theta^{\mathrm{tok}}$. Decoder-mode training uses a separate corruption $z^{\mathrm{dec}}$ of the clean answer and same-position token labels $y_i$:
+A vocabulary head on the same backbone predicts token probabilities $p_{\theta,i}^{\mathrm{tok}}$ at canvas position $i$. Decoder-mode training uses a separate corruption $z^{\mathrm{dec}}$ and same-position labels $y_i$. For examples $b$ with prompt encodings $c_b$, let $M_{bi}$ select valid answer tokens, including the terminal token:
 \begin{equation}
  \mathcal L_{\mathrm{CE}}=
  \E\!\left[-\frac{\sum_{bi} M_{bi}\log p_{\theta,i}^{\mathrm{tok}}(y_{bi}\mid z_b^{\mathrm{dec}},c_b)}
  {\sum_{bi} M_{bi}}\right].
  \label{eq:methoddecoderloss}
 \end{equation}
-Each training row selects flow mode with probability $0.8$ or decoder mode with probability $0.2$. Thus the expected mixture is $0.8\mathcal L_{\mathrm{FM}}^{\mathrm{SCCFG}}+0.2\mathcal L_{\mathrm{CE}}$, using a common valid-token normalization in each microbatch. The backbone is shared between modes, with separate continuous and vocabulary output heads. This training construction remains close to the original ELF formulation, with the exact masks and decoder corruption specified in Appendix~\ref{app:methodobjective}.
+Rows select flow/decoder modes with probabilities $0.8/0.2$, sharing the backbone with separate output heads. Appendix~\ref{app:methodobjective} gives the decoder corruption and exact mixed objective.
 
 \paragraph{Sampling and terminal decoding.}
-Given a prompt $q$, compute $c(q)$ once and initialize the $L-L_q$ available answer positions with Gaussian noise of scale $\sigma$. The model processes the clean prompt and the complete noisy answer jointly. Euler updates integrate its predicted velocity for $S$ denoising calls under the chosen shared clock (Section~\ref{sec:preliminaries}). Prompt states remain clean; answer self-conditioning starts at zero and then carries the preceding clean prediction, with the requested SCCFG scale supplied to each call. A final call through the shared backbone and token head decodes all answer positions in parallel; the first terminal token determines the returned length. Section~\ref{sec:clocks} extends this sampling procedure to different clocks for different latent groups.
+Compute $c(q)$ once, keep it clean, and denoise all available answer positions jointly using $S$ Euler steps with recurrent self-conditioning. One terminal call through the shared backbone and vocabulary head decodes the answer in parallel; this call is excluded from denoising NFE. Appendix~\ref{app:methodobjective} specifies initialization and termination.
 
 % BEGIN inlined sections/representation.tex
 \subsection{Learning the denoising representation}
@@ -808,8 +789,27 @@ All four arms start from the same seed-42 backbone initialization, use 2,434,330
 \section{LFRM objective and conditioning details}
 \label{app:methodobjective}
 
+\paragraph{Canvas and scoring positions.}
+Training sequences satisfy $L_q+L_a\le L=1024$, with latent width $d=1024$. For example $b$, the mask $M_{bi}$ equals one on $L_{q,b}<i\le L_{q,b}+L_{a,b}$ and zero elsewhere. It includes the answer's terminal token and excludes prompt and padding positions. Answer latents and velocities at answer index $j$ occupy canvas position $i=L_{q,b}+j$.
+
 \paragraph{Time and self-conditioning.}
-For a flow row, sample $t=\operatorname{sigmoid}(-1.5+0.8\xi)$ with $\xi\sim\mathcal N(0,1)$ and use noise scale $\sigma=2$. A detached bootstrap pass with zero answer self-conditioning produces $\widehat z_{\mathrm{boot}}$. With $b_{\mathrm{sc}}\sim\mathrm{Bernoulli}(0.5)$, the main pass receives $\widehat z_{\mathrm{sc}}=b_{\mathrm{sc}}\widehat z_{\mathrm{boot}}$ in answer self-conditioning positions. Prompt states are restored to the clean condition independently of $b_{\mathrm{sc}}$. The velocity conversion for both prediction and target uses $\Delta_t=\max(1-t,0.05)$, so the executed target differs from $u_t=z_{\mathrm{clean}}-2\epsilon$ where the clamp is active.
+For a flow row, sample $t=\operatorname{sigmoid}(-1.5+0.8\xi)$ with $\xi\sim\mathcal N(0,1)$ and use noise scale $\sigma=2$. A detached bootstrap pass with zero answer self-conditioning produces $\widehat z_{\mathrm{boot}}$. With $b_{\mathrm{sc}}\sim\mathrm{Bernoulli}(0.5)$, the main pass receives $\widehat z_{\mathrm{sc}}=b_{\mathrm{sc}}\widehat z_{\mathrm{boot}}$ in answer self-conditioning positions. Prompt states are restored to the clean condition independently of $b_{\mathrm{sc}}$. The endpoint predictor and velocity denominator are
+\begin{equation}
+ \widehat z_{\mathrm{clean}}=F_\theta(z_t,t;c,\widehat z_{\mathrm{sc}},g),
+ \qquad \Delta_t=\max(1-t,0.05).
+ \label{eq:methodendpoint}
+\end{equation}
+Equation~\eqref{eq:methodvelocity} uses this denominator for both prediction and target, so the executed target differs from $u_t=z_{\mathrm{clean}}-2\epsilon$ where the clamp is active.
+
+\paragraph{Masked flow regression.}
+The normalized counterpart of Eq.~\eqref{eq:basicflowloss}, before the SCCFG target adjustment, is
+\begin{equation}
+ \mathcal L_{\mathrm{FM}}=
+ \E\!\left[\frac{\sum_{bi} M_{bi}\|v_{\theta,bi}-u_{bi}^{\mathrm{stab}}\|_2^2}
+ {d\sum_{bi} M_{bi}}\right].
+ \label{eq:methodflowloss}
+\end{equation}
+Here $u_{bi}^{\mathrm{stab}}$ is the target at example $b$'s sampled time $t_b$. All latent coordinates contribute. SCCFG replaces this target by $\widetilde u_{bi}$ below.
 
 \paragraph{SCCFG target.}
 Draw the guidance scale $g$ from $\log(1+g)\sim\mathrm{Uniform}(\log1.5,\log6)$, giving $g\in[0.5,5]$. Let $v^0$ and $v^1$ denote auxiliary velocity predictions without and with answer self-conditioning. The main loss uses
@@ -836,7 +836,10 @@ For valid response mask $M_{bi}$, including the terminal token and excluding que
  {\sum_{bi}M_{bi}}.
  \label{eq:methodmicroobjective}
 \end{equation}
-Here $\widetilde u_{bi}$ is the SCCFG-adjusted target at example $b$'s sampled time. There is one denominator across both row types, with no additional normalization by mode probability. The flow term averages all 1,024 coordinates, preserving the relative 256/256/512 group widths. Gradients are averaged over data-parallel ranks and accumulation microsteps. LFRM-B uses 12 bidirectional blocks of width 768 and LFRM-L uses 32 blocks of width 1,280; both share their backbone between flow and token-decoder modes.
+Here $\widetilde u_{bi}$ is the SCCFG-adjusted target at example $b$'s sampled time. There is one denominator across both row types, with no additional normalization by mode probability. Averaging over mode assignments gives $0.8\mathcal L_{\mathrm{FM}}^{\mathrm{SCCFG}}+0.2\mathcal L_{\mathrm{CE}}$ under this common normalization. The flow term averages all 1,024 coordinates, preserving the relative 256/256/512 group widths. Gradients are averaged over data-parallel ranks and accumulation microsteps. LFRM-B uses 12 bidirectional blocks of width 768 and LFRM-L uses 32 blocks of width 1,280; both share their backbone between flow and token-decoder modes.
+
+\paragraph{Sampling initialization and termination.}
+Given $q$, compute $c(q)$ once and initialize all $L-L_q$ available answer positions independently from $\mathcal N(0,\sigma^2I)$. The prompt remains clean throughout. For $S$ denoising calls, Euler evaluates at $\tau_r$, $r=0,\ldots,S-1$, and advances to $\tau_S=1$; Appendix~\ref{app:inferenceclocks} specifies the grid. Answer self-conditioning starts at zero and subsequently carries the preceding clean prediction. The requested SCCFG scale is supplied to each call. A separate call through the shared backbone and token head decodes all answer positions in parallel; the first terminal token determines the returned length. Denoising NFE counts only the $S$ denoising calls.
 
 \paragraph{Prompt encoder.}
 The frozen Qwen token table maps vocabulary IDs to 2,560-dimensional vectors. The learned frontend applies $2560\to512\to d_{\mathrm{model}}$ linear maps without an intervening nonlinearity. Six bidirectional Transformer blocks use width 768 and 12 heads for LFRM-B, or width 1,280 and 16 heads for LFRM-L, followed by RMSNorm and a 1,024-dimensional output projection. Inputs contain only the question prefix, and padding is masked. The standalone objective averages MSE over positions and coordinates within each question, then weights questions equally. Joint training retains the flow/decoder objective and fixed answer targets. The token table stays frozen while the prompt Transformer and flow model receive gradients from the main forward.
