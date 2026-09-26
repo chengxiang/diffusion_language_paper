@@ -290,7 +290,7 @@ The encoder need not reproduce the teacher's coordinates: it must preserve the i
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/prompt_curriculum_training.pdf}
-\caption{\textbf{Stable teacher conditioning followed by learned prompt adaptation.} Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. The red line marks the epoch-12 switch; arrows show the immediate MSE-prompt swap loss. Points are two-seed means (bars: 95\% problem-bootstrap CIs). Appendix~\ref{app:curvevalues} gives every plotted value and evaluation settings.}
+\caption{\textbf{Stable teacher conditioning followed by learned prompt adaptation.} Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. The red line marks the epoch-12 switch; arrows show the immediate MSE-prompt swap loss. Appendix~\ref{app:curvevalues} gives every plotted value and evaluation settings.}
 \label{fig:promptcurriculum}
 \end{figure}
 % END inlined figures/prompt_curriculum.tex
@@ -1383,7 +1383,7 @@ Learned prompt & MBPP+ & 26.32 {\scriptsize (1.54)} & 34.45 & 41.41 & 47.09\\
 This section tabulates the prompt-learning, representation-ablation, and reconstruction-sensitivity curves. Values come from the saved figure cohorts and are rounded independently from full precision. The oracle and majority-vote curves in Figures~\ref{fig:headlinestages} and~\ref{fig:elfbstages} are tabulated in Appendix~\ref{app:budgetvalues}; Table~\ref{tab:sccfgsweepvalues} gives the SCCFG sensitivity curve. Across-seed SDs describe sampling variability at fixed checkpoints, while problem-bootstrap intervals describe uncertainty across benchmark problems conditional on the saved draws.
 
 \paragraph{Prompt-learning curves.}
-Table~\ref{tab:promptcurvevalues} contains every point in Figure~\ref{fig:promptcurriculum}. Each uses seeds 42/123, async $(2.5,2,1.5)$, 32 denoising steps, SCCFG 2, and backbone EMA $0.9999$. Prompt EMA is $0.999$ at the MSE swap and $0.9999$ during joint training. GSM8K uses canonical scoring and MATH500 uses Math-Verify. Brackets reproduce the plotted pointwise 95\% intervals from 4,000 problem-bootstrap replicates. Epoch 12 appears twice because prompt substitution does not advance the flow-training epoch; the two rows have identical backbone weights. The axes start at zero, but no epoch-zero accuracy was measured or plotted.
+Table~\ref{tab:promptcurvevalues} contains every point in Figure~\ref{fig:promptcurriculum}. Points are means over seeds 42/123, evaluated with async $(2.5,2,1.5)$, 32 denoising steps, SCCFG 2, and backbone EMA $0.9999$. Prompt EMA is $0.999$ at the MSE swap and $0.9999$ during joint training. GSM8K uses canonical scoring and MATH500 uses Math-Verify. Error bars show pointwise 95\% intervals from 4,000 problem-bootstrap replicates; brackets in the table give their bounds. Epoch 12 appears twice because prompt substitution does not advance the flow-training epoch; the two rows have identical backbone weights. The axes start at zero, but no epoch-zero accuracy was measured or plotted.
 
 \begin{table}[htbp]
 \centering\small
