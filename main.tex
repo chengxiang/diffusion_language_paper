@@ -901,7 +901,7 @@ Figure~\ref{fig:layerreconstruction} uses LFRM-B epoch 18, backbone/prompt EMA $
 The random control uses eight fixed NumPy PCG64 partitions (seeds 20260918--20260925). Each control slot retains its true-group time and injected Gaussian energy; random-subset RMS is recorded but does not recalibrate the intervention. At $\eta=3$, after self-conditioning, the true-group layer-16 minus layer-24 CE contrast exceeds the corresponding mean-random contrast by 0.967 nats/token (paired 95\% CI $[0.168,1.890]$). The layer-16 minus layer-32 excess is 1.149 ($[0.061,2.241]$), with weaker evidence at lower noise and in the first prediction. Random partitions are averaged within problem before resampling; they are not additional independent problems.
 
 \paragraph{Interpretation.}
-For $0<\tau<1$, our chosen powers give $t_{16}<t_{24}<t_{32}$: layer 16 becomes clean relatively later, while all groups reach their endpoint together. One possible explanation is that the more sensitive layer-16 representation benefits from being reconstructed with cleaner deeper-layer features available as context. This is a hypothesis about coordination between representations, rather than a consequence of the local probe. In particular, a separate generation control that assigns the clocks to random coordinates gives nearly identical GSM8K accuracy (below). The probe motivates investigating layer-dependent denoising, but further experiments are needed to establish whether this proposed mechanism explains its sampling benefits.
+For $0<\tau<1$, our chosen powers give $t_{16}<t_{24}<t_{32}$: layer 16 becomes clean relatively later, while all groups reach their endpoint together. One possible explanation is that the more sensitive layer-16 representation benefits from being reconstructed with cleaner deeper-layer features available as context. This is a hypothesis about coordination between representations, rather than a consequence of the local probe. The probe motivates investigating layer-dependent denoising, but further experiments are needed to establish whether this proposed mechanism explains its sampling benefits.
 
 \paragraph{Reconstruction-sensitivity curves.}
 Table~\ref{tab:reconstructioncurvevalues} reproduces the means, error bars, and shaded ranges in Figure~\ref{fig:layerreconstruction}. The zero-noise points are identically zero because each condition is compared with its own pass's clean-input baseline. Random-partition ranges describe the eight partition means, not uncertainty intervals.
@@ -952,9 +952,6 @@ Layer & $\eta$ & Actual group [95\% CI] & Random mean [min, max] \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\subsection{Random-coordinate clocks during generation}
-A separate LFRM-L epoch-21 GSM8K control assigns $(2.5,2,1.5)$ to a random 256/256/512 partition for each of seeds 42/123/456/789, keeping that partition fixed throughout generation. At 32 steps and SCCFG 2, actual layer groups yield 58.53\% mean pass@1 and random groups 58.40\%; random minus actual is $-0.13$ points (paired 95\% CI $[-0.80,+0.51]$). This comparison does not demonstrate an accuracy advantage from matching the clocks to the teacher-layer boundaries. Together, the probes establish a distinction between measured local reconstruction geometry and a causal explanation of end-to-end sampling gains.
 
 \section{NFT implementation and gold-anchor analysis}
 \label{app:nftdetails}
