@@ -72,14 +72,9 @@ Our complete reasoning pipeline comprises the following key contributions:
 \section{Related work}
 \label{sec:relatedwork}
 
-\paragraph{Diffusion language models.}
-Language diffusion operates in continuous representations \citep{plaid,tess2,hyperspherical} or discrete token spaces \citep{mdlm,llada}, with recent continuous models targeting reasoning, coding, and few-step generation \citep{posterior,mlfm,dbtm,plaidq}. We build on ELF \citep{elf}, which denoises contextual representations and shares a backbone between denoising and token decoding. Concurrent to our paper, ELF-REG \citep{scalingdlm} augments ELF with teacher-feature alignment and a jointly denoised global representation. LFRM learns its answer representation and replaces external prompt encoders with a compact trainable network.
-
-\paragraph{Representation design and denoising order.}
-Related work learns or aligns diffusion representations in vision and language \citep{repa,textldm,ldlm}, and explores separate denoising clocks for representation components in vision \citep{sfd,latentforcing}. We study learned multilayer language representations for both decoding and generation, and use their structure for asynchronous inference.
-
-\paragraph{Diffusion reinforcement learning.}
-Reward-based post-training has also been explored for diffusion reasoning \citep{d1,llada15,ladirl}. We adapt DiffusionNFT \citep{diffusionnft}, which optimizes rewarded endpoints through forward-process regression. Our adaptation accommodates ELF's learned self-conditioning guidance, adds gold-solution anchoring, and jointly updates the flow model and prompt encoder.
+\textbf{Diffusion language models.} Language diffusion operates in continuous representations \citep{plaid,tess2,hyperspherical} or discrete token spaces \citep{mdlm,llada}, with recent continuous models targeting reasoning, coding, and few-step generation \citep{posterior,mlfm,dbtm,plaidq}. We build on ELF \citep{elf}, which denoises contextual representations and shares a backbone between denoising and token decoding. Concurrent to our paper, ELF-REG \citep{scalingdlm} augments ELF with teacher-feature alignment and a jointly denoised global representation. LFRM learns its answer representation and replaces external prompt encoders with a compact trainable network.
+\textbf{Representation design and denoising order.} Related work learns or aligns diffusion representations in vision and language \citep{repa,textldm,ldlm}, and explores separate denoising clocks for representation components in vision \citep{sfd,latentforcing}. We study learned multilayer language representations for both decoding and generation, and use their structure for asynchronous inference.
+\textbf{Diffusion reinforcement learning.} Reward-based post-training has also been explored for diffusion reasoning \citep{d1,llada15,ladirl}. We adapt DiffusionNFT \citep{diffusionnft}, which optimizes rewarded endpoints through forward-process regression. Our adaptation accommodates ELF's learned self-conditioning guidance, adds gold-solution anchoring, and jointly updates the flow model and prompt encoder.
 
 \section{Preliminaries}
 \label{sec:preliminaries}
