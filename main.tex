@@ -39,7 +39,7 @@
 \maketitle
 
 \begin{abstract}
-Continuous diffusion generates complete reasoning solutions through iterative refinement in latent space. We introduce Latent Flow Reasoning Models (LFRMs), an ELF-based training and inference recipe. Our experiments show that accurate decoding alone does not ensure effective generation, motivating compact representations learned from multiple layers of a strong autoregressive teacher. Their decomposition also enables asynchronous denoising at different rates. We show that prompt encodings need only preserve the information required for the correct text-conditional score, rather than exactly match teacher features, and use a staged curriculum to learn a compact prompt encoder that replaces the teacher Transformer at inference. We adapt DiffusionNFT to learned self-conditioning guidance and incorporate gold-solution endpoints to supplement sparse rewards. With 90M and 638M denoising backbones, our strongest supervised results outperform reported continuous-diffusion baselines at comparable backbone scales on mathematical reasoning and code generation. NFT further improves single-sample accuracy and majority-vote performance on GSM8K and MATH500.
+Continuous diffusion generates complete reasoning solutions through iterative refinement in latent space. We introduce Latent Flow Reasoning Models (LFRMs), an ELF-based training and inference recipe. Our experiments show that accurate decoding alone does not ensure effective generation, motivating compact representations learned from multiple layers of a strong autoregressive teacher. Their decomposition also enables asynchronous denoising at different rates. We show that prompt encodings need only preserve the information required for the correct text-conditional score, rather than exactly match teacher features, and use a staged curriculum to learn a compact prompt encoder that replaces the teacher Transformer at inference. We adapt DiffusionNFT to learned self-conditioning guidance and incorporate gold-solution endpoints to supplement sparse rewards. With 90M and 638M denoising backbones, our strongest supervised results outperform reported continuous-diffusion baselines at comparable backbone scales on mathematical reasoning and code generation. NFT further improves single-sample accuracy on math and code, and majority-vote performance on mathematics.
 Code will be available at: \url{https://anonymous.4open.science/r/LFRM-98B5/}.
 \end{abstract}
 % Keep normal paragraph gaps in the main text compact but visible.
@@ -52,7 +52,7 @@ Autoregressive language models have made substantial progress on mathematical re
 
 We introduce Latent Flow Reasoning Models (LFRMs), based on the simple continuous flow formulation of Embedded Language Flows (ELF; \citealp{elf}). Our pipeline learns compact answer representations from multiple layers of a strong autoregressive teacher (Figure~\ref{fig:pipelineoverview}). To avoid retaining the teacher for prompt conditioning, we separate the answer-generation target from the prompt encoding. Conditioning on prompt \emph{text} makes that encoding an internal, learnable interface: it need only preserve the information required for denoising, without exact teacher-feature matching (Lemma~\ref{lem:conditionalrepresentation}). We use this flexibility to jointly train a compact prompt encoder and denoiser through the generative objective.
 
-Remaining close to standard continuous diffusion lets us apply DiffusionNFT \citep{diffusionnft} with verifiable rewards, after adapting it to ELF's learned guidance. Our strongest supervised results outperform comparable-scale continuous-diffusion baselines on mathematical reasoning and code generation; NFT further improves accuracy on GSM8K and MATH500.
+Remaining close to standard continuous diffusion lets us apply DiffusionNFT \citep{diffusionnft} with verifiable rewards, after adapting it to ELF's learned guidance. Our strongest supervised results outperform comparable-scale continuous-diffusion baselines on mathematical reasoning and code generation; NFT further improves accuracy on both math and code.
 
 % BEGIN inlined sections/contributions.tex
 \paragraph{Contributions.}
@@ -71,7 +71,7 @@ Our complete reasoning pipeline comprises the following key contributions:
     We show that \emph{information preservation} for denoising is sufficient for an ideal downstream score network to recover the correct text-conditional score, without exact MSE matching to teacher prompt features (Lemma~\ref{lem:conditionalrepresentation}). This permits a compact prompt encoder to replace the large teacher. Our staged curriculum first learns the flow under fixed teacher conditioning, then fits the encoder and jointly adapts both networks (Figure~\ref{fig:promptcurriculum}), addressing the difficulty of learning them together from initialization (Figure~\ref{fig:representationcomparison}).
 
     \item \textbf{Guidance-compatible diffusion reinforcement learning for reasoning.}
-    We propose a method to reconcile DiffusionNFT's CFG-free optimization \citep{diffusionnft} with ELF's learned self-conditioning guidance. We optimize guidance-corrected fields while retaining guided rollouts, jointly updating the flow and prompt encoder as a text-conditioned policy (Section~\ref{sec:nftsccfg}). Gold-solution endpoints supplement sparse correctness rewards, with their anchoring effect characterized in Lemma~\ref{lem:goldanchor}. NFT substantially improves single-sample reasoning accuracy and majority-vote performance on GSM8K and MATH500 (Figure~\ref{fig:headlinestages}).
+    We propose a method to reconcile DiffusionNFT's CFG-free optimization \citep{diffusionnft} with ELF's learned self-conditioning guidance. We optimize guidance-corrected fields while retaining guided rollouts, jointly updating the flow and prompt encoder as a text-conditioned policy (Section~\ref{sec:nftsccfg}). Gold-solution endpoints supplement sparse correctness rewards, with their anchoring effect characterized in Lemma~\ref{lem:goldanchor}. NFT improves single-sample accuracy on math and code, and majority-vote performance on mathematics (Figure~\ref{fig:headlinestages}; Table~\ref{tab:codingcomparison}).
 \end{enumerate}
 % END inlined sections/contributions.tex
 
@@ -341,7 +341,7 @@ where $C_{\mathcal H}$ is independent of $f$ with the conditioning information a
 
 At $\rho_G=1$, the gold term directly regresses toward $m_G$. Under an ideal reference model matching that gold posterior target, the anchor interpolates between the reference and old fields; Appendix~\ref{app:nftgoldproof} gives the proof and scope. This gold-induced anchor complements the explicit reference penalty.
 
-Because the external condition is the question text, NFT jointly updates the prompt encoder and flow model as one conditional policy (Lemma~\ref{lem:conditionalrepresentation}), without a prompt-imitation objective. Training uses synchronous identity clocks; asynchronous evaluation follows Section~\ref{sec:clocks}. Appendix~\ref{app:training} gives optimization details, and Section~\ref{sec:nftresults} discusses the empirical gains.
+Because the external condition is the question text, NFT jointly updates the prompt encoder and flow model as one conditional policy (Lemma~\ref{lem:conditionalrepresentation}), without a prompt-imitation objective. Training uses synchronous identity clocks; asynchronous evaluation follows Section~\ref{sec:clocks}. Appendix~\ref{app:training} gives optimization details, and Sections~\ref{sec:nftresults} and~\ref{sec:codingresults} discuss the empirical gains.
 % END inlined sections/nft.tex
 
 % BEGIN inlined sections/headline_results.tex
@@ -435,27 +435,29 @@ NFT improves single-sample accuracy at every reported denoising depth (Tables~\r
 \subsection{Code generation}
 \label{sec:codingresults}
 
-On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L trains for 12 epochs with frozen Qwen conditioning, fits the 121M-parameter prompt encoder for ten MSE epochs with the flow model fixed, then jointly trains both networks for one epoch. Table~\ref{tab:codingcomparison} reports eight-seed results with async $(2.5,2,1.5)$ and SCCFG 3, without NFT; Appendix~\ref{app:training} details the training setup, including auxiliary prompt-MSE regularization during joint training.
+On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L uses 12 epochs of frozen-Qwen flow training, ten prompt-MSE epochs, one joint epoch, and 100 NFT updates with execution-based rewards (Appendix~\ref{app:training}). Table~\ref{tab:codingcomparison} uses eight seeds, 128 denoising calls, async $(2.5,2,1.5)$, and SCCFG 3.
 
 \begin{table}[!htb]
 \centering\small
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use HumanEval base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's reported ``MBPP+'' uses base tests. Frozen/MSE rows share the epoch-12 backbone; joint training yields epoch 13. NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Protocols: Appendix~\ref{app:codingdetails}; seed SDs: Table~\ref{tab:codingstandarddetail}.}
+\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's ``MBPP+'' uses base tests. Frozen Qwen: epoch 12; pre-NFT: joint epoch 13; post-NFT: update 100. NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Protocols: Appendix~\ref{app:codingdetails}; seed SDs: Table~\ref{tab:codingstandarddetail}.}
 \label{tab:codingcomparison}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Model / prompt conditioner & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
+Model / setting & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
 \midrule
 PlaidQ \citep{plaidq} & 128 & 19.02 & 18.05 & 22.18 & ---\\
 PlaidQ+CFG \citep{plaidq} & 256 & 22.04 & 19.70 & 24.58 & ---\\
-LFRM-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 38.72 & 33.99\\
-LFRM-L / prompt MSE (ours) & 128 & 27.97 & 25.30 & 19.61 & 16.96\\
-LFRM-L / joint prompt (ours) & 128 & 29.57 & 26.91 & 18.45 & 16.40\\
+\midrule
+LFRM-L / frozen Qwen & 128 & 33.69 & 30.87 & 38.72 & 33.99\\
+\midrule
+LFRM-L, pre-NFT (ours) & 128 & 29.57 & 26.91 & 18.45 & 16.40\\
+LFRM-L, post-NFT (ours) & 128 & 32.85 & 30.18 & 22.26 & 19.61\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-All three variants outperform reported PlaidQ results on HumanEval(+); learned conditioning also exceeds oDLM-0.6B \citep{odlm} and Edit Flow-1.3B \citep{editflow}, but trails guided PlaidQ on MBPP-378 base. Matching ELF-REG-L's function-name aliasing rule, all three exceed its reported HumanEval(+)/MBPP-378 scores (Appendix~\ref{app:codingdetails}, Table~\ref{tab:codingaliascomparison}). Appendix~\ref{app:codingdetails} discusses prompt adaptation across tasks and the effects of joint training.
+Pre- and post-NFT LFRM exceed reported PlaidQ results on HumanEval(+), but trail guided PlaidQ on MBPP-378 base. Under matched function-name aliasing, they also exceed ELF-REG-L (Appendix~\ref{app:codingdetails}). NFT raises pass@1 on all four coding metrics, including HumanEval+ by $3.28$ points and MBPP+ by $3.21$. HumanEval(+) approaches frozen-Qwen conditioning, while a substantial MBPP gap remains. Higher-pass oracle gains are smaller, as in mathematics; paired comparisons appear in Appendix~\ref{app:codingdetails}.
 
 % END inlined sections/headline_results.tex
 
@@ -524,7 +526,7 @@ Task / model & \shortstack{Frozen-Qwen\\flow epochs} & \shortstack{Prompt-MSE\\e
 GSM8K / LFRM-B & 12 & 60 & 6 (18) & 300\\
 GSM8K / LFRM-L & 12 & 30 & 9 (21) & 500\\
 MATH / LFRM-L & 12 & 10 & 9 (21) & 600\\
-OpenCodeInstruct / LFRM-L & 12 & 10 & 1 (13) & ---\\
+OpenCodeInstruct / LFRM-L & 12 & 10 & 1 (13) & 100\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -584,17 +586,20 @@ Flow training, standalone prompt imitation, and joint adaptation use effective b
 
 The coding epoch-13 checkpoint follows one additional joint epoch (9,558 optimizer updates), starting from the epoch-12 flow checkpoint and the prompt-epoch-10 EMA $0.999$ state. Unlike the math joint stage, coding retains an auxiliary teacher-prompt MSE. Targets are the fixed, cached Qwen prompt representations; the loss averages valid prompt positions and latent coordinates within each training row, then weights rows equally. Only the prompt encoder receives this auxiliary gradient; answer representations and the vocabulary lookup remain frozen.
 
-At each optimizer update, let $g_{\mathrm{down}}$ and $g_{\mathrm{MSE}}$ denote the accumulated, data-parallel-mean prompt gradients from the downstream and auxiliary objectives. We combine them as $g_\phi=g_{\mathrm{down}}+\lambda g_{\mathrm{MSE}}$, with $\lambda=2\,\overline{\|g_{\mathrm{down}}\|_2}/\max(\overline{\|g_{\mathrm{MSE}}\|_2},10^{-12})$, where bars denote exponential moving averages with decay $0.99$. The target 2:1 ratio concerns smoothed gradient norms, not scalar loss values. The combined prompt gradient is clipped at norm one. Joint training otherwise retains the synchronous clocks and supervised optimization settings above. No coding NFT result is reported.
+At each optimizer update, let $g_{\mathrm{down}}$ and $g_{\mathrm{MSE}}$ denote the accumulated, data-parallel-mean prompt gradients from the downstream and auxiliary objectives. We combine them as $g_\phi=g_{\mathrm{down}}+\lambda g_{\mathrm{MSE}}$, with $\lambda=2\,\overline{\|g_{\mathrm{down}}\|_2}/\max(\overline{\|g_{\mathrm{MSE}}\|_2},10^{-12})$, where bars denote exponential moving averages with decay $0.99$. The target 2:1 ratio concerns smoothed gradient norms, not scalar loss values. The combined prompt gradient is clipped at norm one. Joint training otherwise retains the synchronous clocks and supervised optimization settings above. The subsequent coding NFT stage uses no auxiliary prompt MSE.
 
 \subsection{NFT fine-tuning}
 \label{app:nfttraining}
 
 Initialize current, old, and reference policies from the selected supervised endpoint, with fresh NFT optimizers. The current flow backbone and prompt body are trainable. The Qwen vocabulary lookup and representation projectors remain fixed, as do the decoder-specific mode tokens, output projection, and vocabulary-head parameters. The shared backbone continues to change, so freezing these decoder-specific parameters does not freeze the entire decoding function. Old and reference policies receive no optimizer gradients; each retains its own prompt encoder.
 
-Both trainable components use constant learning rate $10^{-4}$, zero weight decay, and separate norm-one gradient clipping. The flow backbone uses Muon with auxiliary Nesterov-Adam; the prompt body uses Muon/AdamW. Computation uses BF16. Collection uses 32 denoising steps, synchronous identity clocks, and SCCFG two; optimization also retains synchronous scalar-time conditioning. Each round collects 24 prompt groups with 15 generated endpoints and one gold endpoint per group, followed by eight independently corrupted records per retained endpoint. Filtering makes the update size variable, so the supervised batch size 512 does not apply to NFT. Appendix~\ref{app:nftdetails} specifies rewards, filtering, loss normalization, and old-policy updates. Table~\ref{tab:trainingstages} lists the reported NFT endpoints. Evaluation uses separate flow/prompt EMA $0.99/0.99$ and applies asynchronous clocks only at inference.
+Both trainable components use constant learning rate $10^{-4}$, zero weight decay, and separate norm-one gradient clipping. The flow backbone uses Muon with auxiliary Nesterov-Adam; the prompt body uses Muon/AdamW. Computation uses BF16. Collection uses 32 denoising steps, synchronous identity clocks, and SCCFG two; optimization also retains synchronous scalar-time conditioning. Each round collects 24 prompt groups with 15 generated endpoints and one gold endpoint per group, followed by eight independently corrupted records per retained endpoint. Filtering makes the update size variable, so the supervised batch size 512 does not apply to NFT. Appendix~\ref{app:nftdetails} specifies rewards, filtering, loss normalization, and old-policy updates. Table~\ref{tab:trainingstages} lists the reported NFT endpoints. Evaluation uses flow/prompt EMA $0.99/0.99$ for math and $0.9/0.9$ for code, with asynchronous clocks only at inference.
+
+\paragraph{Coding reward population.}
+Coding NFT starts from joint epoch 13 with flow/prompt EMA $0.9999/0.9999$ and fresh optimizers, retaining the objective and optimization settings above. We select 4,096 unique OpenCodeInstruct training prompts and reserve 256 disjoint development prompts, with selection seed 20260926. Eligible rows explicitly specify the tested interface, have unchanged native assertion tests and successful reference metadata, and pass reference execution in the reward harness. Prompt deduplication and exact held-out benchmark prompt exclusion precede selection. The training tests supply binary execution rewards; HumanEval/MBPP evaluation tests are never used for training. Gold endpoints receive reward one, generated programs receive $0.75$ if all retained assertions pass and zero otherwise. Synthetic training tests remain imperfect measures of correctness. Execution is isolated, network-disabled, and resource-limited, with a five-second timeout per assertion. Both flow and prompt models train jointly, without the supervised stage's prompt-MSE regularizer. We report successful NFT update 100.
 
 \paragraph{NFT checkpoint selection.}
-We compare updates 100/200/300/400 for GSM8K LFRM-B, 100/300/500 for GSM8K LFRM-L, and 200/400/600 for MATH LFRM-L. Selection uses mean accuracy over seeds 42/123 on fixed development panels of 1,000 GSM8K and 500 MATH problems (Appendix~\ref{app:inferenceclocks}), with async $(2.5,2,1.5)$, 32 steps, and SCCFG two. Canonical numerical scoring selects update 300 for GSM8K LFRM-B and 500 for GSM8K LFRM-L; Math-Verify selects update 600 for MATH LFRM-L. These are selections among the evaluated checkpoints, not claims about all possible update counts.
+We compare updates 100/200/300/400 for GSM8K LFRM-B, 100/300/500 for GSM8K LFRM-L, and 200/400/600 for MATH LFRM-L. Selection uses mean accuracy over seeds 42/123 on fixed development panels of 1,000 GSM8K and 500 MATH problems (Appendix~\ref{app:inferenceclocks}), with async $(2.5,2,1.5)$, 32 steps, and SCCFG two. Canonical numerical scoring selects update 300 for GSM8K LFRM-B and 500 for GSM8K LFRM-L; Math-Verify selects update 600 for MATH LFRM-L. These are selections among the evaluated checkpoints, not claims about all possible update counts. For coding, update 100 with flow/prompt EMA $0.9/0.9$ was retained after benchmark-based comparisons of updates 100/200 and EMA pairs $0.9/0.9$ and $0.99/0.99$, using seeds 42/123. We then expanded the retained setting to eight seeds. This coding choice is not an independent development-set selection; reported bootstrap intervals condition on the chosen checkpoints and generations.
 
 \clearpage
 \section{LFRM objective and conditional encoding}
@@ -986,9 +991,9 @@ Layer & $\eta$ & Actual group [95\% CI] & Random mean [min, max] \\
 
 \subsection{Collection, rewards, and forward corruption}
 
-Each collection round draws 24 prompt groups uniformly from the applicable training-row population. The old policy produces 15 candidates per group using 32 Euler denoising steps, synchronous identity clocks, the logit-normal-quantile grid of Appendix~\ref{app:inferenceclocks}, initial noise scale two, prompt CFG one, and SCCFG two. Self-conditioning is recurrent during collection. Terminal token decoding is greedy and uses the same SCCFG scale. We save the terminal latent endpoint and its decoded answer length; generated text is used for reward evaluation without re-encoding it through Qwen. Each group additionally receives one gold endpoint from the fixed answer cache. No Qwen Transformer forward is required during NFT.
+Each collection round draws 24 prompt groups from the applicable training population; coding uses the screened reward cohort in Appendix~\ref{app:nfttraining}. The old policy produces 15 candidates per group using 32 Euler denoising steps, synchronous identity clocks, the logit-normal-quantile grid of Appendix~\ref{app:inferenceclocks}, initial noise scale two, prompt CFG one, and SCCFG two. Self-conditioning is recurrent during collection. Terminal token decoding is greedy and uses the same SCCFG scale. We save the terminal latent endpoint and its decoded answer length; generated text is used for reward evaluation without re-encoding it through Qwen. Each group additionally receives one gold endpoint from the fixed answer cache. No Qwen Transformer forward is required during NFT.
 
-The generated reward is $0.75$ for a correct final answer and zero otherwise, while the gold reward is one. GSM8K uses numerical-answer correctness. MATH uses Math-Verify 0.9.0 with a five-second timeout; unparsed predictions, exceptions, and timeouts receive zero. All-correct generated groups are excluded before computing normalization statistics. For retained group $b$ and candidate $m$, define
+The generated reward is $0.75$ for a correct final answer and zero otherwise, while the gold reward is one. GSM8K uses numerical-answer correctness. MATH uses Math-Verify 0.9.0 with a five-second timeout; unparsed predictions, exceptions, and timeouts receive zero. Coding correctness requires all retained native training assertions to pass (Appendix~\ref{app:nfttraining}). All-correct generated groups are excluded before computing normalization statistics. For retained group $b$ and candidate $m$, define
 \begin{equation}
  A_{bm}=\operatorname{clip}\!\left(
  \frac{R_{bm}-\bar R_b}{\sigma_R+10^{-4}},-5,5\right),
@@ -996,7 +1001,7 @@ The generated reward is $0.75$ for a correct final answer and zero otherwise, wh
  \rho_{bm}=\operatorname{clip}\!\left(\frac12+\frac{A_{bm}}{10},0,1\right),
  \label{eq:nftrewardnormalization}
 \end{equation}
-where $\bar R_b$ averages all 16 endpoints and $\sigma_R$ is the population standard deviation of the retained \emph{raw} rewards across the complete collection round. Discarded groups do not enter these statistics. All-incorrect groups remain informative because they include a gold endpoint. The GSM8K implementations additionally stop before an update if an entire round has zero correct generations; the MATH implementation disables that round-level guard and permits a gold-anchored update. A round with no retained groups supplies no optimizer update.
+where $\bar R_b$ averages all 16 endpoints and $\sigma_R$ is the population standard deviation of the retained \emph{raw} rewards across the complete collection round. Discarded groups do not enter these statistics. All-incorrect groups remain informative because they include a gold endpoint. The GSM8K implementations additionally stop before an update if an entire round has zero correct generations; the MATH and coding implementations disable that round-level guard and permit gold-anchored updates. A round with no retained groups supplies no optimizer update.
 
 Correct generations remain in mixed groups. Because gold has a higher raw reward than correct generations, even all-correct groups would supply a gold-versus-generation preference if retained. Filtering removes those groups to concentrate updates on observed failures. The higher gold reward favors the reference reasoning trace within the latent objective, whereas generated-solution rewards depend only on final-answer correctness.
 
@@ -1345,7 +1350,7 @@ NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
 \label{app:codingdetails}
 
 \paragraph{Training stages and checkpoint selectors.}
-Appendix~\ref{app:training} describes the coding architecture and three-stage recipe; Appendix~\ref{app:codingtraining} gives the joint prompt-MSE regularizer. All coding evaluations select backbone EMA $0.9999$. Standalone MSE encoders use prompt EMA $0.999$; the joint epoch-13 checkpoint uses prompt EMA $0.9999$. The frozen-Qwen and standalone-MSE conditions share the epoch-12 backbone, whereas joint training updates both the backbone and prompt encoder.
+Appendix~\ref{app:training} describes the coding architecture, three supervised stages, and NFT continuation; Appendix~\ref{app:codingtraining} gives the supervised joint prompt-MSE regularizer. Supervised evaluations select backbone EMA $0.9999$, with prompt EMA $0.999$ for standalone MSE and $0.9999$ for joint epoch 13. Post-NFT uses update 100 with independently selected backbone/prompt EMA $0.9/0.9$. Frozen-Qwen and standalone-MSE conditions share the epoch-12 backbone; joint training and NFT each update both trainable models. The coding checkpoint-selection procedure is given in Appendix~\ref{app:nfttraining}.
 
 \paragraph{Generation and scoring.}
 We use the benchmark task text in the native Qwen chat format, without assistant prefill, with batch size 32, CFG 1, SCCFG 3, and async $(2.5,2,1.5)$ throughout. Answers fill the remaining positions of the 1,024-token canvas and are decoded greedily. Denoising NFE excludes one terminal decoder call. The eight-seed cohort is $\{42,123,456,789,2026,31415,27182,16180\}$. The shorter training curve uses 32 steps and its stated two- or four-seed cohorts.
@@ -1355,24 +1360,25 @@ HumanEval \citep{humaneval} contains 164 tasks; MBPP \citep{mbpp} uses the 378 t
 \paragraph{Mapping external reports.}
 Our PlaidQ comparison uses the author-reported results from arXiv version 1, subsequently withdrawn by the authors to address institutional resource-disclosure requirements \citep{plaidq}. PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our comparison values. ELF-REG Table 1 supplies its aliased HumanEval, HumanEval+, and MBPP-378 base results \citep{scalingdlm}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. We retain their reported values without re-evaluating their models.
 
-For additional discrete-model context, oDLM-0.6B reports HumanEval/HumanEval+ pass@1 of 17.87\%/16.40\% at 128 sampling steps with a 128-token response budget \citep[Table 1 and Appendix B.7]{odlm}. Edit Flow-1.3B reports 12.8\%/10.4\%, and its localized variant reports 14.0\%/10.4\% \citep[Table 3]{editflow}. Our learned-conditioning results without name repair are 27.97\%/25.30\% before joint training and 29.57\%/26.91\% at epoch 13. These comparisons use the authors' reported accuracies; training data, initialization, and sampling protocols differ. We restrict the additional comparison to HumanEval(+) rather than equating differently defined MBPP columns.
+For additional discrete-model context, oDLM-0.6B reports HumanEval/HumanEval+ pass@1 of 17.87\%/16.40\% at 128 sampling steps with a 128-token response budget \citep[Table 1 and Appendix B.7]{odlm}. Edit Flow-1.3B reports 12.8\%/10.4\%, and its localized variant reports 14.0\%/10.4\% \citep[Table 3]{editflow}. Our learned-conditioning results without name repair are 27.97\%/25.30\% before joint training, 29.57\%/26.91\% at epoch 13, and 32.85\%/30.18\% after NFT. These comparisons use the authors' reported accuracies; training data, initialization, and sampling protocols differ. We restrict the additional comparison to HumanEval(+) rather than equating differently defined MBPP columns.
 
 \paragraph{Comparison under function-name aliasing.}
-Table~\ref{tab:codingaliascomparison} separates the ELF-REG-L comparison from standard scoring in Table~\ref{tab:codingcomparison}. Under the same alias rule, all three LFRM-L variants exceed ELF-REG-L on all three reported metrics. For joint epoch 13, aliasing raises MBPP-378 base accuracy from 18.45\% to 32.11\%, exceeding ELF-REG-L's 28.92\%; without repair, it remains below guided PlaidQ's 24.58\%. Mixing repaired and unrepaired scores would therefore obscure a substantial difference in acceptance criteria.
+Table~\ref{tab:codingaliascomparison} separates the ELF-REG-L comparison from standard scoring in Table~\ref{tab:codingcomparison}. Under the same alias rule, all four LFRM-L variants exceed ELF-REG-L on all three reported metrics. For NFT update 100, aliasing raises MBPP-378 base accuracy from 22.26\% to 38.96\%, exceeding ELF-REG-L's 28.92\%; without repair, it remains below guided PlaidQ's 24.58\%. Mixing repaired and unrepaired scores would therefore obscure a substantial difference in acceptance criteria.
 
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{Code generation with single-function name aliasing.} Mean pass@1 (\%) under the matched repair rule. ELF-REG-L values are author-reported; $^{*}128$ denotes 127 denoising calls plus terminal decoding in its reported budget. Our rows use eight seeds: frozen/MSE conditioning at epoch 12, and joint conditioning at epoch 13. Prompting and execution limits still differ across papers, as detailed above. Table~\ref{tab:codingaliasdetail} gives our seed SDs and higher-pass results.}
+\caption{\textbf{Code generation with single-function name aliasing.} Mean pass@1 (\%) under the matched repair rule. ELF-REG-L values are author-reported; $^{*}128$ denotes 127 denoising calls plus terminal decoding in its reported budget. Our rows use eight seeds: frozen/MSE conditioning at epoch 12; joint conditioning at epoch 13; and NFT update 100. Prompting and execution limits still differ across papers, as detailed above. Table~\ref{tab:codingaliasdetail} gives our seed SDs and higher-pass results.}
 \label{tab:codingaliascomparison}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Model / prompt conditioner & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
+Model / setting & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
 \midrule
 ELF-REG-L \citep{scalingdlm} & $^{*}128$ & 22.56 & 21.46 & 28.92 & ---\\
 LFRM-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 43.45 & 37.93\\
 LFRM-L / prompt MSE (ours) & 128 & 28.05 & 25.38 & 30.99 & 26.32\\
-LFRM-L / joint prompt (ours) & 128 & 29.73 & 27.06 & 32.11 & 27.81\\
+LFRM-L, pre-NFT (ours) & 128 & 29.73 & 27.06 & 32.11 & 27.81\\
+LFRM-L, post-NFT (ours) & 128 & 33.16 & 30.26 & 38.96 & 33.76\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1412,11 +1418,11 @@ Before joint training, at 128 steps, aliasing improves MSE-prompt MBPP-378 base 
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Standard scoring without aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
+\caption{\textbf{Standard scoring without aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use epoch 12; pre-NFT is joint epoch 13; post-NFT is update 100. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
 \label{tab:codingstandarddetail}
 \begin{tabular}{@{}llrrrrr@{}}
 \toprule
-Conditioner & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
+Stage & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
 \midrule
 Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.78)} & 44.66 {\scriptsize (3.21)} & 54.13 {\scriptsize (3.46)} & 62.20 {\scriptsize (3.75)} & 2.11\\
 Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.70)} & 41.53 {\scriptsize (3.18)} & 50.82 {\scriptsize (3.45)} & 59.15 {\scriptsize (3.77)} & 2.09\\
@@ -1428,10 +1434,15 @@ Prompt MSE & HumanEval+ & 25.30 {\scriptsize (2.81)} & 32.19 {\scriptsize (3.25)
 Prompt MSE & MBPP-378 base & 19.61 {\scriptsize (1.54)} & 27.44 {\scriptsize (1.90)} & 35.41 {\scriptsize (2.17)} & 43.92 {\scriptsize (2.53)} & 1.85\\
 Prompt MSE & MBPP+ & 16.96 {\scriptsize (1.47)} & 23.72 {\scriptsize (1.84)} & 30.30 {\scriptsize (2.14)} & 36.77 {\scriptsize (2.48)} & 1.11\\
 \midrule
-Joint prompt & HumanEval & 29.57 {\scriptsize (2.74)} & 39.07 {\scriptsize (3.23)} & 47.23 {\scriptsize (3.55)} & 54.27 {\scriptsize (3.87)} & 2.33\\
-Joint prompt & HumanEval+ & 26.91 {\scriptsize (2.73)} & 35.26 {\scriptsize (3.22)} & 42.22 {\scriptsize (3.58)} & 47.56 {\scriptsize (3.92)} & 1.99\\
-Joint prompt & MBPP-378 base & 18.45 {\scriptsize (1.53)} & 25.77 {\scriptsize (1.90)} & 32.95 {\scriptsize (2.20)} & 39.95 {\scriptsize (2.53)} & 1.23\\
-Joint prompt & MBPP+ & 16.40 {\scriptsize (1.45)} & 23.20 {\scriptsize (1.84)} & 29.81 {\scriptsize (2.15)} & 35.98 {\scriptsize (2.48)} & 1.30\\
+Pre-NFT & HumanEval & 29.57 {\scriptsize (2.74)} & 39.07 {\scriptsize (3.23)} & 47.23 {\scriptsize (3.55)} & 54.27 {\scriptsize (3.87)} & 2.33\\
+Pre-NFT & HumanEval+ & 26.91 {\scriptsize (2.73)} & 35.26 {\scriptsize (3.22)} & 42.22 {\scriptsize (3.58)} & 47.56 {\scriptsize (3.92)} & 1.99\\
+Pre-NFT & MBPP-378 base & 18.45 {\scriptsize (1.53)} & 25.77 {\scriptsize (1.90)} & 32.95 {\scriptsize (2.20)} & 39.95 {\scriptsize (2.53)} & 1.23\\
+Pre-NFT & MBPP+ & 16.40 {\scriptsize (1.45)} & 23.20 {\scriptsize (1.84)} & 29.81 {\scriptsize (2.15)} & 35.98 {\scriptsize (2.48)} & 1.30\\
+\midrule
+Post-NFT & HumanEval & 32.85 {\scriptsize (2.97)} & 41.59 {\scriptsize (3.35)} & 49.08 {\scriptsize (3.65)} & 54.27 {\scriptsize (3.89)} & 1.91\\
+Post-NFT & HumanEval+ & 30.18 {\scriptsize (2.97)} & 37.83 {\scriptsize (3.33)} & 44.48 {\scriptsize (3.64)} & 49.39 {\scriptsize (3.92)} & 1.79\\
+Post-NFT & MBPP-378 base & 22.26 {\scriptsize (1.71)} & 29.62 {\scriptsize (2.02)} & 36.76 {\scriptsize (2.27)} & 43.39 {\scriptsize (2.54)} & 1.50\\
+Post-NFT & MBPP+ & 19.61 {\scriptsize (1.63)} & 26.31 {\scriptsize (1.96)} & 32.54 {\scriptsize (2.24)} & 37.83 {\scriptsize (2.49)} & 1.36\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1439,11 +1450,11 @@ Joint prompt & MBPP+ & 16.40 {\scriptsize (1.45)} & 23.20 {\scriptsize (1.84)} &
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Scoring with single-function aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
+\caption{\textbf{Scoring with single-function aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use epoch 12; pre-NFT is joint epoch 13; post-NFT is update 100. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
 \label{tab:codingaliasdetail}
 \begin{tabular}{@{}llrrrrr@{}}
 \toprule
-Conditioner & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
+Stage & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
 \midrule
 Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.78)} & 44.66 {\scriptsize (3.21)} & 54.13 {\scriptsize (3.46)} & 62.20 {\scriptsize (3.75)} & 2.11\\
 Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.70)} & 41.53 {\scriptsize (3.18)} & 50.82 {\scriptsize (3.45)} & 59.15 {\scriptsize (3.77)} & 2.09\\
@@ -1455,10 +1466,15 @@ Prompt MSE & HumanEval+ & 25.38 {\scriptsize (2.81)} & 32.32 {\scriptsize (3.25)
 Prompt MSE & MBPP-378 base & 30.99 {\scriptsize (1.88)} & 40.54 {\scriptsize (2.18)} & 48.72 {\scriptsize (2.37)} & 55.82 {\scriptsize (2.57)} & 1.48\\
 Prompt MSE & MBPP+ & 26.32 {\scriptsize (1.81)} & 34.45 {\scriptsize (2.14)} & 41.41 {\scriptsize (2.38)} & 47.09 {\scriptsize (2.61)} & 1.54\\
 \midrule
-Joint prompt & HumanEval & 29.73 {\scriptsize (2.76)} & 39.16 {\scriptsize (3.23)} & 47.24 {\scriptsize (3.55)} & 54.27 {\scriptsize (3.87)} & 2.34\\
-Joint prompt & HumanEval+ & 27.06 {\scriptsize (2.74)} & 35.39 {\scriptsize (3.23)} & 42.31 {\scriptsize (3.59)} & 47.56 {\scriptsize (3.92)} & 2.14\\
-Joint prompt & MBPP-378 base & 32.11 {\scriptsize (1.91)} & 41.66 {\scriptsize (2.20)} & 49.82 {\scriptsize (2.37)} & 57.14 {\scriptsize (2.57)} & 1.72\\
-Joint prompt & MBPP+ & 27.81 {\scriptsize (1.86)} & 36.19 {\scriptsize (2.18)} & 43.16 {\scriptsize (2.39)} & 49.21 {\scriptsize (2.60)} & 1.88\\
+Pre-NFT & HumanEval & 29.73 {\scriptsize (2.76)} & 39.16 {\scriptsize (3.23)} & 47.24 {\scriptsize (3.55)} & 54.27 {\scriptsize (3.87)} & 2.34\\
+Pre-NFT & HumanEval+ & 27.06 {\scriptsize (2.74)} & 35.39 {\scriptsize (3.23)} & 42.31 {\scriptsize (3.59)} & 47.56 {\scriptsize (3.92)} & 2.14\\
+Pre-NFT & MBPP-378 base & 32.11 {\scriptsize (1.91)} & 41.66 {\scriptsize (2.20)} & 49.82 {\scriptsize (2.37)} & 57.14 {\scriptsize (2.57)} & 1.72\\
+Pre-NFT & MBPP+ & 27.81 {\scriptsize (1.86)} & 36.19 {\scriptsize (2.18)} & 43.16 {\scriptsize (2.39)} & 49.21 {\scriptsize (2.60)} & 1.88\\
+\midrule
+Post-NFT & HumanEval & 33.16 {\scriptsize (2.97)} & 42.03 {\scriptsize (3.34)} & 49.64 {\scriptsize (3.64)} & 54.88 {\scriptsize (3.88)} & 2.06\\
+Post-NFT & HumanEval+ & 30.26 {\scriptsize (2.97)} & 37.87 {\scriptsize (3.34)} & 44.48 {\scriptsize (3.64)} & 49.39 {\scriptsize (3.92)} & 1.75\\
+Post-NFT & MBPP-378 base & 38.96 {\scriptsize (2.10)} & 47.68 {\scriptsize (2.32)} & 54.42 {\scriptsize (2.42)} & 60.32 {\scriptsize (2.55)} & 1.60\\
+Post-NFT & MBPP+ & 33.76 {\scriptsize (2.07)} & 41.21 {\scriptsize (2.33)} & 46.55 {\scriptsize (2.47)} & 50.79 {\scriptsize (2.61)} & 1.43\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1486,6 +1502,33 @@ Alias & HumanEval & $+1.68$ {\scriptsize $[-0.53,+3.81]$} & $+5.49$ {\scriptsize
 Alias & HumanEval+ & $+1.68$ {\scriptsize $[-0.46,+3.73]$} & $+5.49$ {\scriptsize $[+0.61,+10.98]$}\\
 Alias & MBPP-378 base & $+1.12$ {\scriptsize $[-0.33,+2.65]$} & $+1.32$ {\scriptsize $[-2.38,+4.76]$}\\
 Alias & MBPP+ & $+1.49$ {\scriptsize $[+0.17,+2.88]$} & $+2.12$ {\scriptsize $[-1.06,+5.03]$}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{NFT with execution-based rewards.}
+Table~\ref{tab:codingnftdeltas} compares NFT update 100 against joint epoch 13 under matched prompts, ordered seeds, 128 denoising calls, SCCFG 3, arithmetic, and scorers. Backbone/prompt evaluation EMAs change from $0.9999/0.9999$ to $0.9/0.9$, so this comparison measures the reported training-stage change, including its EMA selection. Standard pass@1 improves on all four benchmarks, with positive paired intervals: HumanEval and HumanEval+ gain $3.28$ points, MBPP-378 base $3.80$, and MBPP+ $3.21$. Under alias scoring, the corresponding gains are $3.43$, $3.20$, $6.85$, and $5.95$ points. Aliasing remains a separate evaluation convention, rather than part of standard scoring.
+
+Higher-pass gains are less pronounced. Standard HumanEval pass@8 remains $54.27\%$, and HumanEval+ rises from $47.56\%$ to $49.39\%$; neither paired interval excludes zero. The MBPP pass@8 intervals also include zero, including the base-test interval whose lower endpoint rounds to zero. This mirrors the mathematics results: NFT improves single-sample reliability more clearly than oracle coverage, without establishing a decrease in diversity. HumanEval(+) pass@1 approaches the frozen-Qwen reference, but a substantial MBPP gap remains. These are conditional comparisons of fixed checkpoints and saved draws, not estimates of training-run or checkpoint-selection uncertainty.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\caption{\textbf{NFT update 100 minus joint epoch 13.} Differences in percentage points with paired 95\% problem-bootstrap intervals, over eight matched seeds at 128 denoising calls and SCCFG 3. Backbone/prompt EMAs are $0.9999/0.9999$ before NFT and $0.9/0.9$ afterward. Intervals use 4,000 problem resamples and condition on the selected endpoints.}
+\label{tab:codingnftdeltas}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Scoring & Benchmark & $\Delta$ pass@1 [95\% CI] & $\Delta$ pass@8 [95\% CI]\\
+\midrule
+Standard & HumanEval & $+3.28$ {\scriptsize $[+1.22,+5.34]$} & $+0.00$ {\scriptsize $[-5.49,+5.49]$}\\
+Standard & HumanEval+ & $+3.28$ {\scriptsize $[+1.30,+5.34]$} & $+1.83$ {\scriptsize $[-3.05,+6.71]$}\\
+Standard & MBPP-378 base & $+3.80$ {\scriptsize $[+2.61,+5.09]$} & $+3.44$ {\scriptsize $[+0.00,+7.14]$}\\
+Standard & MBPP+ & $+3.21$ {\scriptsize $[+2.05,+4.43]$} & $+1.85$ {\scriptsize $[-1.32,+5.03]$}\\
+\midrule
+Alias & HumanEval & $+3.43$ {\scriptsize $[+1.30,+5.56]$} & $+0.61$ {\scriptsize $[-4.27,+6.10]$}\\
+Alias & HumanEval+ & $+3.20$ {\scriptsize $[+1.14,+5.34]$} & $+1.83$ {\scriptsize $[-3.05,+6.71]$}\\
+Alias & MBPP-378 base & $+6.85$ {\scriptsize $[+5.22,+8.40]$} & $+3.17$ {\scriptsize $[+0.00,+6.61]$}\\
+Alias & MBPP+ & $+5.95$ {\scriptsize $[+4.46,+7.47]$} & $+1.59$ {\scriptsize $[-1.32,+4.76]$}\\
 \bottomrule
 \end{tabular}
 \end{table}
