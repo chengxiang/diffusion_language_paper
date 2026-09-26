@@ -175,32 +175,13 @@ Each layer is intervened on independently. The teacher target is detached; gradi
 \vspace{-\baselineskip}
 \centering
 \includegraphics[width=\linewidth]{figures/representation_shared2_sd.pdf}
-\par\smallskip
-% BEGIN inlined tables/representation_epoch6_compact.tex
-% Generated from exact per-seed counts; parentheses are sample SD, ddof=1.
-\begingroup
-\small
-\setlength{\tabcolsep}{3pt}
-\renewcommand{\arraystretch}{1.25}
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{.56\linewidth}r@{}}
-\toprule
-Variant & Accuracy (\%) \\
-\midrule
-Learned, 16/24/32 & \textbf{30.76} {\scriptsize (0.39)} \\
-PCA, 16/24/32 & 28.43 {\scriptsize (0.19)} \\
-PCA, layer 32 & 11.20 {\scriptsize (0.56)} \\
-Epoch 0 Learned Prompt Encoder & 8.70 {\scriptsize (0.33)} \\
-\bottomrule
-\end{tabular}
-\endgroup
-% END inlined tables/representation_epoch6_compact.tex
-\caption{\small\textbf{Representation and conditioning choices change reasoning performance.} LFRM-B on GSM8K, evaluated with 32 steps and $t=\tau^2$. \textbf{Top:} Learning curves. \textbf{Bottom:} Epoch-six accuracy. The first three variants use frozen Qwen prompt conditioning; the fourth jointly trains a randomly initialized prompt encoder. Protocol and numerical values appear in Appendices~\ref{app:representationclock} and~\ref{app:curvevalues}.}
+\caption{\small\textbf{Representation and conditioning choices change reasoning performance.} LFRM-B learning curves on GSM8K, with 32 steps and $t=\tau^2$. The first three variants retain Qwen prompt conditioning; the fourth jointly trains a randomly initialized prompt encoder. Protocol: Appendix~\ref{app:representationclock}; values and SDs: Table~\ref{tab:representationcurvevalues} (Appendix~\ref{app:curvevalues}).}
 \label{fig:representationcomparison}
 \vspace{-\baselineskip}
 \end{wrapfigure}
 % END inlined figures/representation_comparison.tex
 
-The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch LFRM-B training and evaluation settings.
+The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch LFRM-B training and evaluation settings; Table~\ref{tab:representationcurvevalues} gives the four-seed endpoint results used below.
 
 \paragraph{Good decoding does not ensure good generation.}
 Layer-32 activations support \textbf{99.37\%} token-reconstruction accuracy (Appendix~\ref{app:representationdiagnostics}), yet a diffusion model using only their PCA projection achieves \textbf{11.20\%} GSM8K accuracy (Figure~\ref{fig:representationcomparison}). This motivates evaluating representations for generation beyond their clean-token decodability.
@@ -968,7 +949,7 @@ Table~\ref{tab:headlineseedsd} reports standard deviations across independent sa
 \]
 These values describe generation randomness at a fixed checkpoint and test set. They are distinct from uncertainty across test problems and from variation across training runs. We use every completed sampling seed at each denoising budget: $n=64,32,16,8$ for NFE $8,16,32,64$, respectively. Checkpoints, guidance, scorers, and benchmark populations match the main tables.
 
-For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} in Appendix~\ref{app:codingdetails} give Table~\ref{tab:codingcomparison}'s eight-seed coding results with SDs. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:curvevalues} also includes the four-seed epoch-six summary from Figure~\ref{fig:representationcomparison}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
+For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} in Appendix~\ref{app:codingdetails} give Table~\ref{tab:codingcomparison}'s eight-seed coding results with SDs. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:curvevalues} also includes the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
 
 % BEGIN inlined tables/headline_seed_variability.tex
 \begin{table}[htbp]
@@ -1380,12 +1361,12 @@ Epoch & Prompt & Correct$_{42}$ & Correct$_{123}$ & Mean (SD) & 95\% CI \\
 \end{tabular}
 \end{table}
 \paragraph{Representation-ablation curves.}
-Table~\ref{tab:representationcurvevalues} gives all points and error bars in Figures~\ref{fig:representationcomparison} (top) and~\ref{fig:representationidentity}, followed by the four-seed epoch-six summary at the bottom of Figure~\ref{fig:representationcomparison}. The curves use seeds 42/123; the endpoint table adds 456/789. Error bars and parenthesized values are sample SDs across their respective generation seeds. Both use 32 steps and backbone EMA $0.999$; full controls are described in Appendix~\ref{app:representationclock}.
+Table~\ref{tab:representationcurvevalues} gives all points and error bars in Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}, followed by the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. The curves use seeds 42/123; the endpoint summary adds 456/789. Error bars and parenthesized values are sample SDs across their respective generation seeds. Both use 32 steps and backbone EMA $0.999$; full controls are described in Appendix~\ref{app:representationclock}.
 
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{5pt}
-\caption{Numerical learning curves and endpoint summary for Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}: mean GSM8K accuracy (\%) with sample seed SD in parentheses. Curves use two seeds (42/123); the final block repeats the four-seed epoch-six comparison (42/123/456/789). The final column trains the prompt encoder jointly from epoch zero; the other three retain Qwen prompt conditioning.}
+\caption{Numerical learning curves and endpoint summary for Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}: mean GSM8K accuracy (\%) with sample seed SD in parentheses. Curves use two seeds (42/123); the final block reports the four-seed epoch-six comparison (42/123/456/789). The final column trains the prompt encoder jointly from epoch zero; the other three retain Qwen prompt conditioning.}
 \label{tab:representationcurvevalues}
 \begin{tabular}{@{}rrrrr@{}}
 \toprule
