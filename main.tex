@@ -360,9 +360,8 @@ Because the external condition is the question text, NFT jointly updates the pro
 
 We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math500}, and code generation in Section~\ref{sec:codingresults}. Math evaluations use zero-shot prompts, async clocks $(2.5,2,1.5)$, numerical-answer scoring for GSM8K, and Math-Verify for MATH500 \citep{mathverify}. Headline pass@1 averages eight sampling seeds at 64 denoising steps. NFE counts denoising calls, excluding prompt encoding and terminal decoding. Appendices~\ref{app:experimentdetails} and~\ref{app:seedvariability} give checkpoint settings and seed standard deviations.
 
-\subsection{Reasoning accuracy across denoising budgets}
-\label{sec:headlinecomparison}
-\label{sec:headlinelownfe}
+\subsection{Mathematical reasoning}
+\label{sec:mathresults}
 % BEGIN inlined tables/headline_comparison.tex
 \begin{table}[t]
 \caption{Mathematical reasoning, mean pass@1 (\%). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
@@ -404,6 +403,9 @@ TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
 \end{table}
 % END inlined tables/headline_comparison.tex
 
+\paragraph{Reasoning accuracy across denoising budgets.}
+\label{sec:headlinecomparison}
+\label{sec:headlinelownfe}
 At comparable denoising-backbone sizes, supervised LFRM already exceeds the reported continuous-diffusion baselines, and NFT gives our strongest results (Table~\ref{tab:headlinecomparison}). On MATH500, supervised LFRM-L reaches 21.18\%, compared with ELF-REG-L's 13.39\% at 127 denoising calls \citep{scalingdlm}. Our 90.4M/638M denoisers use compact learned prompt encoders, without executing the teacher Transformer during generation. The autoregressive and discrete-diffusion rows provide broader performance context.
 
 % BEGIN inlined tables/headline_low_nfe.tex
@@ -433,7 +435,7 @@ Both supervised and post-NFT LFRM retain this advantage at 8, 16, 32, and 64 NFE
 
 The MATH500 headline tables use SCCFG 3, selected through a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); GSM8K and all inference-allocation curves retain SCCFG 2.
 
-\subsection{Refining an answer or drawing more answers}
+\paragraph{Refining an answer or drawing more answers.}
 \label{sec:headlinebudget}
 For $k$ samples with $S$ denoising steps each, we use $kS$ as the inference budget. Oracle pass@$k$ measures whether any sample is correct; majority vote selects the most frequent final answer after grouping equivalent answers, without consulting the reference. For selectors returning one of the generated answers, voting provides an achievable \emph{lower bound} on optimal selection accuracy, while oracle pass@$k$ supplies its \emph{upper bound}. We compare $S\in\{8,16,32,64\}$ up to a budget of 512 calls; Appendix~\ref{app:budgetvalues} gives aggregation details.
 
@@ -446,7 +448,7 @@ For $k$ samples with $S$ denoising steps each, we use $kS$ as the inference budg
 
 Figure~\ref{fig:headlinestages} shows that oracle selection generally favors more attempts with fewer steps, whereas voting generally favors higher-NFE samples. On MATH500 after NFT, 64 eight-step samples reach 67.00\% oracle accuracy, versus 52.60\% for eight 64-step samples; voting reverses this preference, at 25.79\% versus 32.42\%. Intermediate depths remain competitive for voting. The gap between voting and oracle accuracy motivates better answer selection, potentially using learned latent-space or hidden-state classifiers.
 
-\subsection{What changes after NFT?}
+\paragraph{What changes after NFT?}
 \label{sec:nftresults}
 NFT improves single-sample accuracy at every reported denoising depth (Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe}). At 64 steps with SCCFG 2, the paired LFRM-L gains are $+5.07$ percentage points on GSM8K (95\% problem-bootstrap interval $[4.26,5.90]$) and $+4.75$ on MATH500 ($[3.33,6.15]$). These results support the promise of diffusion RL for continuous reasoning models.
 
