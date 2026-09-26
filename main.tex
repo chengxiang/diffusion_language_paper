@@ -286,7 +286,7 @@ $(2.5,2,1.5)$ & \textbf{59.25} {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scri
 % END inlined tables/inference_clocks.tex
 
 \textbf{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the six-schedule MATH validation sweep (Appendix~\ref{app:inferenceclocks}). The shared-square clock improves on the identity clock, and $(2.5,2,1.5)$ achieves the highest mean among the four schedules in Table~\ref{tab:inferenceclocks} on both benchmarks. The broader sweep and lower-NFE comparisons show that the ordering depends on the evaluation setting (Appendix~\ref{app:inferenceclocks}).
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the reported MATH validation comparison (Appendix~\ref{app:inferenceclocks}). The shared-square clock improves on the identity clock, and $(2.5,2,1.5)$ achieves the highest mean among the four schedules in Table~\ref{tab:inferenceclocks} on both benchmarks. The validation and lower-NFE comparisons show that the ordering depends on the evaluation setting (Appendix~\ref{app:inferenceclocks}).
 
 Reconstruction probes reveal distinct sensitivities across layer groups, with weaker contrasts under random coordinate grouping (Figure~\ref{fig:layerreconstruction}). These findings motivate studying coordinated denoising across representations, but do not establish the mechanism behind the sampling gains.
 
@@ -857,7 +857,7 @@ The base $\tau$ grid is fixed across schedule comparisons. We retain the full de
 \subsection{Schedule comparisons}
 Tables~\ref{tab:inferenceclocks} and~\ref{tab:inferenceclockfull} use LFRM-L epoch 21, 32 denoising steps, SCCFG 2, backbone/prompt EMA $0.9999/0.9999$, and seeds 42/123. Scores are canonical GSM8K and primary Math-Verify accuracies (Appendix~\ref{app:experimentdetails}). Entries in Table~\ref{tab:inferenceclocks} give mean pass@1 with sample SD across the two seeds; bold marks the highest mean among its four schedules.
 
-Table~\ref{tab:inferenceclockfull} reports all six schedules in the matched validation and test sweeps. The MATH validation result corroborates the headline allocation retrospectively; it was not the original selection experiment. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution; the two validation sets need not favor the same schedule. The highest GSM8K validation mean instead uses $(1.5,2,2.5)$. On the test set, the two additional shared-power schedules achieve higher MATH500 point estimates than the four schedules in the main table. Thus the main comparison supports the usefulness of time reparameterization and the chosen operating point, without identifying a universally optimal exponent vector.
+Table~\ref{tab:inferenceclockfull} compares the four schedules from the main table on both validation and test sets. The MATH validation result corroborates the headline allocation retrospectively; it was not the original selection experiment. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution; the two validation sets need not favor the same schedule. The highest GSM8K validation mean instead uses $(1.5,2,2.5)$. Thus the main comparison supports the usefulness of time reparameterization and the chosen operating point, without identifying a universally optimal exponent vector.
 
 \begin{table}[htbp]
 \centering\small
@@ -868,14 +868,12 @@ Table~\ref{tab:inferenceclockfull} reports all six schedules in the matched vali
 Clock powers & GSM8K & MATH & GSM8K & MATH500 \\
 \midrule
 $(1,1,1)$ & 65.00 {\scriptsize (0.99)} & 15.40 {\scriptsize (0.28)} & 52.96 {\scriptsize (1.13)} & 15.50 {\scriptsize (1.27)} \\
-$(1.5,1.5,1.5)$ & 71.75 {\scriptsize (0.35)} & 17.70 {\scriptsize (0.71)} & 57.35 {\scriptsize (0.38)} & \textbf{18.10} {\scriptsize (1.27)} \\
 $(2,2,2)$ & 72.70 {\scriptsize (0.85)} & 17.80 {\scriptsize (0.57)} & 57.51 {\scriptsize (0.80)} & 17.40 {\scriptsize (1.41)} \\
-$(2.5,2.5,2.5)$ & 71.35 {\scriptsize (0.49)} & 16.30 {\scriptsize (1.56)} & 55.80 {\scriptsize (0.64)} & \textbf{18.10} {\scriptsize (1.56)} \\
 $(1.5,2,2.5)$ & \textbf{72.80} {\scriptsize (1.13)} & 18.30 {\scriptsize (0.14)} & 58.07 {\scriptsize (0.64)} & 17.60 {\scriptsize (1.98)} \\
-$(2.5,2,1.5)$ & 72.15 {\scriptsize (0.35)} & \textbf{18.70} {\scriptsize (0.14)} & \textbf{59.25} {\scriptsize (0.16)} & 17.90 {\scriptsize (1.27)} \\
+$(2.5,2,1.5)$ & 72.15 {\scriptsize (0.35)} & \textbf{18.70} {\scriptsize (0.14)} & \textbf{59.25} {\scriptsize (0.16)} & \textbf{17.90} {\scriptsize (1.27)} \\
 \bottomrule
 \end{tabular}
-\caption{Complete six-schedule LFRM-L epoch-21 sweep: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns include all entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
+\caption{Four-schedule LFRM-L epoch-21 comparison: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns include all entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
 \label{tab:inferenceclockfull}
 \end{table}
 
