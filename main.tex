@@ -294,16 +294,14 @@ Given the predicted clean endpoint $\widehat z_{\mathrm{clean},r}$ and local tim
 \end{equation}
 with $\Delta_t$ defined in Section~\ref{sec:methodflow}. All groups update from the same denoiser call, so asynchrony does not increase NFE. Unlike shared-clock reparameterization, this adapts the model to unequal group times absent from synchronous training; implementation details appear in Appendix~\ref{app:inferenceclocks}.
 
-\paragraph{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the six-schedule MATH validation sweep (Appendix~\ref{app:inferenceclocks}).
-
 % BEGIN inlined tables/inference_clocks.tex
-\begin{table}[htbp]
+\begin{wraptable}{r}{.50\textwidth}
+\vspace{-\baselineskip}
 \centering\small
-\setlength{\tabcolsep}{10pt}
-\begin{tabular}{lcc}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrr@{}}
 \toprule
-Clock powers $(\gamma_{16},\gamma_{24},\gamma_{32})$ & GSM8K & MATH500 \\
+$(\gamma_{16},\gamma_{24},\gamma_{32})$ & GSM8K & MATH500 \\
 \midrule
 $(1,1,1)$ & 52.96 {\scriptsize($\pm 1.13$)} & 15.50 {\scriptsize($\pm 1.27$)} \\
 $(2,2,2)$ & 57.51 {\scriptsize($\pm 0.80$)} & 17.40 {\scriptsize($\pm 1.41$)} \\
@@ -311,10 +309,14 @@ $(1.5,2,2.5)$ & 58.07 {\scriptsize($\pm 0.64$)} & 17.60 {\scriptsize($\pm 1.98$)
 $(2.5,2,1.5)$ & \textbf{59.25} {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scriptsize($\pm 1.27$)} \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Inference clocks change reasoning accuracy without retraining.} LFRM-L epoch 21, 32 denoising steps; mean pass@1 (\%). Protocol and the complete validation/test sweep appear in Appendix~\ref{app:inferenceclocks}.}
+\caption{\small\textbf{Inference clocks change accuracy without retraining.} LFRM-L epoch 21, 32 steps; mean pass@1 (\%). Protocol and full sweep: Appendix~\ref{app:inferenceclocks}.}
 \label{tab:inferenceclocks}
-\end{table}
+\vspace{-\baselineskip}
+\end{wraptable}
 % END inlined tables/inference_clocks.tex
+
+\paragraph{Schedule choice and reasoning accuracy.}
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the six-schedule MATH validation sweep (Appendix~\ref{app:inferenceclocks}).
 
 The shared-square clock improves on the identity clock, and $(2.5,2,1.5)$ achieves the highest mean among the four schedules in Table~\ref{tab:inferenceclocks} on both benchmarks. The broader sweep and lower-NFE comparisons show that the ordering depends on the evaluation setting (Appendix~\ref{app:inferenceclocks}).
 
