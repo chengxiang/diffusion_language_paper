@@ -357,8 +357,8 @@ We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math50
 \subsection{Mathematical reasoning}
 \label{sec:mathresults}
 % BEGIN inlined tables/headline_comparison.tex
-\begin{table}[t]
-\caption{Mathematical reasoning, mean pass@1 (\%). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
+\begin{table}[htbp]
+\caption{Mathematical reasoning, mean pass@1 (\%). Parameter counts include frozen weights; Embedding covers vocabulary input/output maps, and $(+X)$ denotes parameters used once per response. Bold/underline mark best/second within each continuous-backbone group. $^{*}N$ denotes $N-1$ denoising calls; slashes separate GSM8K/MATH500 budgets. $^\dagger$Python scoring. Full comparisons and protocol details: Appendix~\ref{app:experimentdetails}; seed SDs: Appendix~\ref{app:seedvariability}.}
 \label{tab:headlinecomparison}
 \centering\small
 \setlength{\tabcolsep}{3pt}
@@ -371,8 +371,6 @@ Qwen3-0.6B-Base \citep{qwen3} & 156 & 440 & --- & 59.59 & ---\\
 Qwen3-0.6B, thinking \citep{qwen3} & 156 & 440 & --- & --- & 77.60\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Discrete diffusion / blockwise diffusion}}\\
-LLaDA-8B-Base \citep{llada} & 1,040 & 6,980 & 1,024 & 70.30 & ---\\
-Dream-v0-Base-7B \citep{dream} & 1,090 & 6,530 & 256 & 77.20 & ---\\
 SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
@@ -386,21 +384,15 @@ ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
 ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96 & 13.39\\
 \textbf{LFRM-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{58.67} & \underline{21.18}\\
 \textbf{LFRM-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{63.74} & \textbf{24.68}\\
-\midrule
-\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: larger backbones (reference)}}\\
-MLFM \citep{mlfm} & 123 & 1,220 & 256 & 31.24 & ---\\
-TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
 \bottomrule
 \end{tabular}
-\vspace{3pt}
-\parbox{\linewidth}{\footnotesize External results are author-reported; $^\dagger$Python scoring, $^\ddagger$figure-derived accuracy. Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
 \end{table}
 % END inlined tables/headline_comparison.tex
 
 \paragraph{Reasoning accuracy across denoising budgets.}
 \label{sec:headlinecomparison}
 \label{sec:headlinelownfe}
-At comparable denoising-backbone sizes, supervised LFRM already exceeds the reported continuous-diffusion baselines, and NFT gives our strongest results (Table~\ref{tab:headlinecomparison}). On MATH500, supervised LFRM-L reaches 21.18\%, compared with ELF-REG-L's 13.39\% at 127 denoising calls \citep{scalingdlm}. Our 90.4M/638M denoisers use compact learned prompt encoders, without executing the teacher Transformer during generation. The autoregressive and discrete-diffusion rows provide broader performance context.
+At comparable denoising-backbone sizes, supervised LFRM already exceeds the reported continuous-diffusion baselines, and NFT gives our strongest results (Table~\ref{tab:headlinecomparison}). On MATH500, supervised LFRM-L reaches 21.18\%, compared with ELF-REG-L's 13.39\% at 127 denoising calls \citep{scalingdlm}. Our 90.4M/638M denoisers use compact learned prompt encoders, without executing the teacher Transformer during generation. The autoregressive and discrete-diffusion rows provide broader performance context; Table~\ref{tab:headlinecomparisonfull} in Appendix~\ref{app:experimentdetails} adds comparisons with larger models.
 
 % BEGIN inlined tables/headline_low_nfe.tex
 \begin{table}[t]
@@ -561,12 +553,54 @@ Each generation seed evaluates all 1,319 GSM8K test problems or all 500 MATH500 
 The headline and inference-allocation math evaluations use a 1,024-token canvas and async clocks $(2.5,2,1.5)$. The supervised endpoints are epoch 18 for LFRM-B and epoch 21 for LFRM-L; NFT endpoints are updates 300, 500, and 600 for GSM8K LFRM-B, GSM8K LFRM-L, and MATH500 LFRM-L, respectively. Supervised evaluations select backbone/prompt EMA $.9999/.9999$; NFT evaluations select $.99/.99$. Table~\ref{tab:headlinecomparison} uses eight sampling seeds at 64 denoising steps. Table~\ref{tab:headlinelownfe} uses 64, 32, 16, and 8 seeds at 8, 16, 32, and 64 steps, respectively. Our rows in both tables use SCCFG 2 for GSM8K and SCCFG 3 for MATH500. The latter follows a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); the inference-allocation figures retain SCCFG 2, whose 64-step MATH500 pass@1 is 18.85\% before NFT and 23.60\% afterward.
 
 \paragraph{External reports and parameter accounting.}
-Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} use the comparison papers' reported accuracies and sampling budgets, without re-evaluating their models. GSM8K uses 4-shot prompts for Qwen/LLaDA, 8-shot prompts for Dream/TESS~2, and zero-shot prompts for ours. FMLM+ grades Python solutions, whereas ELF-REG and LFRM produce natural-language reasoning. The low-NFE values come from FMLM+ Table~8 and ELF-REG Tables~13 and~17; ELF-REG uses early stopping \citep{posterior,scalingdlm}. SDAR uses four steps per four-token block. ELF-REG's reported budget includes one terminal decoder call, so our tables mark it with $^{*}$; our NFE excludes prompt encoding and terminal decoding.
+Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} and~\ref{tab:headlinecomparisonfull} use the comparison papers' reported accuracies and sampling budgets, without re-evaluating their models. GSM8K uses 4-shot prompts for Qwen/LLaDA, 8-shot prompts for Dream/TESS~2, and zero-shot prompts for ours. FMLM+ grades Python solutions, whereas ELF-REG and LFRM produce natural-language reasoning. The low-NFE values come from FMLM+ Table~8 and ELF-REG Tables~13 and~17; ELF-REG uses early stopping \citep{posterior,scalingdlm}. SDAR uses four steps per four-token block. ELF-REG's reported budget includes one terminal decoder call, so our tables mark it with $^{*}$; our NFE excludes prompt encoding and terminal decoding.
 
 Parameter counts include frozen components. Our inherited Qwen vocabulary input/output maps contain 545M parameters and are called once per response; the denoising backbones contain 90.4M/638M parameters. The $(+X)$ counts include the learned prompt encoder and terminal projection, also used once per response. ELF-REG includes its frozen Qwen prompt encoder, and its reported non-decoder counts retain training-only REPA projectors. MLFM includes unmerged adapters; SDAR counts both untied vocabulary maps. These conventions describe stored parameters and invocation frequency, not equal inference cost across architectures.
 
 \paragraph{Uncertainty notation.}
 \emph{Seed SD} denotes the sample standard deviation of full-benchmark accuracies across generation seeds at a fixed checkpoint, using denominator $n-1$ (Appendix~\ref{app:seedvariability}). Bars in the representation learning curves are $\pm1$ seed SD; small parenthesized values in the accompanying table report the same statistic. \emph{95\% CI} denotes a pointwise problem-bootstrap interval with 4,000 replicates: complete problems, including their saved draws, are resampled together. This convention applies to the prompt curriculum, reconstruction probe, and SCCFG-sensitivity figures. Paired comparisons resample the same problems in both conditions. The numerical inference-allocation tables instead report bootstrap standard errors, as detailed in Appendix~\ref{app:budgetvalues}. None of these measures estimates variability across independent training runs.
+
+% Full comparison retains all broader-context rows from the original headline table.
+\begin{table}[p]
+\caption{Full mathematical-reasoning comparison, mean pass@1 (\%). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
+\label{tab:headlinecomparisonfull}
+\centering\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Model & \shortstack{Embedding\\Params (M)} & \shortstack{Other\\Params (M)} & NFE & GSM8K & MATH500\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Autoregressive}}\\
+Qwen3-0.6B-Base \citep{qwen3} & 156 & 440 & --- & 59.59 & ---\\
+Qwen3-0.6B, thinking \citep{qwen3} & 156 & 440 & --- & --- & 77.60\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Discrete diffusion / blockwise diffusion}}\\
+LLaDA-8B-Base \citep{llada} & 1,040 & 6,980 & 1,024 & 70.30 & ---\\
+Dream-v0-Base-7B \citep{dream} & 1,090 & 6,530 & 256 & 77.20 & ---\\
+SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
+$\mathbb S$-FLM \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
+FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
+ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
+\textbf{LFRM-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & ---\\
+\textbf{LFRM-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{42.16} & ---\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone 200M--1B}}\\
+ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96 & 13.39\\
+\textbf{LFRM-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{58.67} & \underline{21.18}\\
+\textbf{LFRM-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{63.74} & \textbf{24.68}\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: larger backbones (reference)}}\\
+MLFM \citep{mlfm} & 123 & 1,220 & 256 & 31.24 & ---\\
+TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
+\bottomrule
+\end{tabular}
+\vspace{3pt}
+\parbox{\linewidth}{\footnotesize External results are author-reported; $^\dagger$Python scoring, $^\ddagger$figure-derived accuracy. Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
+\end{table}
+% Flush the full comparison within its evaluation-details appendix.
+\clearpage
 
 % BEGIN inlined sections/representation_appendix.tex
 \section{Representation construction details}
