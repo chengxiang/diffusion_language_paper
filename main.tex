@@ -258,23 +258,24 @@ Let $Z_{\mathrm{clean}}$ and $Q$ denote the clean answer latents and prompt, wit
 Thus an encoder preserves the full-prompt score exactly when it preserves the posterior mean clean answer. If this holds along the path, the optimal unguided field also agrees by Eq.~\eqref{eq:conditionalflowscore}, giving the same conditional endpoint law under exact integration whenever the flow is well-defined.
 \end{lemma}
 
-The encoder need not reproduce the teacher's coordinates: it must preserve the information needed for the posterior mean answer. Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. MSE matching supplies a compatible initialization, while downstream training can adapt the encoder and denoiser jointly. We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:methodobjective}):
-\begin{enumerate}
- \item \textbf{Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective.
-
- \item \textbf{Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE.
-
- \item \textbf{Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss, to epoch 18 for LFRM-B or epoch 21 for LFRM-L on the mathematical reasoning tasks.
-\end{enumerate}
-
 % BEGIN inlined figures/prompt_curriculum.tex
-\begin{figure}[htbp]
+\begin{wrapfigure}{R}{.43\textwidth}
+\vspace{-\baselineskip}
 \centering
 \includegraphics[width=\linewidth]{figures/prompt_curriculum_training.pdf}
-\caption{\textbf{Stable teacher conditioning followed by learned prompt adaptation.} Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. The red line marks the epoch-12 switch; arrows show the immediate MSE-prompt swap loss. Appendix~\ref{app:curvevalues} gives every plotted value and evaluation settings.}
+\caption{\small\textbf{Stable teacher conditioning followed by learned prompt adaptation.} Top: GSM8K; bottom: MATH500. Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. The red line marks the epoch-12 switch; arrows show the immediate MSE-prompt swap loss. Appendix~\ref{app:curvevalues} gives every plotted value and evaluation settings.}
 \label{fig:promptcurriculum}
-\end{figure}
+\vspace{-\baselineskip}
+\end{wrapfigure}
 % END inlined figures/prompt_curriculum.tex
+
+The encoder need not reproduce the teacher's coordinates: it must preserve the information needed for the posterior mean answer. Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. MSE matching supplies a compatible initialization, while downstream training can adapt the encoder and denoiser jointly. We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:methodobjective}):
+
+\textbf{1. Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective.
+
+\textbf{2. Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE.
+
+\textbf{3. Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss, to epoch 18 for LFRM-B or epoch 21 for LFRM-L on the mathematical reasoning tasks.
 
 Replacing Qwen with the MSE-trained encoder immediately reduces accuracy, despite unchanged flow-model weights (Figure~\ref{fig:promptcurriculum}). Subsequent joint training recovers much of this loss on GSM8K and exceeds the original teacher-conditioned checkpoint on MATH500. This recovery reflects adaptation of \emph{both} networks, showing the value of learning the conditioning interface through the generative objective.
 
@@ -290,6 +291,13 @@ Our multilayer representation allows different feature groups to become clean at
 
 \paragraph{Adapting a synchronously trained denoiser.}
 Although training uses a shared time, inference applies the same learned time-embedding function to each local time and averages its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. This requires no retraining and recovers the original embedding when the local times agree.
+
+% End the curriculum wrap before the full-width sampling equation.
+\par
+\ifnum\value{WF@wrappedlines}>1
+  \vspace{\dimexpr\value{WF@wrappedlines}\baselineskip\relax}
+\fi
+\WFclear
 
 Given the predicted clean endpoint $\widehat z_{\mathrm{clean},r}$ and local times $t_{\ell,r}=f_\ell(\tau_r)$, the groupwise Euler update is
 \begin{equation}
@@ -443,26 +451,17 @@ The MATH500 headline tables use SCCFG 3, selected through a test-set sensitivity
 \caption{Reasoning at lower NFE, mean pass@1 (\%). Bold/underline mark first/second within each benchmark and backbone-scale block; $^{*}$ marks one fewer denoising call than the heading (Table~\ref{tab:headlinecomparison}). External results follow \citet{posterior,scalingdlm}; Appendix~\ref{app:experimentdetails} gives source and protocol details.}
 \label{tab:headlinelownfe}
 \centering\small
-\setlength{\tabcolsep}{7pt}
-\begin{tabular}{@{}lrrrr@{}}
+\setlength{\tabcolsep}{1.7pt}
+\begin{tabular}{@{}l*{12}{r}@{}}
 \toprule
-Method & 8 NFE & 16 NFE & 32 NFE & 64 NFE\\
+& \multicolumn{4}{c}{GSM8K ($\sim$100M)} & \multicolumn{4}{c}{GSM8K ($\sim$650M)} & \multicolumn{4}{c}{MATH500 ($\sim$650M)}\\
+\cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-13}
+Method / NFE & 8 & 16 & 32 & 64 & 8 & 16 & 32 & 64 & 8 & 16 & 32 & 64\\
 \midrule
-\multicolumn{5}{@{}l}{\textit{GSM8K: approximately 100M denoising backbone}}\\
-FMLM+ Init & 15.10 & 26.10 & 31.80 & 33.60\\
-ELF-REG-B & $^{*}$26.20 & $^{*}$34.42 & $^{*}$37.15 & $^{*}$38.11\\
-LFRM-B, pre-NFT (ours) & \underline{26.40} & \underline{34.48} & \underline{37.80} & \underline{39.17}\\
-LFRM-B, post-NFT (ours) & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.16}\\
-\midrule
-\multicolumn{5}{@{}l}{\textit{GSM8K: approximately 650M denoising backbone}}\\
-ELF-REG-L & $^{*}$47.34 & $^{*}$52.89 & $^{*}$55.04 & $^{*}$55.96\\
-LFRM-L, pre-NFT (ours) & \underline{49.41} & \underline{55.33} & \underline{57.88} & \underline{58.67}\\
-LFRM-L, post-NFT (ours) & \textbf{54.84} & \textbf{60.55} & \textbf{62.47} & \textbf{63.74}\\
-\midrule
-\multicolumn{5}{@{}l}{\textit{MATH500: approximately 650M denoising backbone}}\\
-ELF-REG-L & $^{*}$9.76 & $^{*}$11.53 & $^{*}$12.40 & $^{*}$13.31\\
-LFRM-L, pre-NFT (ours) & \underline{15.23} & \underline{17.93} & \underline{19.65} & \underline{21.18}\\
-LFRM-L, post-NFT (ours) & \textbf{17.45} & \textbf{20.93} & \textbf{22.60} & \textbf{24.68}\\
+FMLM+ Init & 15.10 & 26.10 & 31.80 & 33.60 & --- & --- & --- & --- & --- & --- & --- & ---\\
+ELF-REG & $^{*}$26.20 & $^{*}$34.42 & $^{*}$37.15 & $^{*}$38.11 & $^{*}$47.34 & $^{*}$52.89 & $^{*}$55.04 & $^{*}$55.96 & $^{*}$9.76 & $^{*}$11.53 & $^{*}$12.40 & $^{*}$13.31\\
+LFRM, pre-NFT & \underline{26.40} & \underline{34.48} & \underline{37.80} & \underline{39.17} & \underline{49.41} & \underline{55.33} & \underline{57.88} & \underline{58.67} & \underline{15.23} & \underline{17.93} & \underline{19.65} & \underline{21.18}\\
+LFRM, post-NFT & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.16} & \textbf{54.84} & \textbf{60.55} & \textbf{62.47} & \textbf{63.74} & \textbf{17.45} & \textbf{20.93} & \textbf{22.60} & \textbf{24.68}\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
