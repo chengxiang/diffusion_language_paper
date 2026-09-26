@@ -436,7 +436,7 @@ TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
-\parbox{\linewidth}{\footnotesize External results are author-reported; $^\dagger$Python scoring, $^\ddagger$figure-derived accuracy. Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Appendix~\ref{app:seedvariability} gives our seed SDs.}
+\parbox{\linewidth}{\footnotesize External results are author-reported; $^\dagger$Python scoring, $^\ddagger$figure-derived accuracy. Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
 \end{table}
 % END inlined tables/headline_comparison.tex
 
@@ -465,7 +465,7 @@ LFRM, post-NFT & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.1
 \bottomrule
 \end{tabular}
 \vspace{3pt}
-\parbox{\linewidth}{\footnotesize Our checkpoints are fixed across columns, with SCCFG 2 for GSM8K and 3 for MATH500. Sampling-seed counts and SDs appear in Appendix~\ref{app:seedvariability}.}
+\parbox{\linewidth}{\footnotesize Our checkpoints are fixed across columns, with SCCFG 2 for GSM8K and 3 for MATH500. Sampling-seed counts and SDs: Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability}.}
 \end{table}
 % END inlined tables/headline_low_nfe.tex
 
@@ -514,7 +514,7 @@ LFRM-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 43.45 & 37.93\\
 LFRM-L / learned prompt (ours) & 128 & 28.05 & 25.38 & 30.99 & 26.32\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Code generation with and without function-name repair.} Mean pass@1 (\%). HE/HE+ denote HumanEval and its full extended tests; both MBPP columns use 378 tasks. PlaidQ's column named ``MBPP+'' uses base tests and is placed under MBPP-378 base here. External values are reported by the authors. Ours use eight seeds and the same epoch-12 backbone weights in both conditioner rows. NFE excludes terminal decoding: PlaidQ+CFG uses two calls per denoising step, and $^{*}128$ denotes ELF-REG's 127 denoising calls. Prompts, response budgets, and extraction/execution details differ across papers (Appendix~\ref{app:codingdetails}).}
+\caption{\textbf{Code generation with and without function-name repair.} Mean pass@1 (\%). HE/HE+ denote HumanEval and its full extended tests; both MBPP columns use 378 tasks. PlaidQ's column named ``MBPP+'' uses base tests and is placed under MBPP-378 base here. External values are reported by the authors. Ours use eight seeds and the same epoch-12 backbone weights in both conditioner rows. NFE excludes terminal decoding: PlaidQ+CFG uses two calls per denoising step, and $^{*}128$ denotes ELF-REG's 127 denoising calls. Prompts, response budgets, and extraction/execution details differ across papers (Appendix~\ref{app:codingdetails}; seed SDs in Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail}).}
 \label{tab:codingcomparison}
 \end{table}
 
@@ -835,15 +835,15 @@ Table~\ref{tab:inferenceclockfull} reports all six schedules in the matched vali
 \cmidrule(lr){2-3}\cmidrule(lr){4-5}
 Clock powers & GSM8K & MATH & GSM8K & MATH500 \\
 \midrule
-$(1,1,1)$ & 65.00 & 15.40 & 52.96 & 15.50 \\
-$(1.5,1.5,1.5)$ & 71.75 & 17.70 & 57.35 & \textbf{18.10} \\
-$(2,2,2)$ & 72.70 & 17.80 & 57.51 & 17.40 \\
-$(2.5,2.5,2.5)$ & 71.35 & 16.30 & 55.80 & \textbf{18.10} \\
-$(1.5,2,2.5)$ & \textbf{72.80} & 18.30 & 58.07 & 17.60 \\
-$(2.5,2,1.5)$ & 72.15 & \textbf{18.70} & \textbf{59.25} & 17.90 \\
+$(1,1,1)$ & 65.00 {\scriptsize (0.99)} & 15.40 {\scriptsize (0.28)} & 52.96 {\scriptsize (1.13)} & 15.50 {\scriptsize (1.27)} \\
+$(1.5,1.5,1.5)$ & 71.75 {\scriptsize (0.35)} & 17.70 {\scriptsize (0.71)} & 57.35 {\scriptsize (0.38)} & \textbf{18.10} {\scriptsize (1.27)} \\
+$(2,2,2)$ & 72.70 {\scriptsize (0.85)} & 17.80 {\scriptsize (0.57)} & 57.51 {\scriptsize (0.80)} & 17.40 {\scriptsize (1.41)} \\
+$(2.5,2.5,2.5)$ & 71.35 {\scriptsize (0.49)} & 16.30 {\scriptsize (1.56)} & 55.80 {\scriptsize (0.64)} & \textbf{18.10} {\scriptsize (1.56)} \\
+$(1.5,2,2.5)$ & \textbf{72.80} {\scriptsize (1.13)} & 18.30 {\scriptsize (0.14)} & 58.07 {\scriptsize (0.64)} & 17.60 {\scriptsize (1.98)} \\
+$(2.5,2,1.5)$ & 72.15 {\scriptsize (0.35)} & \textbf{18.70} {\scriptsize (0.14)} & \textbf{59.25} {\scriptsize (0.16)} & 17.90 {\scriptsize (1.27)} \\
 \bottomrule
 \end{tabular}
-\caption{Complete six-schedule LFRM-L epoch-21 sweep: mean pass@1 (\%) over seeds 42/123 at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns use the same cohort as Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
+\caption{Complete six-schedule LFRM-L epoch-21 sweep: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns include all entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
 \label{tab:inferenceclockfull}
 \end{table}
 % END inlined tables/inference_clocks_full.tex
@@ -958,6 +958,8 @@ The moving old policy centers NFT's implicit positive/negative construction, whi
 % END inlined sections/nft_appendix.tex
 
 % BEGIN inlined sections/headline_appendix.tex
+% Keep the seed-variability discussion and table together on an appendix page.
+\clearpage
 \section{Variation across evaluation seeds}
 \label{app:seedvariability}
 
@@ -966,6 +968,8 @@ Table~\ref{tab:headlineseedsd} reports standard deviations across independent sa
   \operatorname{SD}_{\mathrm{seed}}=\sqrt{\frac{1}{n-1}\sum_{m=1}^{n}(A_m-\bar A)^2}.
 \]
 These values describe generation randomness at a fixed checkpoint and test set. They are distinct from uncertainty across test problems and from variation across training runs. We use every completed sampling seed at each denoising budget: $n=64,32,16,8$ for NFE $8,16,32,64$, respectively. Checkpoints, guidance, scorers, and benchmark populations match the main tables.
+
+For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} in Appendix~\ref{app:codingdetails} give Table~\ref{tab:codingcomparison}'s eight-seed coding results with SDs. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:curvevalues} also includes the four-seed epoch-six summary from Figure~\ref{fig:representationcomparison}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
 
 % BEGIN inlined tables/headline_seed_variability.tex
 \begin{table}[htbp]
@@ -976,6 +980,7 @@ These values describe generation randomness at a fixed checkpoint and test set. 
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
 Model / stage & 8 NFE & 16 NFE & 32 NFE & 64 NFE\\
+Sampling seeds $n$ & 64 & 32 & 16 & 8\\
 \midrule
 \multicolumn{5}{@{}l}{\textit{GSM8K, LFRM-B, SCCFG 2}}\\
 Pre-NFT & $26.40\pm0.87$ & $34.48\pm0.94$ & $37.80\pm1.20$ & $39.17\pm0.63$\\
@@ -997,6 +1002,8 @@ Post-NFT & $16.31\pm1.36$ & $20.09\pm1.23$ & $22.08\pm1.41$ & $23.60\pm1.79$\\
 \end{tabular}
 \end{table}
 % END inlined tables/headline_seed_variability.tex
+% Keep the seed-variability table within Appendix J, before the next heading.
+\clearpage
 
 \section{LFRM-B inference allocation before and after NFT}
 \label{app:elfbbudgets}
@@ -1277,7 +1284,7 @@ Epoch 12 / prompt MSE 10 & 4 & 26.37 {\scriptsize (1.44)} & 24.70 {\scriptsize (
 \end{table}
 
 \paragraph{Eight-seed variation and multiple attempts.}
-Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give generation-seed SD for pass@1 and oracle pass@2/4/8. For each problem with $c$ successful samples among eight, pass@$k$ uses $1-\binom{8-c}{k}/\binom{8}{k}$, averaged across problems. Eight samples do not support pass@10, so the main cross-paper comparison uses pass@1. These SDs describe sampling variation for fixed checkpoints, not training variability. Paired uncertainty uses 4,000 problem-bootstrap replicates with seed 20260918, retaining all seeds and both compared conditions within each sampled problem.
+Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1 with its generation-seed SD, alongside oracle pass@2/4/8. For each problem with $c$ successful samples among eight, pass@$k$ uses $1-\binom{8-c}{k}/\binom{8}{k}$, averaged across problems. Eight samples do not support pass@10, so the main cross-paper comparison uses pass@1. These SDs describe sampling variation for fixed checkpoints, not training variability. Paired uncertainty uses 4,000 problem-bootstrap replicates with seed 20260918, retaining all seeds and both compared conditions within each sampled problem.
 
 At 128 steps, aliasing improves learned-prompt MBPP-378 base by $11.38$ points (95\% interval $[9.19,13.69]$), compared with $4.73$ ($[3.41,6.18]$) for frozen Qwen. With the learned encoder, full MBPP+ improves by $9.36$ points under repair, but remains $11.61$ points below repaired frozen-Qwen performance ($[9.13,14.25]$). Thus entry-point naming accounts for part of the measured conditioning gap; correcting it does not recover the teacher-conditioned result. Standard HumanEval+ also retains a $5.56$ point gap at this longer budget ($[1.75,9.38]$), so the near-recovery at 32 steps should not be interpreted as equivalence at every inference budget.
 
@@ -1374,12 +1381,12 @@ Epoch & Prompt & Correct$_{42}$ & Correct$_{123}$ & Mean (SD) & 95\% CI \\
 \end{tabular}
 \end{table}
 \paragraph{Representation-ablation curves.}
-Table~\ref{tab:representationcurvevalues} gives all points and error bars in Figures~\ref{fig:representationcomparison} (top) and~\ref{fig:representationidentity}. These are two-seed learning curves, distinct from the four-seed epoch-six summary at the bottom of Figure~\ref{fig:representationcomparison}. The curves use seeds 42/123; the endpoint table adds 456/789. Error bars and parenthesized values are sample SDs across their respective generation seeds. Both use 32 steps and backbone EMA $0.999$; full controls are described in Appendix~\ref{app:representationclock}.
+Table~\ref{tab:representationcurvevalues} gives all points and error bars in Figures~\ref{fig:representationcomparison} (top) and~\ref{fig:representationidentity}, followed by the four-seed epoch-six summary at the bottom of Figure~\ref{fig:representationcomparison}. The curves use seeds 42/123; the endpoint table adds 456/789. Error bars and parenthesized values are sample SDs across their respective generation seeds. Both use 32 steps and backbone EMA $0.999$; full controls are described in Appendix~\ref{app:representationclock}.
 
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{5pt}
-\caption{Numerical learning curves for Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}: mean GSM8K accuracy (\%) with sample SD across seeds 42/123. The final column trains the prompt encoder jointly from epoch zero; the other three retain Qwen prompt conditioning.}
+\caption{Numerical learning curves and endpoint summary for Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}: mean GSM8K accuracy (\%) with sample seed SD in parentheses. Curves use two seeds (42/123); the final block repeats the four-seed epoch-six comparison (42/123/456/789). The final column trains the prompt encoder jointly from epoch zero; the other three retain Qwen prompt conditioning.}
 \label{tab:representationcurvevalues}
 \begin{tabular}{@{}rrrrr@{}}
 \toprule
@@ -1400,6 +1407,9 @@ Epoch & \shortstack{Learned\\16/24/32} & \shortstack{PCA\\16/24/32} & \shortstac
 4 & 22.18 {\scriptsize (1.45)} & 19.18 {\scriptsize (2.36)} & 10.12 {\scriptsize (0.48)} & 8.15 {\scriptsize (1.88)} \\
 5 & 24.68 {\scriptsize (1.23)} & 21.08 {\scriptsize (0.96)} & 11.94 {\scriptsize (1.02)} & 8.45 {\scriptsize (1.23)} \\
 6 & 26.76 {\scriptsize (0.43)} & 24.22 {\scriptsize (2.52)} & 13.38 {\scriptsize (0.16)} & 8.68 {\scriptsize (0.16)} \\
+\addlinespace
+\multicolumn{5}{@{}l}{Epoch-six summary: $t=\tau^2$, four seeds}\\
+6 & 30.76 {\scriptsize (0.39)} & 28.43 {\scriptsize (0.19)} & 11.20 {\scriptsize (0.56)} & 8.70 {\scriptsize (0.33)} \\
 \addlinespace
 \bottomrule
 \end{tabular}
