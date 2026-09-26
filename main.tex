@@ -359,82 +359,57 @@ Reconstruction probes reveal distinct sensitivities across layer groups, with we
 \section{Reinforcement learning with self-conditioned flows}
 \label{sec:nft}
 
-Verifiable reasoning rewards provide a way to improve a continuous generator beyond supervised imitation. We build on DiffusionNFT \citep{diffusionnft}, which learns from rewarded endpoints through forward noising and avoids differentiating through a sampling trajectory or estimating its likelihood. Our adaptation addresses two features of this setting: LFRM inherits learned self-conditioning guidance from ELF, and mathematical correctness provides a sparse signal over complete solutions. We retain the guided sampler, construct an SCCFG-compatible NFT update, and supplement generated solutions with gold latent endpoints. The prompt encoder and flow model are refined together as a single model conditioned on question tokens.
+DiffusionNFT \citep{diffusionnft} improves continuous generators through rewarded endpoint regression, without differentiating through sampling trajectories. We adapt it to LFRM's learned self-conditioning guidance and supplement sparse correctness rewards with gold-solution endpoints.
 
 \subsection{NFT with learned self-conditioning guidance}
 \label{sec:nftsccfg}
 
-\paragraph{The field optimized by standard NFT.}
-Let $u$ denote a sample's forward velocity target and $\rho\in[0,1]$ its normalized optimality coefficient. NFT constructs implicit positive and negative fields around an old sampling policy:
+\paragraph{The velocity field optimized by standard NFT.}
+Let $v_{\mathrm{cur}}$ and $v_{\mathrm{old}}$ denote the current and old policy velocity fields, $u$ a sample's forward velocity target, and $\rho\in[0,1]$ its normalized optimality coefficient. NFT forms implicit positive and negative velocity fields, $v^+=(1-\beta)v_{\mathrm{old}}+\beta v_{\mathrm{cur}}$ and $v^-=(1+\beta)v_{\mathrm{old}}-\beta v_{\mathrm{cur}}$. For current and old velocity-field values $f,h$, the pointwise loss is
 \begin{equation}
- v_\theta^+=(1-\beta)v_{\mathrm{old}}+\beta v_\theta,
- \qquad
- v_\theta^-=(1+\beta)v_{\mathrm{old}}-\beta v_\theta.
- \label{eq:nftimplicitfields}
-\end{equation}
-For current and old field values $f,o$, write the resulting pointwise loss as
-\begin{equation}
-\begin{split}
- \ell_\beta(f,o;u,\rho)
- ={}&\rho\|(1-\beta)o+\beta f-u\|_2^2\\
- &+(1-\rho)\|(1+\beta)o-\beta f-u\|_2^2.
-\end{split}
+ \ell_\beta(f,h;u,\rho)
+ =\rho\|(1-\beta)h+\beta f-u\|_2^2
+ +(1-\rho)\|(1+\beta)h-\beta f-u\|_2^2.
 \label{eq:nftquadratic}
 \end{equation}
-Standard NFT applies this loss to $f=v_\theta$ and $o=v_{\mathrm{old}}$; its original experiments use CFG-free optimization \citep{diffusionnft}. LFRM inherits a guidance-scale-conditioned predictor from ELF. Our SCCFG sensitivity experiments motivate retaining this mechanism during post-training (Figure~\ref{fig:sccfgsweep}, Appendix~\ref{app:sccfgsweep}).
+Standard NFT applies this loss to $f=v_{\mathrm{cur}}$ and $h=v_{\mathrm{old}}$, holding the old field fixed; its original experiments use CFG-free optimization \citep{diffusionnft}. LFRM instead learns a guidance-conditioned field, motivating a correction before applying NFT's regression objective. Our SCCFG sensitivity results support retaining guidance during post-training (Figure~\ref{fig:sccfgsweep}).
 
 \paragraph{Constructing the SCCFG-compatible field.}
-For each policy role $p\in\{\mathrm{cur},\mathrm{old},\mathrm{ref}\}$, write $v_p$ for the complete field $v_{\Theta_p}$ with shared inputs suppressed. Forward-noise an endpoint and perform a detached bootstrap with zero answer self-conditioning, giving velocity $v_p^0$. A main forward uses the bootstrap clean prediction when $b_{\mathrm{sc}}=1$, and zero answer self-conditioning when $b_{\mathrm{sc}}=0$, producing $v_p^{\mathrm{main}}$. Each role uses its own prompt encoder; the question remains present in both passes. Following ELF's supervised guidance construction, define
+For each policy $p\in\{\mathrm{cur},\mathrm{old},\mathrm{ref}\}$, forward-noise an endpoint and obtain velocity $v_p^0$ from a detached bootstrap without answer self-conditioning. The main prediction $v_p^{\mathrm{main}}$ uses the bootstrap clean endpoint when $b_{\mathrm{sc}}=1$ and zero answer self-conditioning otherwise; both passes retain the question. Following ELF's guidance construction, define
 \begin{equation}
  \widetilde v_p=v_p^{\mathrm{main}}-
  \sg\!\left[b_{\mathrm{sc}}(1-g^{-1})(v_p^{\mathrm{main}}-v_p^0)\right],
  \label{eq:nftcorrectedfield}
 \end{equation}
-where $g>0$ is the SCCFG scale supplied to the predictor. Our NFT update applies Eq.~\eqref{eq:nftquadratic} to $f=\widetilde v_{\mathrm{cur}}$, $o=\sg(\widetilde v_{\mathrm{old}})$, and $u=u_t^{\mathrm{stab}}$ from Eq.~\eqref{eq:methodvelocity}. We use $\beta=1$ and add a squared-velocity penalty toward the fixed initial reference, using the same corrected field $\widetilde v_{\mathrm{ref}}$.
+where $g>0$ is the SCCFG scale. Our update applies Eq.~\eqref{eq:nftquadratic} to $f=\widetilde v_{\mathrm{cur}}$, $h=\sg(\widetilde v_{\mathrm{old}})$, and $u=u_t^{\mathrm{stab}}$ from Eq.~\eqref{eq:methodvelocity}. We use $\beta=1$ and add a squared-velocity penalty toward the corrected field $\widetilde v_{\mathrm{ref}}$ of the fixed initial reference.
 
-With self-conditioning enabled, the numerical value of Eq.~\eqref{eq:nftcorrectedfield} is $v_p^0+(v_p^{\mathrm{main}}-v_p^0)/g$: it removes the scale-dependent amplification from the main prediction relative to its bootstrap. The stop-gradient placement retains the full main-pass Jacobian, rather than multiplying it by $1/g$. In particular, for the current complete-model parameters $\Theta$, the implemented differentiation gives $\nabla_\Theta\widetilde v_{\mathrm{cur}}=\nabla_\Theta v_{\mathrm{cur}}^{\mathrm{main}}$ with the bootstrap and guidance correction detached. This extends ELF's target construction to NFT's comparisons among policy fields. Appendix~\ref{app:nftdetails} specifies the complete objective and gradient routing.
+With self-conditioning enabled, the corrected value is $v_p^0+(v_p^{\mathrm{main}}-v_p^0)/g$. Detaching the correction preserves the main-pass Jacobian rather than scaling it by $1/g$ (Appendix~\ref{app:nftdetails}).
 
 \paragraph{Guided rollouts and forward-process updates.}
-Collection retains recurrent self-conditioning: the old policy's clean prediction from one denoising step conditions the next, with SCCFG 2. We save its terminal continuous latents, decode them to score correctness, and use those latents directly as endpoints for NFT. Updating requires fresh forward corruption and a bootstrap at the newly sampled noisy state; it does not replay the rollout's self-conditioning history. Thus the sampler uses the learned guided field, while the training residuals use the correction in Eq.~\eqref{eq:nftcorrectedfield}. Endpoint-only optimization is inherited from NFT; adapting its field comparisons to learned SCCFG is the additional construction.
+Collection retains recurrent self-conditioning and SCCFG guidance. We reward decoded answers but optimize their saved continuous endpoints, using fresh forward corruption and bootstrap predictions rather than replaying rollout histories. Thus rollouts remain guided while NFT optimizes the corrected fields in Eq.~\eqref{eq:nftcorrectedfield}.
 
 \subsection{Gold-anchored reasoning updates}
 \label{sec:nftgold}
 
-For each question, collect 15 old-policy solutions and append one gold endpoint from the fixed teacher-derived latent cache. Assign raw rewards
-\begin{equation}
- R=\begin{cases}
-  1,&\text{gold solution},\\
-  0.75,&\text{generated solution with a correct final answer},\\
-  0,&\text{otherwise}.
- \end{cases}
- \label{eq:nftrewardtiers}
-\end{equation}
-Correctness uses numerical-answer checking for GSM8K and Math-Verify for MATH. The gold endpoint supplies a preferred target even when all generations for a question are incorrect. Giving it a higher reward than correct generations also favors the reference reasoning trace within the latent objective, while generated-solution rewards depend only on final-answer correctness. This post-training recipe therefore uses reference solutions as well as verifiable rewards.
-
-We discard an entire group when all 15 generated answers are correct, retaining correct generations within mixed groups. This concentrates updates on questions with observed failures. Because gold has a higher reward, the discarded groups would otherwise still supply a gold-versus-generation preference. Retained rewards are centered within group, scaled, and mapped to $\rho\in[0,1]$ as detailed in Appendix~\ref{app:nftdetails}. In particular, gold raw reward one generally gives a normalized coefficient below one. The following identity characterizes its contribution without equating the two.
+Each question contributes 15 old-policy generations and one gold latent endpoint, with raw rewards 0.75 for correct generated answers, 0 for incorrect answers, and 1 for gold. The gold endpoint supplies a preferred target even when all generated answers are incorrect. We discard groups whose generated answers are all correct, concentrating updates on observed failures; retained rewards are normalized into $\rho$ as described in Appendix~\ref{app:nftdetails}. This recipe uses reference solutions as well as verifiable rewards. Gold raw reward one need not give $\rho_G=1$; the following lemma characterizes its contribution.
 
 \begin{lemma}[Gold endpoints as field anchors]
 \label{lem:goldanchor}
-For a gold endpoint, let $\mathcal H$ contain the noisy state, time, question, coefficient $\rho_G\in[1/2,1]$, and any auxiliary inputs held fixed for the update. Let $U$ denote the random stabilized target $u_t^{\mathrm{stab}}$, assume its conditional second moment is finite, and set $m_G=\E[U\mid\mathcal H,\mathrm{gold}]$. For $\mathcal H$-measurable current and old field values $f,o$, the beta-one NFT loss satisfies
+For a gold endpoint, let $\mathcal H$ contain the noisy state, time, question, coefficient $\rho_G\in[1/2,1]$, and any auxiliary inputs held fixed for the update. Let $U$ denote the random stabilized target $u_t^{\mathrm{stab}}$, assume its conditional second moment is finite, and set $m_G=\E[U\mid\mathcal H,\mathrm{gold}]$. For $\mathcal H$-measurable current and old velocity-field values $f,h$, the beta-one NFT loss satisfies
 \begin{equation}
 \begin{split}
- \E[\ell_1(f,o;U,\rho_G)\mid\mathcal H,\mathrm{gold}]
+ \E[\ell_1(f,h;U,\rho_G)\mid\mathcal H,\mathrm{gold}]
  &=\|f-a_G\|_2^2+C_{\mathcal H},\\
- a_G&=(2\rho_G-1)m_G+2(1-\rho_G)o,
+ a_G&=(2\rho_G-1)m_G+2(1-\rho_G)h,
 \end{split}
 \label{eq:nftgoldanchor}
 \end{equation}
 where $C_{\mathcal H}$ is independent of $f$ with the conditioning information and auxiliary fields fixed. Thus the gold term attracts the current field toward a convex combination of the gold posterior target and the old field.
 \end{lemma}
 
-At $\rho_G=1$, this is direct regression toward $m_G$. Under the idealization that the reference field equals the gold posterior target, the anchor interpolates between the reference and old fields; if they coincide, it equals the reference for every allowed $\rho_G$. This assumption concerns the gold latent distribution under forward corruption, and is stronger than perfect final-answer accuracy. The lemma gives a field-level interpretation of gold anchoring; Appendix~\ref{app:nftgoldproof} proves the identity and specifies its scope for detached SCCFG updates. The separate explicit reference penalty provides an additional anchor throughout training.
+At $\rho_G=1$, the gold term directly regresses toward $m_G$. Under an ideal reference model matching that gold posterior target, the anchor interpolates between the reference and old fields; Appendix~\ref{app:nftgoldproof} gives the proof and scope. This gold-induced anchor complements the explicit reference penalty.
 
-\subsection{Joint refinement of the conditional model}
-\label{sec:nftjoint}
-
-Equation~\eqref{eq:tokenconditionalfield} makes the question tokens the external condition for every policy role. Current, old, and reference policies can therefore use their own encoders $P_\phi$, $P_{\phi_{\mathrm{old}}}$, and $P_{\phi_{\mathrm{ref}}}$ while being compared under the same question $q$. Lemma~\ref{lem:conditionalrepresentation} explains why preserving the denoising-relevant information is the appropriate criterion for this internal representation. Jointly updating the current encoder and flow model refines one conditional model, and requires no prompt-imitation loss during NFT.
-
-We train the current prompt body and flow backbone, keeping the vocabulary lookup, representation projectors, and decoder-specific parameters frozen. The decoder still shares the changing backbone. Both components of the old policy track the current model by EMA, while the initial reference remains fixed. Our headline NFT runs use synchronous identity clocks for collection and forward corruption; asynchronous evaluation follows Section~\ref{sec:clocks}. These choices yield an empirical test of diffusion RL for continuous reasoning while preserving learned guidance and allowing the conditioning interface to adapt. Section~\ref{sec:nftresults} discusses the empirical effects of NFT after the benchmark comparisons in Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} and the inference-allocation results in Figure~\ref{fig:headlinestages}.
+Because the external condition is the question text, NFT jointly updates the prompt encoder and flow model as one conditional policy (Lemma~\ref{lem:conditionalrepresentation}), without a prompt-imitation objective. Training uses synchronous identity clocks; asynchronous evaluation follows Section~\ref{sec:clocks}. Appendix~\ref{app:nftdetails} gives optimization details, and Section~\ref{sec:nftresults} discusses the empirical gains.
 % END inlined sections/nft.tex
 
 % BEGIN inlined sections/headline_results.tex
@@ -952,13 +927,15 @@ The generated reward is $0.75$ for a correct final answer and zero otherwise, wh
 \end{equation}
 where $\bar R_b$ averages all 16 endpoints and $\sigma_R$ is the population standard deviation of the retained \emph{raw} rewards across the complete collection round. Discarded groups do not enter these statistics. All-incorrect groups remain informative because they include a gold endpoint. The GSM8K implementations additionally stop before an update if an entire round has zero correct generations; the MATH implementation disables that round-level guard and permits a gold-anchored update. A round with no retained groups supplies no optimizer update.
 
+Correct generations remain in mixed groups. Because gold has a higher raw reward than correct generations, even all-correct groups would supply a gold-versus-generation preference if retained. Filtering removes those groups to concentrate updates on observed failures. The higher gold reward favors the reference reasoning trace within the latent objective, whereas generated-solution rewards depend only on final-answer correctness.
+
 For each retained endpoint, draw eight independent time/noise/self-conditioning records, yielding at most $24\times16\times8=3072$ records per update. Each record draws $t=\operatorname{sigmoid}(-1.5+0.8\xi)$, with $\xi\sim\mathcal N(0,1)$, independently of the rollout grid. All representation groups use this same time, with unit group weights. Corrupt answer latents using Eq.~\eqref{eq:methodinterpolant} and convert predictions and endpoint targets using $\Delta_t=\max(1-t,0.05)$. Each policy restores its own clean prompt states, while endpoint, noise, answer states, and masks are shared across roles. Masks include the first EOS token and exclude prompt and subsequent padding positions.
 
 \subsection{SCCFG construction and exact loss}
 
 For each record, sample $b_{\mathrm{sc}}\sim\mathrm{Bernoulli}(0.5)$ and $\log(1+g)\sim\mathrm{Uniform}(\log1.5,\log6)$. Use the same $b_{\mathrm{sc}},g$ for current, old, and reference roles. Each role first predicts a clean endpoint under zero answer self-conditioning, restores its own clean prompt, and detaches that prediction. The main forward receives $b_{\mathrm{sc}}$ times the bootstrap prediction in answer positions; prompt positions remain clean regardless of $b_{\mathrm{sc}}$. The guidance-scale input $g$ is supplied to both passes. Convert both predictions to velocities and apply Eq.~\eqref{eq:nftcorrectedfield}.
 
-Only the current main forward carries gradients. Bootstrap predictions, the entire guidance correction, old/reference computations, sampled endpoints, and data targets are detached. The current prompt encoder receives the main-forward chain-rule gradient, including its use as the clean condition. Its output gradients are accumulated across records and propagated through the shared prompt graph. This implements the same detached construction as the ELF guidance-adjusted target: $\widetilde v_{\mathrm{cur}}-u_t^{\mathrm{stab}}$ equals $v_{\mathrm{cur}}^{\mathrm{main}}-\sg[u_t^{\mathrm{stab}}+b_{\mathrm{sc}}(1-g^{-1})(v_{\mathrm{cur}}^{\mathrm{main}}-v_{\mathrm{cur}}^0)]$ when $u_t^{\mathrm{stab}}$ is detached. Removing the stop-gradient from the correction would change the update.
+Only the current main forward carries gradients. Bootstrap predictions, the entire guidance correction, old/reference computations, sampled endpoints, and data targets are detached, giving $\nabla_\Theta\widetilde v_{\mathrm{cur}}=\nabla_\Theta v_{\mathrm{cur}}^{\mathrm{main}}$ under the implemented differentiation. The current prompt encoder receives the main-forward chain-rule gradient, including its use as the clean condition. Its output gradients are accumulated across records and propagated through the shared prompt graph. This implements the same detached construction as the ELF guidance-adjusted target: $\widetilde v_{\mathrm{cur}}-u_t^{\mathrm{stab}}$ equals $v_{\mathrm{cur}}^{\mathrm{main}}-\sg[u_t^{\mathrm{stab}}+b_{\mathrm{sc}}(1-g^{-1})(v_{\mathrm{cur}}^{\mathrm{main}}-v_{\mathrm{cur}}^0)]$ when $u_t^{\mathrm{stab}}$ is detached. Removing the stop-gradient from the correction would change the update.
 
 Let $b$ index retained training records and $i$ full-canvas token positions. With $d=1024$, define $N_{\mathrm{tok}}=\sum_{bi}M_{bi}$ across all ranks and microbatches of the update. Define
 \begin{equation}
@@ -975,13 +952,16 @@ With $e_c=\widetilde v_{\mathrm{cur}}-\sg(u_t^{\mathrm{stab}})$ and $e_o=\sg(\wi
 This averages coordinates and valid tokens, rather than averaging a separate mean for each solution. Gradients are summed across ranks using the same update-wide denominator. The reference term is a squared-velocity penalty. We omit the adaptive residual normalization of the original DiffusionNFT implementation \citep{diffusionnft}; no decoder CE, prompt MSE, or separate correct-solution flow auxiliary loss is added.
 
 \subsection{Optimization and policy roles}
+\label{sec:nftjoint}
 
 Current, old, and reference policies are initialized from the selected supervised source states, with fresh NFT optimizers. The current flow backbone and prompt body are trainable. The Qwen vocabulary lookup and representation projectors remain fixed, as do LFRM's decoder-specific mode tokens, output projection, and vocabulary-head parameters. The shared backbone continues to change, so freezing these leaves does not freeze the entire decoding function. Old and reference roles receive no optimizer gradients, and each retains its own prompt encoder.
 
-Both trainable components use constant learning rate $10^{-4}$, zero weight decay, and separate gradient clipping at norm one. The flow backbone uses Muon with its auxiliary Nesterov-Adam optimizer; the prompt body uses Muon/AdamW. Computation uses BF16. After successful update $h$, both old-policy components are updated by
+Equation~\eqref{eq:tokenconditionalfield} makes the question tokens the external condition for all roles. Thus the current, old, and reference policies use their respective encoders $P_\phi$, $P_{\phi_{\mathrm{old}}}$, and $P_{\phi_{\mathrm{ref}}}$ while being compared under the same question $q$.
+
+Both trainable components use constant learning rate $10^{-4}$, zero weight decay, and separate gradient clipping at norm one. The flow backbone uses Muon with its auxiliary Nesterov-Adam optimizer; the prompt body uses Muon/AdamW. Computation uses BF16. After successful update $n$, both old-policy components are updated by
 \begin{equation}
- \Theta_{\mathrm{old}}\leftarrow \alpha_h\Theta_{\mathrm{old}}+(1-\alpha_h)\Theta_{\mathrm{cur}},
- \qquad \alpha_h=\begin{cases}\min(0.001h,0.5),&h<400,\\0.4,&h\ge400.\end{cases}
+ \Theta_{\mathrm{old}}\leftarrow \alpha_n\Theta_{\mathrm{old}}+(1-\alpha_n)\Theta_{\mathrm{cur}},
+ \qquad \alpha_n=\begin{cases}\min(0.001n,0.5),&n<400,\\0.4,&n\ge400.\end{cases}
  \label{eq:nftoldema}
 \end{equation}
 The reference remains at initialization. Evaluation uses separate backbone/prompt EMA $0.99/0.99$, distinct from this old-policy retention schedule. NFT training retains synchronous scalar-time conditioning; inference-time clock adaptation is applied only for evaluation of these headline runs.
@@ -990,21 +970,21 @@ The reference remains at initialization. Evaluation uses separate backbone/promp
 \label{app:nftgoldproof}
 
 \begin{proof}[Proof of Lemma~\ref{lem:goldanchor}]
-All expectations below condition on $\mathcal H$ and a gold endpoint, so $f,o,\rho_G$ are fixed. Let $\sigma_G^2=\E[\|U-m_G\|_2^2\mid\mathcal H,\mathrm{gold}]$. Conditional variance decomposition gives
+All expectations below condition on $\mathcal H$ and a gold endpoint, so $f,h,\rho_G$ are fixed. Let $\sigma_G^2=\E[\|U-m_G\|_2^2\mid\mathcal H,\mathrm{gold}]$. Conditional variance decomposition gives
 \begin{equation}
- \E[\ell_1(f,o;U,\rho_G)\mid\mathcal H,\mathrm{gold}]
+ \E[\ell_1(f,h;U,\rho_G)\mid\mathcal H,\mathrm{gold}]
  =\rho_G\|f-m_G\|_2^2
- +(1-\rho_G)\|f-(2o-m_G)\|_2^2+\sigma_G^2.
+ +(1-\rho_G)\|f-(2h-m_G)\|_2^2+\sigma_G^2.
 \end{equation}
-For any vectors $a,b$, the identity $\omega\|f-a\|^2+(1-\omega)\|f-b\|^2=\|f-[\omega a+(1-\omega)b]\|^2+\omega(1-\omega)\|a-b\|^2$ completes the square. Substituting $a=m_G$, $b=2o-m_G$, and $\omega=\rho_G$ yields Eq.~\eqref{eq:nftgoldanchor}, with
+For any vectors $a,b$, the identity $\omega\|f-a\|^2+(1-\omega)\|f-b\|^2=\|f-[\omega a+(1-\omega)b]\|^2+\omega(1-\omega)\|a-b\|^2$ completes the square. Substituting $a=m_G$, $b=2h-m_G$, and $\omega=\rho_G$ yields Eq.~\eqref{eq:nftgoldanchor}, with
 \begin{equation}
- C_{\mathcal H}=\sigma_G^2+4\rho_G(1-\rho_G)\|m_G-o\|_2^2.
+ C_{\mathcal H}=\sigma_G^2+4\rho_G(1-\rho_G)\|m_G-h\|_2^2.
 \end{equation}
 The anchor weights $2\rho_G-1$ and $2(1-\rho_G)$ are nonnegative and sum to one.
 \end{proof}
 
 \paragraph{Random coefficients and reference interpretation.}
-In the executed reward mapping, the gold raw reward exceeds its group's mean, so $\rho_G\in(1/2,1]$. Its value depends on the group's generations and the retained population. The conditioning information $\mathcal H$ therefore includes the realized coefficient and any retention information used to define the population; $m_G$ is computed under that same conditional distribution. The lemma does not assume coefficient--target independence. If that independence holds given state, time, and question, the coefficient can be removed from the conditioning of $m_G$. Identifying $m_G$ with a reference field requires the stronger idealization that the reference matches this gold posterior target under the same conditioning and corruption law. Correct final answers alone do not imply that equality.
+In the executed reward mapping, the gold raw reward exceeds its group's mean, so $\rho_G\in(1/2,1]$. Its value depends on the group's generations and the retained population. The conditioning information $\mathcal H$ therefore includes the realized coefficient and any retention information used to define the population; $m_G$ is computed under that same conditional distribution. The lemma does not assume coefficient--target independence. If that independence holds given state, time, and question, the coefficient can be removed from the conditioning of $m_G$. Identifying $m_G$ with a reference field requires the stronger idealization that the reference matches this gold posterior target under the same conditioning and corruption law. Correct final answers alone do not imply that equality. If the reference and old fields both equal $m_G$, the gold anchor equals the reference for every allowed $\rho_G$.
 
 \paragraph{Relation to NFT and detached guidance.}
 The moving old policy centers NFT's implicit positive/negative construction, while our fixed reference appears in the additional penalty of Eq.~\eqref{eq:nftexecutedloss}. Lemma~\ref{lem:goldanchor} characterizes a third source of anchoring supplied by gold data: attraction toward the gold posterior target, interpolated with the old field. It holds for the field-level quadratic with auxiliary inputs fixed. In the SCCFG implementation, differentiation treats the guidance correction as fixed within each update, even though it is recomputed from the current network on subsequent forwards. The lemma consequently interprets the local corrected-field regression; it supplies no monotonic-improvement guarantee for the full recurrent sampler. Group filtering changes the training population, and the information in self-conditioning differs between collection and forward-noising updates. Our benchmark comparisons assess the resulting complete procedure empirically.
