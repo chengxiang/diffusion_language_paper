@@ -179,7 +179,7 @@ The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-
 
 \textbf{Decodability and representation choice.}
 \label{sec:representationablations}
-The fixed 1,024-dimensional layer-32 PCA representation supports \textbf{98.16\%} held-out same-position token recovery after one epoch of training a separate decoder (Appendix~\ref{app:representationdiagnostics}). Yet LFRM-B using this same representation achieves only \textbf{11.20\%} GSM8K accuracy after six epochs. Accurate clean-token recovery alone is therefore an insufficient criterion for choosing a denoising representation.
+The fixed 1,024-dimensional layer-32 PCA representation supports \textbf{99.24\%} held-out same-position token recovery after two epochs of training a separate decoder (Appendix~\ref{app:representationdiagnostics}). Yet LFRM-B using this same representation achieves only \textbf{11.20\%} GSM8K accuracy after six epochs. Accurate clean-token recovery alone is therefore an insufficient criterion for choosing a denoising representation.
 
 \textbf{Layer selection.}
 We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationcka} gives the analysis. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy to \textbf{28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
@@ -809,20 +809,20 @@ Each layer is intervened on independently. Both distributions predict $a_{j+1}$ 
 \label{app:representationdiagnostics}
 We use the exact frozen, whitened top-1,024 PCA coordinates from Qwen layer 32 used by the single-layer generation arm in Figure~\ref{fig:representationcomparison}. A separately trained decoder maps these coordinates through a learned $1{,}024\!\to\!1{,}024$ linear map, GELU, and a vocabulary projection to the same-position token. The reference probe instead maps the full 2,560-dimensional layer-32 activation through a learned $2{,}560\!\to\!1{,}024$ bottleneck, GELU, and a vocabulary projection. Both have the same hidden width and vocabulary-map initialization; their first learned maps differ in input width. The PCA transform remains fixed and is applied in FP32 to cached BF16 teacher activations. Layer 32 is a deep-layer control within the teacher's 36 blocks.
 
-Both probes train for one epoch (428 updates) on the same 218,857 rows, with seed 42, identical global batch order, batch size 512, learning rate 0.002, Muon/auxiliary optimization, and FP32 vocabulary cross-entropy. The PCA run uses four GPUs with gradients weighted by each rank's valid-token count; this changes floating-point reduction order relative to the reference. We evaluate final raw weights on 12,436 held-out solution rows from 4,647 prompt groups, comprising 2,112,672 assistant-content tokens. Training, development, and test splits are disjoint by prompt. Same-position targets include the first assistant token and exclude prompt, terminal, and padding tokens.
+Both probes train for two epochs (856 updates) on the same 218,857 rows, with seed 42, identical global batch order, batch size 512, learning rate 0.002, Muon/auxiliary optimization, and FP32 vocabulary cross-entropy. The PCA run uses four GPUs with gradients weighted by each rank's valid-token count; this changes floating-point reduction order relative to the reference. We evaluate final raw weights on 12,436 held-out solution rows from 4,647 prompt groups, comprising 2,112,672 assistant-content tokens. Training, development, and test splits are disjoint by prompt. Same-position targets include the first assistant token and exclude prompt, terminal, and padding tokens.
 
-Table~\ref{tab:pcadecoding} reports token-weighted accuracy and cross-entropy. Intervals use 4,000 paired prompt-cluster bootstrap replicates (seed 20260920), retaining all rows and tokens within each resampled prompt; they quantify held-out sampling uncertainty, not training variability. The PCA probe is 0.55 percentage points below the reference (paired 95\% interval: $[-0.58,-0.51]$). These results demonstrate substantial clean-token recoverability from the actual PCA generation representation. They measure per-token reconstruction with a separate probe, not solution accuracy or the performance of LFRM's decoder, and do not isolate the cause of generation errors. Neither probe is claimed to have converged after one epoch.
+Table~\ref{tab:pcadecoding} reports token-weighted accuracy and cross-entropy. Intervals use 4,000 paired prompt-cluster bootstrap replicates (seed 20260920), retaining all rows and tokens within each resampled prompt; they quantify held-out sampling uncertainty, not training variability. The PCA probe is 0.13 percentage points below the reference (paired 95\% interval: $[-0.15,-0.11]$). These results demonstrate substantial clean-token recoverability from the actual PCA generation representation. They measure per-token reconstruction with a separate probe, not solution accuracy or the performance of LFRM's decoder, and do not isolate the cause of generation errors. Neither probe is claimed to have converged after two epochs.
 
 \begin{table}[htbp]
 \centering\small
-\caption{Clean-token decoding after one epoch, using final raw probe weights. Brackets give 95\% prompt-cluster bootstrap intervals. The fixed PCA input is the representation used by the single-layer generation ablation.}
+\caption{Clean-token decoding after two epochs, using final raw probe weights. Brackets give 95\% prompt-cluster bootstrap intervals. The fixed PCA input is the representation used by the single-layer generation ablation.}
 \label{tab:pcadecoding}
 \begin{tabular}{@{}lcc@{}}
 \toprule
 Probe input & Token accuracy (\%) & CE (nats/token) \\
 \midrule
-Fixed layer-32 PCA & 98.16 [98.09, 98.24] & 0.1388 [0.1325, 0.1452] \\
-Full layer 32, learned bottleneck & 98.71 [98.65, 98.77] & 0.0918 [0.0863, 0.0974] \\
+Fixed layer-32 PCA & 99.24 [99.19, 99.28] & 0.0548 [0.0502, 0.0597] \\
+Full layer 32, learned bottleneck & 99.37 [99.32, 99.40] & 0.0466 [0.0424, 0.0512] \\
 \bottomrule
 \end{tabular}
 \end{table}
