@@ -9,6 +9,12 @@
 \usepackage{wrapfig}
 \usepackage{hyperref,url}
 \usepackage{xcolor}
+% Modest float spacing; retain the conference font sizes and page geometry.
+\setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
+\setlength{\floatsep}{10pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{6pt}
+\newlength{\conferenceparskip}
+\setlength{\conferenceparskip}{\parskip}
 % BEGIN inlined macros.tex
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\R}{\mathbb{R}}
@@ -36,15 +42,15 @@
 Continuous diffusion generates complete reasoning solutions through iterative refinement in latent space. We introduce Latent Flow Reasoning Models (LFRMs), an ELF-based training and inference recipe. Our experiments show that accurate decoding alone does not ensure effective generation, motivating compact representations learned from multiple layers of a strong autoregressive teacher. Their decomposition also enables asynchronous denoising at different rates. We show that prompt encodings need only preserve the information required for the correct text-conditional score, rather than exactly match teacher features, and use a staged curriculum to learn a compact prompt encoder that replaces the teacher Transformer at inference. We adapt DiffusionNFT to learned self-conditioning guidance and incorporate gold-solution endpoints to supplement sparse rewards. With 90M and 638M denoising backbones, our strongest supervised results outperform reported continuous-diffusion baselines at comparable backbone scales on mathematical reasoning and code generation. NFT further improves single-sample accuracy and majority-vote performance on GSM8K and MATH500.
 Code will be available at: \url{https://anonymous.4open.science/r/LFRM-98B5/}.
 \end{abstract}
+% Keep normal paragraph gaps in the main text compact but visible.
+\setlength{\parskip}{4pt}
 
 \section{Introduction}
 \label{sec:introduction}
 
-Autoregressive language models have made substantial progress on mathematical reasoning \citep{minerva,deepseekr1}. Continuous diffusion offers a complementary approach, generating complete solutions through iterative refinement of all answer positions. Whereas autoregressive and discrete-diffusion language models typically generate in token space, continuous latent diffusion makes the denoising representation an additional design choice \citep{elf,llada}. Reasoning requires this representation to preserve exact quantities and dependencies between deductions. We therefore ask: \emph{what representation makes complex reasoning solutions amenable to generation through denoising?}
+Autoregressive language models have made substantial progress on mathematical reasoning \citep{minerva,deepseekr1}. Continuous diffusion offers a complementary approach, generating complete solutions through iterative refinement of all answer positions. Whereas autoregressive and discrete-diffusion language models typically generate in token space, continuous latent diffusion makes the denoising representation an additional design choice \citep{elf,llada}. Reasoning requires this representation to preserve exact quantities and dependencies between deductions. We therefore ask: \emph{what representation makes complex reasoning solutions amenable to generation through denoising?} Token representations span a spectrum of complexity: tokenwise embedding tables, contextual encodings from bidirectional networks such as T5, and hidden activations of powerful autoregressive models \citep{plaid,t5,qwen3}. Our ablations show that strong token reconstruction does not ensure that a representation is easy to generate (Figure~\ref{fig:representationcomparison}).
 
-Token representations span a spectrum of complexity: tokenwise embedding tables, contextual encodings from bidirectional networks such as T5, and hidden activations of powerful autoregressive models \citep{plaid,t5,qwen3}. Our ablations show that strong token reconstruction does not ensure that a representation is easy to generate (Figure~\ref{fig:representationcomparison}).
-
-We introduce Latent Flow Reasoning Models (LFRMs), based on the simple continuous flow formulation of Embedded Language Flows (ELF; \citealp{elf}). Our pipeline learns compact answer representations from multiple layers of a strong autoregressive teacher (Figure~\ref{fig:pipelineoverview}). To avoid retaining the teacher for prompt conditioning, we separate the answer-generation target from the prompt encoding. Conditioning on prompt \emph{text} makes that encoding an internal, learnable interface: it need only preserve the information required for denoising, without exact teacher-feature matching (Lemma~\ref{lem:conditionalrepresentation}). We use this flexibility to train a compact prompt encoder jointly with the denoiser through the generative objective.
+We introduce Latent Flow Reasoning Models (LFRMs), based on the simple continuous flow formulation of Embedded Language Flows (ELF; \citealp{elf}). Our pipeline learns compact answer representations from multiple layers of a strong autoregressive teacher (Figure~\ref{fig:pipelineoverview}). To avoid retaining the teacher for prompt conditioning, we separate the answer-generation target from the prompt encoding. Conditioning on prompt \emph{text} makes that encoding an internal, learnable interface: it need only preserve the information required for denoising, without exact teacher-feature matching (Lemma~\ref{lem:conditionalrepresentation}). We use this flexibility to jointly train a compact prompt encoder and denoiser through the generative objective.
 
 Remaining close to standard continuous diffusion lets us apply DiffusionNFT \citep{diffusionnft} with verifiable rewards, after adapting it to ELF's learned guidance. Our strongest supervised results outperform comparable-scale continuous-diffusion baselines on mathematical reasoning and code generation; NFT further improves accuracy on GSM8K and MATH500.
 
@@ -79,10 +85,10 @@ Our complete reasoning pipeline comprises the following key contributions:
 \section{Preliminaries}
 \label{sec:preliminaries}
 
-\paragraph{Tokens, encodings, and latents.}
+\textbf{Tokens, encodings, and latents.}
 Let $q=(q_1,\ldots,q_{L_q})$ and $a=(a_1,\ldots,a_{L_a})$ be prompt and answer tokens in vocabulary $\mathcal V$, with the answer including its terminal token. Their padded canvas $y=(q,a,\mathrm{padding})$ has length $L$; canvas index $i$ and answer index $j$ satisfy $y_{L_q+j}=a_j$. An answer encoder gives $z_{\mathrm{clean}}=\mathcal E(q,a)\in\R^{L_a\times d}$, and a prompt-only encoder gives $c_\phi(q)=P_\phi(q)\in\R^{L_q\times d}$; rows are token vectors. Unlike the teacher's tokenwise lookup $B_\psi[q_i]$, $P_\phi$ uses prompt context. Parameters $\psi$ are frozen teacher weights, $\phi$ the prompt encoder, and $\theta$ the shared denoising/decoding network, with $\Theta=(\theta,\phi)$. Teacher layer $\ell$ contributes width $d_\ell$ to total latent width $d$. Uppercase letters denote random variables.
 
-\paragraph{Flow matching.}
+\textbf{Flow matching.}
 Flow matching transports noise to data \citep{flowmatching}. For noise scale $\sigma>0$, our linear Gaussian path runs from noise at $t=0$ to clean latents at $t=1$:
 \begin{equation}
  z_t=t z_{\mathrm{clean}}+(1-t)\sigma\epsilon,
@@ -98,7 +104,7 @@ Treating text $q$ as the external condition and $c_\phi(q)$ as its internal enco
 \end{equation}
 The expectation samples training pairs $(q,a)$, times $t\sim\pi(t)$, and independent Gaussian noise.
 
-\paragraph{Text and encoded conditioning.}
+\textbf{Text and encoded conditioning.}
 Write $p_t(z\mid q)$ for the forward-path density and $s^\star(z,t\mid q)=\nabla_z\log p_t(z\mid q)$ for its conditional score. For $0<t<1$, the population-optimal velocity is
 \begin{equation}
  v^\star(z,t\mid q)
@@ -108,8 +114,8 @@ Write $p_t(z\mid q)$ for the forward-path density and $s^\star(z,t\mid q)=\nabla
 \end{equation}
 Conditioning on $c_\phi(q)$ may merge distinct prompts; Section~\ref{sec:conditionalencoding} characterizes when the encoding preserves the text-conditional score.
 
-\paragraph{Sampling under a different clock.}
-At inference, let $\tau\in[0,1]$ be solver time and $t=f(\tau)$ an increasing differentiable clock with $f(0)=0$, $f(1)=1$. Starting from $\bar z_0\sim\mathcal N(0,\sigma^2I)$, sampling obeys $\mathrm d\bar z_\tau/\mathrm d\tau=f'(\tau)v_\Theta(\bar z_\tau,f(\tau);q)$. For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration preserves the endpoint, while finite-step accuracy can change. Section~\ref{sec:clocks} extends this construction to group-specific clocks.
+\textbf{Sampling under a different clock.}
+At inference, let $\tau\in[0,1]$ be solver time and $t=f(\tau)$ an increasing differentiable clock with $f(0)=0$, $f(1)=1$. Starting from $\bar z_0\sim\mathcal N(0,\sigma^2I)$, sampling obeys $\mathrm d\bar z_\tau/\mathrm d\tau=f'(\tau)v_\Theta(\bar z_\tau,f(\tau);q)$. For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration preserves the endpoint, while finite-step accuracy can change. Section~\ref{sec:clocks} extends this to group-specific clocks.
 
 % BEGIN continuous diffusion framework and design choices
 \section{Continuous Diffusion Reasoning}
@@ -123,41 +129,39 @@ For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding
     \centering
     \includegraphics[width=\textwidth]{figures/pipeline_overview_v8.pdf}
     \caption{\textbf{The LFRM training and inference pipeline.}
-    \textbf{Left:} Learn compact representations from Qwen layers 16/24/32 through teacher cross-entropy supervision, then concatenate their outputs (Section~\ref{sec:representationconstruction}).
-    \textbf{Center:} Train the ELF backbone with flow-matching and token-decoding losses, with staged learning of the prompt encoder (Sections~\ref{sec:methodflow} and~\ref{sec:conditionalencoding}).
+    \textbf{Left:} Learn projections of Qwen layers 16/24/32 through teacher cross-entropy, then concatenate their outputs (Section~\ref{sec:representationconstruction}).
+    \textbf{Center:} Train the ELF backbone with flow and token-decoding losses and staged prompt learning (Sections~\ref{sec:methodflow} and~\ref{sec:conditionalencoding}).
     \textbf{Right:} Denoise the representation groups under asynchronous clocks, then decode the answer in parallel (Section~\ref{sec:clocks}).}
     \label{fig:pipelineoverview}
 \end{figure}
 % END inlined figures/pipeline_overview_v1.tex
 
-\paragraph{Continuous denoising.}
+\textbf{Continuous denoising.}
 ELF's bidirectional backbone predicts $\widehat z_{\mathrm{clean}}=F_\theta(z_t,t;c,\widehat z_{\mathrm{sc}},g)$ from the clean prompt and noisy answer at a shared training time $t$. Here $\widehat z_{\mathrm{sc}}$ is an earlier clean prediction and $g$ the guidance scale. We apply Eq.~\eqref{eq:basicflowloss} with velocity $v_\theta=(\widehat z_{\mathrm{clean}}-z_t)/\Delta_t$ and stabilized target $u_t^{\mathrm{stab}}=(z_{\mathrm{clean}}-z_t)/\Delta_t$, with $\Delta_t=\max(1-t,0.05)$; outside the clamp, $u_t^{\mathrm{stab}}=u_t$. Appendix~\ref{app:methodobjective} gives valid-token normalization.
 
-\paragraph{Self-conditioning and SCCFG.}
+\textbf{Self-conditioning and SCCFG.}
 ELF's self-conditioning classifier-free guidance (SCCFG) learns to amplify answer self-conditioning at scale $g$. It compares predictions with and without \emph{answer self-conditioning}, retaining the prompt in both; Appendix~\ref{app:methodobjective} gives the detached guidance-adjusted target. Guidance is internal to the field, requiring one denoiser call per step.
 
-\paragraph{Recovering discrete tokens.}
+\textbf{Recovering discrete tokens.}
 A vocabulary head on the same backbone predicts same-position answer tokens under a separate decoder corruption $z^{\mathrm{dec}}$:
 \begin{equation}
  \mathcal L_{\mathrm{CE}}
  =\E_{\mathrm{valid}}\!\left[-\log p_{\theta,j}^{\mathrm{tok}}(a_j\mid z^{\mathrm{dec}},c(q))\right].
  \label{eq:methoddecoderloss}
 \end{equation}
-The expectation averages valid answer tokens, including the terminal token; Appendix~\ref{app:methodobjective} specifies the exact batch weighting, decoder corruption, and mode mixing.
-
-At inference, encode the prompt once and keep it clean through $S$ Euler steps with recurrent self-conditioning; one additional backbone call decodes the answer in parallel and is excluded from denoising NFE.
+The expectation averages valid answer tokens, including the terminal token; Appendix~\ref{app:methodobjective} specifies the exact batch weighting, decoder corruption, and mode mixing. At inference, encode the prompt once and keep it clean through $S$ Euler steps with recurrent self-conditioning; one additional backbone call decodes the answer in parallel and is excluded from denoising NFE.
 
 % BEGIN inlined sections/representation.tex
 \subsection{Learning the denoising representation}
 \label{sec:representation}
 
-The denoising representation must support both generation and recovery of answer tokens. We extract \textbf{teacher-forced Qwen3-4B-Instruct-2507 activations} \citep{qwen2507} in one forward pass; although these features are causal, our bidirectional denoiser generates the complete answer representation jointly.
+The denoising representation must support generation and token recovery. We extract \textbf{teacher-forced Qwen3-4B-Instruct-2507 activations} \citep{qwen2507} in one forward pass; although these features are causal, our bidirectional denoiser jointly generates answer representations.
 
-\paragraph{Latent construction.}
+\textbf{Latent construction.}
 \label{sec:representationconstruction}
-Let $h_j^{(\ell)}$ be the frozen teacher's post-block activation at answer position $j$. We concatenate centered linear projections as $z_{\mathrm{clean},j}=\big[(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}\big]_{\ell\in\mathcal S}$ for $\mathcal S=\{16,24,32\}$, with block widths $(d_{16},d_{24},d_{32})=(256,256,512)$ and fixed layer means $\mu_\ell$. The same maps initially encode prompt states; the answer representation stays fixed during flow training and NFT.
+Let $h_j^{(\ell)}$ be the frozen teacher's post-block activation at answer position $j$. We concatenate centered linear projections as $z_{\mathrm{clean},j}=\big[(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}\big]_{\ell\in\mathcal S}$ for $\mathcal S=\{16,24,32\}$, with widths $(d_{16},d_{24},d_{32})=(256,256,512)$ and fixed means $\mu_\ell$. These maps initially also encode prompts; answer representations stay fixed during flow training and NFT.
 
-\paragraph{Learning the projectors.}
+\textbf{Learning the projectors.}
 Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}$ (Figure~\ref{fig:pipelineoverview}, left). Replacing layer-$\ell$ answer activations with these reconstructions and running the frozen Qwen suffix yields next-token predictions $p_{\ell,j}^{\mathrm{recon}}$. We preserve the teacher's predictions through $\mathcal L_{\mathrm{repr}}=\sum_{\ell\in\mathcal S}\E_{q,a,j}\,\CE(p_j^{\mathrm{teacher}},p_{\ell,j}^{\mathrm{recon}})$, where $\CE$ is full-vocabulary soft cross-entropy. Only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$ are learned; the reconstruction decoders are used only at this stage. Appendix~\ref{app:representationimplementation} gives initialization, whitening, and scoring details.
 
 % BEGIN inlined figures/representation_comparison.tex
@@ -165,38 +169,39 @@ Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}
 \vspace{-\baselineskip}
 \centering
 \includegraphics[width=\linewidth]{figures/representation_shared2_sd.pdf}
-\caption{\small\textbf{Representation and conditioning choices change reasoning performance.} LFRM-B learning curves on GSM8K, with 32 steps and $t=\tau^2$. The first three variants retain Qwen prompt conditioning; the fourth jointly trains a randomly initialized prompt encoder. Protocol: Appendix~\ref{app:representationclock}; values and SDs: Table~\ref{tab:representationcurvevalues} (Appendix~\ref{app:curvevalues}).}
+\caption{\small\textbf{Representation and conditioning affect reasoning.} LFRM-B learning curves on GSM8K, with 32 steps and $t=\tau^2$. The first three variants retain Qwen conditioning; the fourth jointly trains a randomly initialized prompt encoder. Protocol: Appendix~\ref{app:representationclock}; values and SDs: Table~\ref{tab:representationcurvevalues} (Appendix~\ref{app:curvevalues}).}
 \label{fig:representationcomparison}
 \vspace{-\baselineskip}
 \end{wrapfigure}
 % END inlined figures/representation_comparison.tex
 
-The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch LFRM-B training and evaluation settings; Table~\ref{tab:representationcurvevalues} gives the four-seed endpoint results used below.
+The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch LFRM-B training and evaluation; Table~\ref{tab:representationcurvevalues} gives four-seed endpoint results.
 
-\paragraph{Decoding versus generation.}
+\textbf{Decoding versus generation.}
 \label{sec:representationablations}
-Layer-32 activations support \textbf{99.37\%} token-reconstruction accuracy (Appendix~\ref{app:representationdiagnostics}), yet a diffusion model using only their PCA projection achieves \textbf{11.20\%} GSM8K accuracy (Figure~\ref{fig:representationcomparison}). This motivates evaluating representations for generation beyond their clean-token decodability.
+Layer-32 activations support \textbf{99.37\%} token-reconstruction accuracy (Appendix~\ref{app:representationdiagnostics}), yet a diffusion model using only their PCA projection achieves \textbf{11.20\%} GSM8K accuracy (Figure~\ref{fig:representationcomparison}). This motivates assessing generation beyond clean-token decodability.
 
-\paragraph{Layer selection.}
-We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationdiagnostics} gives the plot and detailed motivation. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy from \textbf{11.20\% to 28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
+\textbf{Layer selection.}
+We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationdiagnostics} gives the analysis. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy from \textbf{11.20\% to 28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
 
-\paragraph{Learned versus PCA.}
+\textbf{Learned versus PCA.}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
-% Reserve the remaining figure height before the full-width subsection.
-\par
-\ifnum\value{WF@wrappedlines}>1
-  \vspace{\dimexpr\value{WF@wrappedlines}\baselineskip\relax}
-\fi
-\WFclear
+
 % END inlined sections/representation.tex
 
 \subsection{Learning the conditional encoding in three stages}
 \label{sec:conditionalencoding}
 
-ELF and ELF-REG retain external contextual encoders for prompt conditioning \citep{elf,scalingdlm}. We instead replace the Qwen teacher Transformer with a compact trainable encoder, retaining its frozen token lookup. For LFRM-L, the contextual network has \textbf{121M parameters} (excluding the vocabulary (un)embedding table), replacing the 4B-parameter teacher. The student has six bidirectional attention blocks and encodes the prompt once per response; architecture details appear in Appendix~\ref{app:methodobjective}.
+ELF and ELF-REG use external contextual prompt encoders \citep{elf,scalingdlm}. We instead replace the Qwen teacher Transformer with a compact trainable encoder, retaining its frozen token lookup. For LFRM-L, the contextual network has \textbf{121M parameters} (excluding the vocabulary (un)embedding table), replacing the 4B-parameter teacher. The student uses six bidirectional attention blocks and encodes each prompt once; see Appendix~\ref{app:methodobjective} for its architecture.
 
-\paragraph{The prompt as the condition.}
+% Finish the wrap before the full-width lemma, retaining a small gap.
+\par
+\ifnum\value{WF@wrappedlines}>2
+  \vspace{\dimexpr\value{WF@wrappedlines}\baselineskip-2\baselineskip\relax}
+\fi
+\WFclear
 
+\textbf{The prompt as the condition.}
 The text-conditioned field $v_\Theta$ of Section~\ref{sec:preliminaries} includes self-conditioning and guidance as auxiliary inputs. We jointly optimize $\theta$ and $\phi$, keeping the prompt text, answer representation, and forward corruption fixed. The following lemma characterizes what the encoding must preserve.
 
 \begin{lemma}[Preserving the text-conditional score]
@@ -218,7 +223,7 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 \vspace{-\baselineskip}
 \centering
 \includegraphics[width=\linewidth]{figures/prompt_curriculum_training.pdf}
-\caption{\small\textbf{Stable teacher conditioning followed by learned prompt adaptation.} Top: GSM8K; bottom: MATH500. Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. The red line marks the epoch-12 switch; arrows show the immediate MSE-prompt swap loss. Appendix~\ref{app:curvevalues} gives every plotted value and evaluation settings.}
+\caption{\small\textbf{From teacher conditioning to learned prompts.} Top: GSM8K; bottom: MATH500. Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Values and settings: Appendix~\ref{app:curvevalues}.}
 \label{fig:promptcurriculum}
 \vspace{-\baselineskip}
 \end{wrapfigure}
@@ -226,17 +231,12 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 
 The encoder need not reproduce the teacher's coordinates: it must preserve the information needed for the posterior mean answer. Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. MSE matching supplies a compatible initialization, while downstream training can adapt the encoder and denoiser jointly. We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:methodobjective}):
 
-\textbf{1. Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective.
-
-\textbf{2. Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE.
-
-\textbf{3. Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss, to epoch 18 for LFRM-B or epoch 21 for LFRM-L on the mathematical reasoning tasks.
+\textbf{1. Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective. \textbf{2. Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE. \textbf{3. Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss, to epoch 18 for LFRM-B or epoch 21 for LFRM-L on the mathematical reasoning tasks.
 
 Replacing Qwen with the MSE-trained encoder immediately reduces accuracy, despite unchanged flow-model weights (Figure~\ref{fig:promptcurriculum}). Subsequent joint training recovers much of this loss on GSM8K and exceeds the original teacher-conditioned checkpoint on MATH500. This recovery reflects adaptation of \emph{both} networks, showing the value of learning the conditioning interface through the generative objective.
 
-\paragraph{Importance of fixing initial conditioning.}
+\textbf{Importance of fixing initial conditioning.}
 \label{sec:conditioningcurriculum}
-
 Joint learning from initialization makes the conditioning interface change while the flow model is still learning to interpret it. Under the matched six-epoch comparison, this approach reaches only \textbf{8.70\%} GSM8K accuracy, versus \textbf{30.76\%} with frozen teacher conditioning (Figure~\ref{fig:representationcomparison}). This motivates stabilizing the condition during early learning and adapting it afterward.
 
 \subsection{Asynchronous inference with local clocks}
@@ -244,8 +244,8 @@ Joint learning from initialization makes the conditioning interface change while
 
 Our multilayer representation allows different feature groups to become clean at different rates, potentially letting one group use cleaner information from another. We extend the shared clock of Section~\ref{sec:preliminaries} to layer-specific clocks $t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell}$ for $\ell\in\{16,24,32\}$ at inference, while retaining synchronous training. Equal exponents recover synchronous inference; unequal exponents give different noise levels within a single denoiser call.
 
-\paragraph{Adapting a synchronously trained denoiser.}
-Although training uses a shared time, inference applies the same learned time-embedding function to each local time and averages its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. This requires no retraining and recovers the original embedding when the local times agree.
+\textbf{Adapting a synchronously trained denoiser.}
+Although training uses a shared time, inference applies the same learned time-embedding function to each local time and averages its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. This needs no retraining and recovers the original embedding when local times agree.
 
 % End the curriculum wrap before the full-width sampling equation.
 \par
@@ -285,10 +285,8 @@ $(2.5,2,1.5)$ & \textbf{59.25} {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scri
 \end{wraptable}
 % END inlined tables/inference_clocks.tex
 
-\paragraph{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the six-schedule MATH validation sweep (Appendix~\ref{app:inferenceclocks}).
-
-The shared-square clock improves on the identity clock, and $(2.5,2,1.5)$ achieves the highest mean among the four schedules in Table~\ref{tab:inferenceclocks} on both benchmarks. The broader sweep and lower-NFE comparisons show that the ordering depends on the evaluation setting (Appendix~\ref{app:inferenceclocks}).
+\textbf{Schedule choice and reasoning accuracy.}
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the six-schedule MATH validation sweep (Appendix~\ref{app:inferenceclocks}). The shared-square clock improves on the identity clock, and $(2.5,2,1.5)$ achieves the highest mean among the four schedules in Table~\ref{tab:inferenceclocks} on both benchmarks. The broader sweep and lower-NFE comparisons show that the ordering depends on the evaluation setting (Appendix~\ref{app:inferenceclocks}).
 
 Reconstruction probes reveal distinct sensitivities across layer groups, with weaker contrasts under random coordinate grouping (Figure~\ref{fig:layerreconstruction}). These findings motivate studying coordinated denoising across representations, but do not establish the mechanism behind the sampling gains.
 
@@ -303,7 +301,7 @@ DiffusionNFT \citep{diffusionnft} improves continuous generators through rewarde
 \subsection{NFT with learned self-conditioning guidance}
 \label{sec:nftsccfg}
 
-\paragraph{The velocity field optimized by standard NFT.}
+\textbf{The velocity field optimized by standard NFT.}
 Let $v_{\mathrm{cur}}$ and $v_{\mathrm{old}}$ denote the current and old policy velocity fields, $u$ a sample's forward velocity target, and $\rho\in[0,1]$ its normalized optimality coefficient. NFT forms implicit positive and negative velocity fields, $v^+=(1-\beta)v_{\mathrm{old}}+\beta v_{\mathrm{cur}}$ and $v^-=(1+\beta)v_{\mathrm{old}}-\beta v_{\mathrm{cur}}$. For current and old velocity-field values $f,h$, the pointwise loss is
 \begin{equation}
  \ell_\beta(f,h;u,\rho)
@@ -313,18 +311,16 @@ Let $v_{\mathrm{cur}}$ and $v_{\mathrm{old}}$ denote the current and old policy 
 \end{equation}
 Standard NFT applies this loss to $f=v_{\mathrm{cur}}$ and $h=v_{\mathrm{old}}$, holding the old field fixed; its original experiments use CFG-free optimization \citep{diffusionnft}. LFRM instead learns a guidance-conditioned field, motivating a correction before applying NFT's regression objective. Our SCCFG sensitivity results support retaining guidance during post-training (Figure~\ref{fig:sccfgsweep}).
 
-\paragraph{Constructing the SCCFG-compatible field.}
+\textbf{Constructing the SCCFG-compatible field.}
 For each policy $p\in\{\mathrm{cur},\mathrm{old},\mathrm{ref}\}$, forward-noise an endpoint and obtain velocity $v_p^0$ from a detached bootstrap without answer self-conditioning. The main prediction $v_p^{\mathrm{main}}$ uses the bootstrap clean endpoint when $b_{\mathrm{sc}}=1$ and zero answer self-conditioning otherwise; both passes retain the question. Following ELF's guidance construction, define
 \begin{equation}
  \widetilde v_p=v_p^{\mathrm{main}}-
  \sg\!\left[b_{\mathrm{sc}}(1-g^{-1})(v_p^{\mathrm{main}}-v_p^0)\right],
  \label{eq:nftcorrectedfield}
 \end{equation}
-where $g>0$ is the SCCFG scale. Our update applies Eq.~\eqref{eq:nftquadratic} to $f=\widetilde v_{\mathrm{cur}}$, $h=\sg(\widetilde v_{\mathrm{old}})$, and $u=u_t^{\mathrm{stab}}$ from Section~\ref{sec:methodflow}. We use $\beta=1$ and add a squared-velocity penalty toward the corrected field $\widetilde v_{\mathrm{ref}}$ of the fixed initial reference.
+where $g>0$ is the SCCFG scale. Our update applies Eq.~\eqref{eq:nftquadratic} to $f=\widetilde v_{\mathrm{cur}}$, $h=\sg(\widetilde v_{\mathrm{old}})$, and $u=u_t^{\mathrm{stab}}$ from Section~\ref{sec:methodflow}. We use $\beta=1$ and add a squared-velocity penalty toward the corrected field $\widetilde v_{\mathrm{ref}}$ of the fixed initial reference. With self-conditioning enabled, the corrected value is $v_p^0+(v_p^{\mathrm{main}}-v_p^0)/g$. Detaching the correction preserves the main-pass Jacobian rather than scaling it by $1/g$ (Appendix~\ref{app:nftdetails}).
 
-With self-conditioning enabled, the corrected value is $v_p^0+(v_p^{\mathrm{main}}-v_p^0)/g$. Detaching the correction preserves the main-pass Jacobian rather than scaling it by $1/g$ (Appendix~\ref{app:nftdetails}).
-
-\paragraph{Guided rollouts and forward-process updates.}
+\textbf{Guided rollouts and forward-process updates.}
 Collection retains recurrent self-conditioning and SCCFG guidance. We reward decoded answers but optimize their saved continuous endpoints, using fresh forward corruption and bootstrap predictions rather than replaying rollout histories. Thus rollouts remain guided while NFT optimizes the corrected fields in Eq.~\eqref{eq:nftcorrectedfield}.
 
 \subsection{Gold-anchored reasoning updates}
@@ -357,7 +353,7 @@ We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math50
 \subsection{Mathematical reasoning}
 \label{sec:mathresults}
 % BEGIN inlined tables/headline_comparison.tex
-\begin{table}[htbp]
+\begin{table}[!htb]
 \caption{Mathematical reasoning, mean pass@1 (\%). Parameter counts include frozen weights; Embedding covers vocabulary input/output maps, and $(+X)$ denotes parameters used once per response. Bold/underline mark best/second within each continuous-backbone group. $^{*}N$ denotes $N-1$ denoising calls; slashes separate GSM8K/MATH500 budgets. $^\dagger$Python scoring. Full comparisons and protocol details: Appendix~\ref{app:experimentdetails}; seed SDs: Appendix~\ref{app:seedvariability}.}
 \label{tab:headlinecomparison}
 \centering\small
@@ -389,13 +385,13 @@ ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96
 \end{table}
 % END inlined tables/headline_comparison.tex
 
-\paragraph{Reasoning accuracy across denoising budgets.}
+\textbf{Reasoning accuracy across denoising budgets.}
 \label{sec:headlinecomparison}
 \label{sec:headlinelownfe}
 At comparable denoising-backbone sizes, supervised LFRM already exceeds the reported continuous-diffusion baselines, and NFT gives our strongest results (Table~\ref{tab:headlinecomparison}). On MATH500, supervised LFRM-L reaches 21.18\%, compared with ELF-REG-L's 13.39\% at 127 denoising calls \citep{scalingdlm}. Our 90.4M/638M denoisers use compact learned prompt encoders, without executing the teacher Transformer during generation. The autoregressive and discrete-diffusion rows provide broader performance context; Table~\ref{tab:headlinecomparisonfull} in Appendix~\ref{app:experimentdetails} adds comparisons with larger models.
 
 % BEGIN inlined tables/headline_low_nfe.tex
-\begin{table}[t]
+\begin{table}[!htb]
 \caption{Reasoning at lower NFE, mean pass@1 (\%). Table~\ref{tab:headlinecomparison} gives model parameter counts. Bold/underline mark first/second within each benchmark and backbone-scale block; $^{*}$ marks one fewer denoising call than the heading. External results follow \citet{posterior,scalingdlm}; Appendix~\ref{app:experimentdetails} gives source and protocol details.}
 \label{tab:headlinelownfe}
 \centering\small
@@ -417,11 +413,9 @@ LFRM, post-NFT & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.1
 \end{table}
 % END inlined tables/headline_low_nfe.tex
 
-Both supervised and post-NFT LFRM retain this advantage at 8, 16, 32, and 64 NFE within each backbone-size group (Table~\ref{tab:headlinelownfe}). At eight steps, supervised LFRM-L reaches 15.23\% on MATH500, exceeding ELF-REG-L's 13.39\% at 127 denoising calls. Useful reasoning therefore emerges without training a separate few-step student. These are reported operating points with different training and evaluation protocols; NFE does not equate FLOPs across methods.
+Both supervised and post-NFT LFRM retain this advantage at 8, 16, 32, and 64 NFE within each backbone-size group (Table~\ref{tab:headlinelownfe}). At eight steps, supervised LFRM-L reaches 15.23\% on MATH500, exceeding ELF-REG-L's 13.39\% at 127 denoising calls. Useful reasoning therefore emerges without training a separate few-step student. These are reported operating points with different training and evaluation protocols; NFE does not equate FLOPs across methods. The MATH500 headline tables use SCCFG 3, selected through a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); GSM8K and all inference-allocation curves retain SCCFG 2.
 
-The MATH500 headline tables use SCCFG 3, selected through a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); GSM8K and all inference-allocation curves retain SCCFG 2.
-
-\paragraph{Refining an answer or drawing more answers.}
+\textbf{Refining an answer or drawing more answers.}
 \label{sec:headlinebudget}
 For $k$ samples with $S$ denoising steps each, we use $kS$ as the inference budget. Oracle pass@$k$ measures whether any sample is correct; majority vote selects the most frequent final answer after grouping equivalent answers, without consulting the reference. For selectors returning one of the generated answers, voting provides an achievable \emph{lower bound} on optimal selection accuracy, while oracle pass@$k$ supplies its \emph{upper bound}. We compare $S\in\{8,16,32,64\}$ up to a budget of 512 calls; Appendix~\ref{app:budgetvalues} gives aggregation details.
 
@@ -432,20 +426,18 @@ For $k$ samples with $S$ denoising steps each, we use $kS$ as the inference budg
 \label{fig:headlinestages}
 \end{figure}
 
-Figure~\ref{fig:headlinestages} shows that oracle selection generally favors more attempts with fewer steps, whereas voting generally favors higher-NFE samples. On MATH500 after NFT, 64 eight-step samples reach 67.00\% oracle accuracy, versus 52.60\% for eight 64-step samples; voting reverses this preference, at 25.79\% versus 32.42\%. Intermediate depths remain competitive for voting. The gap between voting and oracle accuracy motivates better answer selection, potentially using learned latent-space or hidden-state classifiers.
+Figure~\ref{fig:headlinestages} shows that oracle selection generally favors more attempts with fewer steps, whereas voting generally favors higher-NFE samples. On MATH500 after NFT, 64 eight-step samples reach 67.00\% oracle accuracy, versus 52.60\% for eight 64-step samples; voting reverses this preference, at 25.79\% versus 32.42\%. Intermediate depths remain competitive for voting. The voting--oracle gap motivates better answer selection, potentially using latent-space or hidden-state classifiers.
 
-\paragraph{What changes after NFT?}
+\textbf{What changes after NFT?}
 \label{sec:nftresults}
-NFT improves single-sample accuracy at every reported denoising depth (Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe}). At 64 steps with SCCFG 2, the paired LFRM-L gains are $+5.07$ percentage points on GSM8K and $+4.75$ on MATH500. These results support the promise of diffusion RL for continuous reasoning models.
-
-The benefit is less uniform for high-$k$ oracle coverage: at eight steps on MATH500, NFT raises pass@1 from 13.88\% to 16.31\%, while pass@64 changes from 67.60\% to 67.00\%. Voting shows clearer gains: with eight 64-step samples, MATH500 accuracy rises from 26.34\% to 32.42\% ($+6.07$ points). Voting benefits from the correct answer's frequency relative to competing answers, whereas oracle selection needs only one successful draw. These patterns do not establish a loss of reasoning diversity after NFT; Appendix~\ref{app:budgetvalues} gives further comparisons and interpretation. Appendices~\ref{app:generations}--\ref{app:trajectories} illustrate complete solutions and intermediate generations.
+NFT improves single-sample accuracy at every reported denoising depth (Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe}). At 64 steps with SCCFG 2, the paired LFRM-L gains are $+5.07$ percentage points on GSM8K and $+4.75$ on MATH500. These results support the promise of diffusion RL for continuous reasoning models. The benefit is less uniform for high-$k$ oracle coverage: at eight steps on MATH500, NFT raises pass@1 from 13.88\% to 16.31\%, while pass@64 changes from 67.60\% to 67.00\%. Voting shows clearer gains: with eight 64-step samples, MATH500 accuracy rises from 26.34\% to 32.42\% ($+6.07$ points). Voting benefits from the correct answer's frequency relative to competing answers, whereas oracle selection needs only one successful draw. These patterns do not establish reduced reasoning diversity after NFT; Appendix~\ref{app:budgetvalues} gives further comparisons and interpretation. Appendices~\ref{app:generations}--\ref{app:trajectories} illustrate complete solutions and intermediate generations.
 
 \subsection{Code generation}
 \label{sec:codingresults}
 
 On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L trains for 12 epochs with frozen Qwen conditioning, fits the 121M-parameter prompt encoder for ten MSE epochs with the flow model fixed, then jointly trains both networks for one epoch. Table~\ref{tab:codingcomparison} reports eight-seed results with async $(2.5,2,1.5)$ and SCCFG 3, without NFT; Appendix~\ref{app:codingdetails} details the training setup, including auxiliary prompt-MSE regularization during joint training.
 
-\begin{table}[htbp]
+\begin{table}[!htb]
 \centering\small
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{@{}lrrrrr@{}}
@@ -459,17 +451,16 @@ LFRM-L / prompt MSE (ours) & 128 & 27.97 & 25.30 & 19.61 & 16.96\\
 LFRM-L / joint prompt (ours) & 128 & 29.57 & 26.91 & 18.45 & 16.40\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use HumanEval base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's reported ``MBPP+'' uses base tests. Frozen/MSE rows share the epoch-12 backbone; joint training yields epoch 13. NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Appendix~\ref{app:codingdetails} details protocols; Table~\ref{tab:codingstandarddetail} gives seed SDs.}
+\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use HumanEval base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's reported ``MBPP+'' uses base tests. Frozen/MSE rows share the epoch-12 backbone; joint training yields epoch 13. NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Protocols: Appendix~\ref{app:codingdetails}; seed SDs: Table~\ref{tab:codingstandarddetail}.}
 \label{tab:codingcomparison}
 \end{table}
 
-All three variants outperform reported PlaidQ results on HumanEval(+); learned conditioning also exceeds oDLM-0.6B \citep{odlm} and Edit Flow-1.3B \citep{editflow}, but trails guided PlaidQ on MBPP-378 base. Matching ELF-REG-L's function-name aliasing rule, all three exceed its reported HumanEval(+)/MBPP-378 scores (Appendix~\ref{app:codingdetails}, Table~\ref{tab:codingaliascomparison}).
-
-Appendix~\ref{app:codingdetails} discusses prompt adaptation across tasks and the effects of joint training.
+All three variants outperform reported PlaidQ results on HumanEval(+); learned conditioning also exceeds oDLM-0.6B \citep{odlm} and Edit Flow-1.3B \citep{editflow}, but trails guided PlaidQ on MBPP-378 base. Matching ELF-REG-L's function-name aliasing rule, all three exceed its reported HumanEval(+)/MBPP-378 scores (Appendix~\ref{app:codingdetails}, Table~\ref{tab:codingaliascomparison}). Appendix~\ref{app:codingdetails} discusses prompt adaptation across tasks and the effects of joint training.
 
 % END inlined sections/headline_results.tex
 
 \clearpage
+\setlength{\parskip}{\conferenceparskip}
 \bibliography{references}
 \bibliographystyle{iclr2027_conference}
 
