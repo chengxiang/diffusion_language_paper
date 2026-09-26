@@ -192,7 +192,7 @@ PCA preserves high-variance directions, which need not preserve the teacher's pr
 \subsection{Learning the conditional encoding in three stages}
 \label{sec:conditionalencoding}
 
-ELF and ELF-REG use external contextual prompt encoders \citep{elf,scalingdlm}. We instead replace the Qwen teacher Transformer with a compact trainable encoder, retaining its frozen token lookup. For LFRM-L, the contextual network has \textbf{121M parameters} (excluding the vocabulary (un)embedding table), replacing the 4B-parameter teacher. The student uses six bidirectional attention blocks and encodes each prompt once; see Appendix~\ref{app:methodobjective} for its architecture.
+ELF and ELF-REG use external contextual prompt encoders \citep{elf,scalingdlm}. We instead replace the Qwen teacher Transformer with a compact trainable encoder, retaining its frozen token lookup. For LFRM-L, the contextual network has \textbf{121M parameters} (excluding the vocabulary (un)embedding table), replacing the 4B-parameter teacher. The student uses six bidirectional attention blocks and encodes each prompt once; see Appendix~\ref{app:training} for its architecture.
 
 % Finish the wrap before the full-width lemma, retaining a small gap.
 \par
@@ -229,7 +229,7 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 \end{wrapfigure}
 % END inlined figures/prompt_curriculum.tex
 
-The encoder need not reproduce the teacher's coordinates: it must preserve the information needed for the posterior mean answer. Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. MSE matching supplies a compatible initialization, while downstream training can adapt the encoder and denoiser jointly. We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:methodobjective}):
+The encoder need not reproduce the teacher's coordinates: it must preserve the information needed for the posterior mean answer. Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. MSE matching supplies a compatible initialization, while downstream training can adapt the encoder and denoiser jointly. We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:training}):
 
 \textbf{1. Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective. \textbf{2. Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE. \textbf{3. Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss, to epoch 18 for LFRM-B or epoch 21 for LFRM-L on the mathematical reasoning tasks.
 
@@ -341,7 +341,7 @@ where $C_{\mathcal H}$ is independent of $f$ with the conditioning information a
 
 At $\rho_G=1$, the gold term directly regresses toward $m_G$. Under an ideal reference model matching that gold posterior target, the anchor interpolates between the reference and old fields; Appendix~\ref{app:nftgoldproof} gives the proof and scope. This gold-induced anchor complements the explicit reference penalty.
 
-Because the external condition is the question text, NFT jointly updates the prompt encoder and flow model as one conditional policy (Lemma~\ref{lem:conditionalrepresentation}), without a prompt-imitation objective. Training uses synchronous identity clocks; asynchronous evaluation follows Section~\ref{sec:clocks}. Appendix~\ref{app:nftdetails} gives optimization details, and Section~\ref{sec:nftresults} discusses the empirical gains.
+Because the external condition is the question text, NFT jointly updates the prompt encoder and flow model as one conditional policy (Lemma~\ref{lem:conditionalrepresentation}), without a prompt-imitation objective. Training uses synchronous identity clocks; asynchronous evaluation follows Section~\ref{sec:clocks}. Appendix~\ref{app:training} gives optimization details, and Section~\ref{sec:nftresults} discusses the empirical gains.
 % END inlined sections/nft.tex
 
 % BEGIN inlined sections/headline_results.tex
@@ -435,7 +435,7 @@ NFT improves single-sample accuracy at every reported denoising depth (Tables~\r
 \subsection{Code generation}
 \label{sec:codingresults}
 
-On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L trains for 12 epochs with frozen Qwen conditioning, fits the 121M-parameter prompt encoder for ten MSE epochs with the flow model fixed, then jointly trains both networks for one epoch. Table~\ref{tab:codingcomparison} reports eight-seed results with async $(2.5,2,1.5)$ and SCCFG 3, without NFT; Appendix~\ref{app:codingdetails} details the training setup, including auxiliary prompt-MSE regularization during joint training.
+On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L trains for 12 epochs with frozen Qwen conditioning, fits the 121M-parameter prompt encoder for ten MSE epochs with the flow model fixed, then jointly trains both networks for one epoch. Table~\ref{tab:codingcomparison} reports eight-seed results with async $(2.5,2,1.5)$ and SCCFG 3, without NFT; Appendix~\ref{app:training} details the training setup, including auxiliary prompt-MSE regularization during joint training.
 
 \begin{table}[!htb]
 \centering\small
@@ -466,6 +466,103 @@ All three variants outperform reported PlaidQ results on HumanEval(+); learned c
 
 \clearpage
 \appendix
+\section{Training recipe and model architectures}
+\label{app:training}
+
+This section collects the architectures, training stages, and optimization settings. All tasks use the same representation and conditioning design; Table~\ref{tab:trainingstages} specifies their training durations. Detailed representation-learning equations, supervised losses, and NFT updates appear in Appendices~\ref{app:representationimplementation}, \ref{app:methodobjective}, and~\ref{app:nftdetails}, respectively.
+
+\subsection{Architectures and fixed representations}
+\label{app:architecture}
+
+The teacher is Qwen3-4B-Instruct-2507, with hidden width 2,560 and a 151,936-token vocabulary. We learn task-specific projections of its post-block activations at layers 16, 24, and 32, with output widths 256, 256, and 512. Concatenating these covariance-whitened features gives the 1,024-dimensional representation used for both teacher prompt conditions and answer targets. Projectors are learned before flow training and then fixed; their reconstruction decoders and frozen Qwen suffixes are used only during representation learning (Appendix~\ref{app:representationimplementation}). Teacher activations and projected targets can be precomputed, so the later training stages do not require live Qwen Transformer calls.
+
+\begin{table}[!htb]
+\centering\small
+\setlength{\tabcolsep}{7pt}
+\caption{LFRM architectures. Both flow models use the ELF backbone, shared between denoising and token decoding. The prompt encoder is a separate bidirectional Transformer; its Qwen vocabulary lookup is frozen from initialization onward.}
+\label{tab:architectures}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Component & LFRM-B & LFRM-L\\
+\midrule
+ELF backbone: blocks / width / heads & 12 / 768 / 12 & 32 / 1,280 / 16\\
+ELF input bottleneck & 512 & 512\\
+Prompt Transformer: blocks / width / heads & 6 / 768 / 12 & 6 / 1,280 / 16\\
+Prompt frontend & $2560\to512\to768$ & $2560\to512\to1280$\\
+Prompt output width & 1,024 & 1,024\\
+Frozen Qwen token lookup & \multicolumn{2}{c}{$151{,}936\times2{,}560$}\\
+Teacher layers / projected widths & \multicolumn{2}{c}{16/24/32\quad /\quad 256/256/512}\\
+Canvas length / latent width & \multicolumn{2}{c}{1,024 / 1,024}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{ELF backbone and token head.}
+Table~\ref{tab:architectures} gives the model sizes. Both backbones use bidirectional attention, rotary position encoding, and SwiGLU blocks with MLP ratio four. The flow head predicts 1,024-dimensional clean latents. A separate token head maps the backbone output through 1,024 decoder features to the native vocabulary, sharing the Transformer with denoising mode. Answer self-conditioning supplies a second latent channel. Time, mode, and SCCFG embeddings condition the backbone; the inference-only duplication of time embeddings is described in Section~\ref{sec:clocks}.
+
+\paragraph{Compact prompt encoder.}
+The encoder first looks up each question token in Qwen's frozen $151{,}936\times2{,}560$ input table. Two learned linear maps, $2560\to512\to d_{\mathrm{model}}$, have no intervening nonlinearity. Six bidirectional ELF-style blocks use rotary positions and MLP ratio four, followed by RMSNorm and a 1,024-dimensional output projection. The first frontend map has no bias; the second and output maps have biases. The LFRM-L contextual encoder contains 121,333,180 trainable parameters, excluding the frozen lookup. Only question-prefix tokens enter the encoder; padding is masked and padded outputs are zero. The lookup stays fixed during prompt imitation, joint training, and NFT, and is excluded from optimizers and prompt EMAs. Learned conditioning thus executes the compact encoder and vocabulary lookup once per response, without the Qwen Transformer.
+
+\subsection{Training stages and durations}
+\label{app:trainingstages}
+
+\begin{table}[!htb]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{Training stages by task. Flow-training epochs count passes over answer rows; prompt-MSE epochs count passes over unique prompts and do not advance the flow-training epoch. Joint epochs are additional to the first 12 flow epochs. The last column gives the NFT checkpoint used for reporting, in successful optimizer updates, rather than a further epoch count.}
+\label{tab:trainingstages}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Task / model & \shortstack{Frozen-Qwen\\flow epochs} & \shortstack{Prompt-MSE\\epochs} & \shortstack{Joint epochs\\(flow endpoint)} & \shortstack{Reported\\NFT update}\\
+\midrule
+GSM8K / LFRM-B & 12 & 60 & 6 (18) & 300\\
+GSM8K / LFRM-L & 12 & 30 & 9 (21) & 500\\
+MATH / LFRM-L & 12 & 10 & 9 (21) & 600\\
+OpenCodeInstruct / LFRM-L & 12 & 10 & 1 (13) & ---\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Training populations and epoch units.}
+The GSM8K reasoning runs share 2,434,330 answer rows and 275,661 unique prompts. The MATH runs use the MATH/augmented-MATH portion of OpenMathInstruct-2's five-million-row split, yielding 3,967,527 eligible answer rows and 508,953 unique prompts. Coding uses 4,893,784 eligible OpenCodeInstruct answer rows and 4,772,508 unique prompts. Different solutions to one question remain separate flow-training rows, whereas standalone prompt imitation weights each unique prompt equally. Native Qwen chat sequences must fit the 1,024-token canvas; overlength rows are excluded rather than truncated. Supervised losses include answer content and one terminal token, excluding prompt and padding positions.
+
+\paragraph{Stage 1: flow training with frozen teacher conditioning.}
+Initialize the ELF backbone and token decoder with seed 42 and train for 12 answer-row epochs using fixed Qwen prompt representations. Both answer targets and prompt conditions use the learned projectors. Optimize the mixed flow/decoder-CE objective, choosing decoder mode with probability $0.2$ and flow mode otherwise. All representation groups share a synchronous scalar time $t=\operatorname{sigmoid}(-1.5+0.8\xi)$, $\xi\sim\mathcal N(0,1)$, with flow noise scale two. Prompt positions remain clean; bootstrap and SCCFG auxiliary targets are detached. Appendix~\ref{app:methodobjective} gives the exact corruptions, masks, guidance distribution, and loss reductions.
+
+\paragraph{Stage 2: standalone prompt imitation.}
+Hold the flow model and representation fixed and initialize the compact prompt encoder's trainable layers with seed 42, using the frozen Qwen token table from the outset. Writing the projected question-only teacher states as $c_{\mathrm T}(q)$, minimize
+\begin{equation}
+ \mathcal L_{\mathrm{prompt}}=
+ \E_q\!\left[\frac{1}{L_qd}\sum_{i=1}^{L_q}
+ \|c_{\phi,i}(q)-c_{\mathrm T,i}(q)\|_2^2\right].
+ \label{eq:methodpromptmse}
+\end{equation}
+The loss first averages valid positions and latent coordinates within a prompt, then weights prompts equally. Prompt-MSE training has its own epoch counter and does not change the epoch-12 flow checkpoint. Table~\ref{tab:trainingstages} gives the task-specific durations; prompt EMA $0.999$ initializes the joint stage.
+
+\paragraph{Stage 3: joint adaptation.}
+Replace the teacher condition with the learned encoder and continue flow training with differentiable question-prefix latents and fixed answer targets. Preserve the flow model's raw weights, optimizer state, and independent EMAs; initialize the prompt model from its selected standalone EMA and start fresh prompt optimizers. The flow/decoder objective updates both trainable networks through the main conditioned forward, while auxiliary self-conditioning and guidance targets remain detached. Mathematical reasoning uses no additional prompt-MSE loss: LFRM-B trains six more epochs to epoch 18, and LFRM-L trains nine to epoch 21. Coding trains one more epoch to epoch 13 and uses the regularizer below. All three stages retain the same prompt architecture and frozen token table.
+
+\paragraph{Supervised optimization.}
+Flow training, standalone prompt imitation, and joint adaptation use effective batch 512, constant learning rate $0.002$, zero weight decay, and gradient clipping at norm one, applied separately to the flow and prompt models during joint training. Eligible matrices use Muon with momentum $0.95$ and five FP32 Newton--Schulz iterations. Remaining flow-model parameters use the auxiliary Nesterov-Adam optimizer; remaining prompt parameters use ordinary AdamW, with betas $(0.9,0.999)$ and epsilon $10^{-8}$. Trainable parameters and optimizer state use FP32, with compiled BF16 forward computation. Each trainable component maintains independent raw weights and EMAs with decays $0.99$, $0.999$, and $0.9999$, updated at optimizer boundaries. Evaluation selects flow and prompt states independently; Appendices~\ref{app:experimentdetails} and~\ref{app:codingdetails} specify the selectors for the reported results.
+
+\subsection{Coding joint-training regularizer}
+\label{app:codingtraining}
+
+The coding epoch-13 checkpoint follows one additional joint epoch (9,558 optimizer updates), starting from the epoch-12 flow checkpoint and the prompt-epoch-10 EMA $0.999$ state. Unlike the math joint stage, coding retains an auxiliary teacher-prompt MSE. Targets are the fixed, cached Qwen prompt representations; the loss averages valid prompt positions and latent coordinates within each training row, then weights rows equally. Only the prompt encoder receives this auxiliary gradient; answer representations and the vocabulary lookup remain frozen.
+
+At each optimizer update, let $g_{\mathrm{down}}$ and $g_{\mathrm{MSE}}$ denote the accumulated, data-parallel-mean prompt gradients from the downstream and auxiliary objectives. We combine them as $g_\phi=g_{\mathrm{down}}+\lambda g_{\mathrm{MSE}}$, with $\lambda=2\,\overline{\|g_{\mathrm{down}}\|_2}/\max(\overline{\|g_{\mathrm{MSE}}\|_2},10^{-12})$, where bars denote exponential moving averages with decay $0.99$. The target 2:1 ratio concerns smoothed gradient norms, not scalar loss values. The combined prompt gradient is clipped at norm one. Joint training otherwise retains the synchronous clocks and supervised optimization settings above. No coding NFT result is reported.
+
+\subsection{NFT fine-tuning}
+\label{app:nfttraining}
+
+Initialize current, old, and reference policies from the selected supervised endpoint, with fresh NFT optimizers. The current flow backbone and prompt body are trainable. The Qwen vocabulary lookup and representation projectors remain fixed, as do the decoder-specific mode tokens, output projection, and vocabulary-head parameters. The shared backbone continues to change, so freezing these decoder-specific parameters does not freeze the entire decoding function. Old and reference policies receive no optimizer gradients; each retains its own prompt encoder.
+
+Both trainable components use constant learning rate $10^{-4}$, zero weight decay, and separate norm-one gradient clipping. The flow backbone uses Muon with auxiliary Nesterov-Adam; the prompt body uses Muon/AdamW. Computation uses BF16. Collection uses 32 denoising steps, synchronous identity clocks, and SCCFG two; optimization also retains synchronous scalar-time conditioning. Each round collects 24 prompt groups with 15 generated endpoints and one gold endpoint per group, followed by eight independently corrupted records per retained endpoint. Filtering makes the update size variable, so the supervised batch size 512 does not apply to NFT. Appendix~\ref{app:nftdetails} specifies rewards, filtering, loss normalization, and old-policy updates. Table~\ref{tab:trainingstages} lists the reported NFT endpoints. Evaluation uses separate flow/prompt EMA $0.99/0.99$ and applies asynchronous clocks only at inference.
+
+\paragraph{NFT checkpoint selection.}
+We compare updates 100/200/300/400 for GSM8K LFRM-B, 100/300/500 for GSM8K LFRM-L, and 200/400/600 for MATH LFRM-L. Selection uses mean accuracy over seeds 42/123 on fixed development panels of 1,000 GSM8K and 500 MATH problems (Appendix~\ref{app:inferenceclocks}), with async $(2.5,2,1.5)$, 32 steps, and SCCFG two. Canonical numerical scoring selects update 300 for GSM8K LFRM-B and 500 for GSM8K LFRM-L; Math-Verify selects update 600 for MATH LFRM-L. These are selections among the evaluated checkpoints, not claims about all possible update counts.
+
+\clearpage
 \section{Generated solutions}
 \label{app:generations}
 
@@ -541,7 +638,7 @@ Light blue marks exact token-ID equality at the same position in the final answe
 Each generation seed evaluates all 1,319 GSM8K test problems or all 500 MATH500 problems in fixed benchmark order. GSM8K uses the canonical numerical-answer scorer, with boxed-answer-first extraction. Math-Verify is the primary MATH scorer throughout, including the schedule comparison in Table~\ref{tab:inferenceclocks}; PRM800K scores are retained as a secondary diagnostic. Validation comparisons use the separate fixed 1,000-problem GSM8K and 500-problem MATH panels described in Appendix~\ref{app:inferenceclocks}. Checkpoint, EMA, clock, guidance, and seed choices are specified with each comparison.
 
 \paragraph{Math checkpoints and generation settings.}
-The headline and inference-allocation math evaluations use a 1,024-token canvas and async clocks $(2.5,2,1.5)$. The supervised endpoints are epoch 18 for LFRM-B and epoch 21 for LFRM-L; NFT endpoints are updates 300, 500, and 600 for GSM8K LFRM-B, GSM8K LFRM-L, and MATH500 LFRM-L, respectively. Supervised evaluations select backbone/prompt EMA $.9999/.9999$; NFT evaluations select $.99/.99$. Table~\ref{tab:headlinecomparison} uses eight sampling seeds at 64 denoising steps. Table~\ref{tab:headlinelownfe} uses 64, 32, 16, and 8 seeds at 8, 16, 32, and 64 steps, respectively. Our rows in both tables use SCCFG 2 for GSM8K and SCCFG 3 for MATH500. The latter follows a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); the inference-allocation figures retain SCCFG 2, whose 64-step MATH500 pass@1 is 18.85\% before NFT and 23.60\% afterward.
+The headline and inference-allocation math evaluations use a 1,024-token canvas and async clocks $(2.5,2,1.5)$. Table~\ref{tab:trainingstages} lists the supervised and NFT endpoints. Supervised evaluations select backbone/prompt EMA $.9999/.9999$; NFT evaluations select $.99/.99$. Table~\ref{tab:headlinecomparison} uses eight sampling seeds at 64 denoising steps. Table~\ref{tab:headlinelownfe} uses 64, 32, 16, and 8 seeds at 8, 16, 32, and 64 steps, respectively. Our rows in both tables use SCCFG 2 for GSM8K and SCCFG 3 for MATH500. The latter follows a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); the inference-allocation figures retain SCCFG 2, whose 64-step MATH500 pass@1 is 18.85\% before NFT and 23.60\% afterward.
 
 \paragraph{External reports and parameter accounting.}
 Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} and~\ref{tab:headlinecomparisonfull} use the comparison papers' reported accuracies and sampling budgets, without re-evaluating their models. GSM8K uses 4-shot prompts for Qwen/LLaDA, 8-shot prompts for Dream/TESS~2, and zero-shot prompts for ours. FMLM+ grades Python solutions, whereas ELF-REG and LFRM produce natural-language reasoning. The low-NFE values come from FMLM+ Table~8 and ELF-REG Tables~13 and~17; ELF-REG uses early stopping \citep{posterior,scalingdlm}. SDAR uses four steps per four-token block. ELF-REG's reported budget includes one terminal decoder call, so our tables mark it with $^{*}$; our NFE excludes prompt encoding and terminal decoding.
@@ -728,25 +825,12 @@ For valid response mask $M_{bi}$, including the terminal token and excluding que
  {\sum_{bi}M_{bi}}.
  \label{eq:methodmicroobjective}
 \end{equation}
-Here $\widetilde u_{bi}$ is the SCCFG-adjusted target at example $b$'s sampled time. There is one denominator across both row types, with no additional normalization by mode probability. Averaging over mode assignments gives $0.8\mathcal L_{\mathrm{FM}}^{\mathrm{SCCFG}}+0.2\mathcal L_{\mathrm{CE}}$ under this common normalization. The flow term averages all 1,024 coordinates, preserving the relative 256/256/512 group widths. Gradients are averaged over data-parallel ranks and accumulation microsteps. LFRM-B uses 12 bidirectional blocks of width 768 and LFRM-L uses 32 blocks of width 1,280; both share their backbone between flow and token-decoder modes.
+Here $\widetilde u_{bi}$ is the SCCFG-adjusted target at example $b$'s sampled time. There is one denominator across both row types, with no additional normalization by mode probability. Averaging over mode assignments gives $0.8\mathcal L_{\mathrm{FM}}^{\mathrm{SCCFG}}+0.2\mathcal L_{\mathrm{CE}}$ under this common normalization. The flow term averages all 1,024 coordinates, preserving the relative 256/256/512 group widths. Gradients are averaged over data-parallel ranks and accumulation microsteps. Both models share their backbone between flow and token-decoder modes (Table~\ref{tab:architectures}).
 
 \paragraph{Sampling initialization and termination.}
 Given $q$, compute $c(q)$ once and initialize all $L-L_q$ available answer positions independently from $\mathcal N(0,\sigma^2I)$. The prompt remains clean throughout. For $S$ denoising calls, Euler evaluates at $\tau_r$, $r=0,\ldots,S-1$, and advances to $\tau_S=1$; Appendix~\ref{app:inferenceclocks} specifies the grid. Answer self-conditioning starts at zero and subsequently carries the preceding clean prediction. The requested SCCFG scale is supplied to each call. A separate call through the shared backbone and token head decodes all answer positions in parallel; the first terminal token determines the returned length. Denoising NFE counts only the $S$ denoising calls.
 
-\paragraph{Prompt encoder.}
-The frozen Qwen token table maps vocabulary IDs to 2,560-dimensional vectors. The learned frontend applies $2560\to512\to d_{\mathrm{model}}$ linear maps without an intervening nonlinearity. Six bidirectional Transformer blocks use width 768 and 12 heads for LFRM-B, or width 1,280 and 16 heads for LFRM-L, followed by RMSNorm and a 1,024-dimensional output projection. Inputs contain only the question prefix, and padding is masked. The standalone objective averages MSE over positions and coordinates within each question, then weights questions equally. Joint training retains the flow/decoder objective and fixed answer targets. The token table stays frozen while the prompt Transformer and flow model receive gradients from the main forward.
-
-Writing the projected question-only teacher states as $c_{\mathrm T}(q)$, standalone prompt imitation minimizes
-\begin{equation}
- \mathcal L_{\mathrm{prompt}}=
- \E_q\!\left[\frac{1}{L_qd}\sum_{i=1}^{L_q}
- \|c_{\phi,i}(q)-c_{\mathrm T,i}(q)\|_2^2\right].
- \label{eq:methodpromptmse}
-\end{equation}
-The flow model remains fixed during this stage, so prompt-MSE training does not advance the flow-training epoch. The learned encoder then replaces the teacher condition at flow-training epoch 12. On the mathematical reasoning tasks, joint training continues to epoch 18 for LFRM-B and epoch 21 for LFRM-L, with no additional prompt-MSE objective.
-
-\paragraph{Training-curve cohorts.}
-Figure~\ref{fig:promptcurriculum} uses the same two-seed pre-NFT evaluations as the original training-curve campaign: epochs 4, 8, 12 before prompt substitution; epoch 12 immediately after substitution; and epochs 16/18 for LFRM-B or 16/20/21 for LFRM-L. All 20 plotted points retain their saved predictions, canonical scores, and 4,000-replicate problem-bootstrap intervals. Both epoch-12 conditions share identical backbone weights. These curves use 32 steps and SCCFG 2, whereas the headline results use 64 steps and SCCFG 3 for MATH500. The joint-from-start comparison in Figure~\ref{fig:representationcomparison} instead uses the common $t=\tau^2$ clock and backbone EMA $0.999$ for its six-epoch controls; its four-seed endpoint means are not points on the curriculum curves.
+The prompt architecture, imitation objective, and stage durations are collected in Appendix~\ref{app:training}; Eq.~\eqref{eq:methodpromptmse} defines the standalone prompt loss. Figure~\ref{fig:promptcurriculum}'s evaluation cohorts are specified in Appendix~\ref{app:curvevalues}.
 
 \subsection{Conditional representation: proof and scope}
 \label{app:conditioninglemma}
@@ -911,20 +995,20 @@ With $e_c=\widetilde v_{\mathrm{cur}}-\sg(u_t^{\mathrm{stab}})$ and $e_o=\sg(\wi
 \end{equation}
 This averages coordinates and valid tokens, rather than averaging a separate mean for each solution. Gradients are summed across ranks using the same update-wide denominator. The reference term is a squared-velocity penalty. We omit the adaptive residual normalization of the original DiffusionNFT implementation \citep{diffusionnft}; no decoder CE, prompt MSE, or separate correct-solution flow auxiliary loss is added.
 
-\subsection{Optimization and policy roles}
+\subsection{Policy roles and old-policy updates}
 \label{sec:nftjoint}
 
-Current, old, and reference policies are initialized from the selected supervised source states, with fresh NFT optimizers. The current flow backbone and prompt body are trainable. The Qwen vocabulary lookup and representation projectors remain fixed, as do LFRM's decoder-specific mode tokens, output projection, and vocabulary-head parameters. The shared backbone continues to change, so freezing these leaves does not freeze the entire decoding function. Old and reference roles receive no optimizer gradients, and each retains its own prompt encoder.
+Appendix~\ref{app:nfttraining} specifies initialization, trainable components, and optimizer settings.
 
 The parameterization in Section~\ref{sec:conditionalencoding} makes the question tokens the external condition for all roles. Thus the current, old, and reference policies use their respective encoders $P_\phi$, $P_{\phi_{\mathrm{old}}}$, and $P_{\phi_{\mathrm{ref}}}$ while being compared under the same question $q$.
 
-Both trainable components use constant learning rate $10^{-4}$, zero weight decay, and separate gradient clipping at norm one. The flow backbone uses Muon with its auxiliary Nesterov-Adam optimizer; the prompt body uses Muon/AdamW. Computation uses BF16. After successful update $n$, both old-policy components are updated by
+After successful update $n$, both old-policy components are updated by
 \begin{equation}
  \Theta_{\mathrm{old}}\leftarrow \alpha_n\Theta_{\mathrm{old}}+(1-\alpha_n)\Theta_{\mathrm{cur}},
  \qquad \alpha_n=\begin{cases}\min(0.001n,0.5),&n<400,\\0.4,&n\ge400.\end{cases}
  \label{eq:nftoldema}
 \end{equation}
-The reference remains at initialization. Evaluation uses separate backbone/prompt EMA $0.99/0.99$, distinct from this old-policy retention schedule. NFT training retains synchronous scalar-time conditioning; inference-time clock adaptation is applied only for evaluation of these headline runs.
+The reference remains at initialization. The evaluation EMAs specified in Appendix~\ref{app:nfttraining} are distinct from this old-policy retention schedule.
 
 \subsection{Proof and interpretation of gold anchoring}
 \label{app:nftgoldproof}
@@ -995,7 +1079,7 @@ Post-NFT & $16.31\pm1.36$ & $20.09\pm1.23$ & $22.08\pm1.41$ & $23.60\pm1.79$\\
 \end{tabular}
 \end{table}
 % END inlined tables/headline_seed_variability.tex
-% Keep the seed-variability table within Appendix J, before the next heading.
+% Keep the seed-variability table within its appendix, before the next heading.
 \clearpage
 
 \section{LFRM-B inference allocation before and after NFT}
@@ -1237,15 +1321,8 @@ The pass@1 improvement does not imply a uniform improvement in multi-sample cove
 \section{Code generation: protocols and detailed results}
 \label{app:codingdetails}
 
-\paragraph{Training and conditioning.}
-The coding population contains 4,893,784 eligible OpenCodeInstruct answer rows and 4,772,508 unique prompts. Native Qwen chat sequences fit within 1,024 tokens without truncation. We use task-specific learned, covariance-whitened Qwen3-4B-Instruct-2507 features from layers 16/24/32 with widths 256/256/512. LFRM-L starts from random initialization and trains for 12 epochs under synchronous clocks, the mixed flow/decoder-CE objective (decoder probability 0.2), and effective batch 512. The coding time distribution uses logit-normal parameters $-1.5/0.8$ and noise scale two. This is a separate task-specific training lineage.
-
-The standalone prompt encoder uses the frozen Qwen vocabulary lookup, a $2560\to512\to1280$ frontend, six bidirectional width-1280 Transformer blocks with 16 heads, and a 1,024-dimensional output. It has 121M trainable parameters. MSE averages over valid positions and coordinates within each prompt, then weights prompts equally; the flow model and the target representation stay fixed throughout the ten prompt-training epochs. All coding evaluations select backbone EMA $0.9999$. Standalone MSE encoders use prompt EMA $0.999$; the joint epoch-13 checkpoint uses prompt EMA $0.9999$. The frozen-Qwen condition executes the external teacher to encode the question; the learned conditions execute only the compact prompt encoder and inherited vocabulary lookup before latent generation.
-
-\paragraph{Joint training with prompt-MSE regularization.}
-The epoch-13 result follows one additional epoch (9,558 optimizer updates) of joint training, initialized from the epoch-12 flow checkpoint and the standalone prompt-epoch-10 EMA $0.999$ state. Both the flow backbone and prompt encoder receive the downstream mixed flow/decoder-CE gradients. Unlike the math joint stage, coding also retains an auxiliary teacher-prompt MSE to regularize the encoder. Its targets are the fixed, cached Qwen prompt representations; the loss averages over valid prompt positions and latent coordinates within each training row, then weights rows equally. Only the prompt encoder receives this auxiliary gradient; the answer representation and vocabulary lookup remain frozen.
-
-At each optimizer update, let $g_{\mathrm{down}}$ and $g_{\mathrm{MSE}}$ denote the accumulated, data-parallel-mean prompt gradients from the downstream and auxiliary objectives. We combine them as $g_\phi=g_{\mathrm{down}}+\lambda g_{\mathrm{MSE}}$, with $\lambda=2\,\overline{\|g_{\mathrm{down}}\|_2}/\max(\overline{\|g_{\mathrm{MSE}}\|_2},10^{-12})$, where bars denote exponential moving averages with decay $0.99$. Thus the target 2:1 ratio concerns smoothed gradient norms, not scalar loss values. The combined prompt gradient is clipped at norm one. Joint training retains synchronous clocks, effective batch 512, and learning rate $0.002$. The reported epoch-13 model selects EMA $0.9999$ independently for both components; no coding NFT result is included.
+\paragraph{Training stages and checkpoint selectors.}
+Appendix~\ref{app:training} describes the coding architecture and three-stage recipe; Appendix~\ref{app:codingtraining} gives the joint prompt-MSE regularizer. All coding evaluations select backbone EMA $0.9999$. Standalone MSE encoders use prompt EMA $0.999$; the joint epoch-13 checkpoint uses prompt EMA $0.9999$. The frozen-Qwen and standalone-MSE conditions share the epoch-12 backbone, whereas joint training updates both the backbone and prompt encoder.
 
 \paragraph{Generation and scoring.}
 We use the benchmark task text in the native Qwen chat format, without assistant prefill, with batch size 32, CFG 1, SCCFG 3, and async $(2.5,2,1.5)$ throughout. Answers fill the remaining positions of the 1,024-token canvas and are decoded greedily. Denoising NFE excludes one terminal decoder call. The eight-seed cohort is $\{42,123,456,789,2026,31415,27182,16180\}$. SCCFG 3 and the 128-step budget follow benchmark sensitivity evaluations rather than an independent code-development-set selection. The shorter training curve uses 32 steps and its stated two- or four-seed cohorts.
@@ -1398,6 +1475,8 @@ This section tabulates the prompt-learning, representation-ablation, and reconst
 
 \paragraph{Prompt-learning curves.}
 Table~\ref{tab:promptcurvevalues} contains every point in Figure~\ref{fig:promptcurriculum}. Points are means over seeds 42/123, evaluated with async $(2.5,2,1.5)$, 32 denoising steps, SCCFG 2, and backbone EMA $0.9999$. Prompt EMA is $0.999$ at the MSE swap and $0.9999$ during joint training. GSM8K uses canonical scoring and MATH500 uses Math-Verify. Error bars show pointwise 95\% intervals from 4,000 problem-bootstrap replicates; brackets in the table give their bounds. Epoch 12 appears twice because prompt substitution does not advance the flow-training epoch; the two rows have identical backbone weights. The axes start at zero, but no epoch-zero accuracy was measured or plotted.
+
+The curve samples flow epochs 4, 8, and 12 before prompt substitution; epoch 12 immediately after substitution; and epochs 16/18 for LFRM-B or 16/20/21 for LFRM-L. All 20 points retain their saved predictions and canonical scores. The joint-from-start comparison in Figure~\ref{fig:representationcomparison} instead uses the common $t=\tau^2$ clock and backbone EMA $0.999$ for its six-epoch controls; its four-seed endpoint means are not points on these curriculum curves. Training durations are summarized in Table~\ref{tab:trainingstages}.
 
 \begin{table}[htbp]
 \centering\small
