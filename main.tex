@@ -269,6 +269,8 @@ with $\Delta_t$ defined in Section~\ref{sec:methodflow}. All groups update from 
 \vspace{-\baselineskip}
 \centering\small
 \setlength{\tabcolsep}{3pt}
+\caption{\small\textbf{Inference clocks change accuracy without retraining.} LFRM-L epoch 21, 32 steps; mean pass@1 (\%). Protocol and full sweep: Appendix~\ref{app:inferenceclocks}.}
+\label{tab:inferenceclocks}
 \begin{tabular}{@{}lrr@{}}
 \toprule
 $(\gamma_{16},\gamma_{24},\gamma_{32})$ & GSM8K & MATH500 \\
@@ -279,8 +281,6 @@ $(1.5,2,2.5)$ & 58.07 {\scriptsize($\pm 0.64$)} & 17.60 {\scriptsize($\pm 1.98$)
 $(2.5,2,1.5)$ & \textbf{59.25} {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scriptsize($\pm 1.27$)} \\
 \bottomrule
 \end{tabular}
-\caption{\small\textbf{Inference clocks change accuracy without retraining.} LFRM-L epoch 21, 32 steps; mean pass@1 (\%). Protocol and full sweep: Appendix~\ref{app:inferenceclocks}.}
-\label{tab:inferenceclocks}
 \vspace{-\baselineskip}
 \end{wraptable}
 % END inlined tables/inference_clocks.tex
@@ -357,7 +357,7 @@ We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math50
 \caption{Mathematical reasoning, mean pass@1 (\%). Parameter counts include frozen weights; Embedding covers vocabulary input/output maps, and $(+X)$ denotes parameters used once per response. Bold/underline mark best/second within each continuous-backbone group. $^{*}N$ denotes $N-1$ denoising calls; slashes separate GSM8K/MATH500 budgets. $^\dagger$Python scoring. Full comparisons: Appendix~\ref{app:fullcomparison}; protocols: Appendix~\ref{app:experimentdetails}; seed SDs: Appendix~\ref{app:seedvariability}.}
 \label{tab:headlinecomparison}
 \centering\small
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{2.4pt}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Model & \shortstack{Embedding\\Params (M)} & \shortstack{Other\\Params (M)} & NFE & GSM8K & MATH500\\
@@ -370,7 +370,7 @@ Qwen3-0.6B, thinking \citep{qwen3} & 156 & 440 & --- & --- & 77.60\\
 SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
-$\mathbb S$-FLM \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
+$\mathbb S$-FLM (top-1) \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
 FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
 ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
 \textbf{LFRM-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & ---\\
@@ -440,6 +440,8 @@ On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L trains for 12 epochs with f
 \begin{table}[!htb]
 \centering\small
 \setlength{\tabcolsep}{4pt}
+\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use HumanEval base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's reported ``MBPP+'' uses base tests. Frozen/MSE rows share the epoch-12 backbone; joint training yields epoch 13. NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Protocols: Appendix~\ref{app:codingdetails}; seed SDs: Table~\ref{tab:codingstandarddetail}.}
+\label{tab:codingcomparison}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Model / prompt conditioner & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
@@ -451,8 +453,6 @@ LFRM-L / prompt MSE (ours) & 128 & 27.97 & 25.30 & 19.61 & 16.96\\
 LFRM-L / joint prompt (ours) & 128 & 29.57 & 26.91 & 18.45 & 16.40\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use HumanEval base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's reported ``MBPP+'' uses base tests. Frozen/MSE rows share the epoch-12 backbone; joint training yields epoch 13. NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Protocols: Appendix~\ref{app:codingdetails}; seed SDs: Table~\ref{tab:codingstandarddetail}.}
-\label{tab:codingcomparison}
 \end{table}
 
 All three variants outperform reported PlaidQ results on HumanEval(+); learned conditioning also exceeds oDLM-0.6B \citep{odlm} and Edit Flow-1.3B \citep{editflow}, but trails guided PlaidQ on MBPP-378 base. Matching ELF-REG-L's function-name aliasing rule, all three exceed its reported HumanEval(+)/MBPP-378 scores (Appendix~\ref{app:codingdetails}, Table~\ref{tab:codingaliascomparison}). Appendix~\ref{app:codingdetails} discusses prompt adaptation across tasks and the effects of joint training.
@@ -530,7 +530,35 @@ OpenCodeInstruct / LFRM-L & 12 & 10 & 1 (13) & ---\\
 \end{table}
 
 \paragraph{Training populations and epoch units.}
-The GSM8K reasoning runs share 2,434,330 answer rows and 275,661 unique prompts. The MATH runs use the MATH/augmented-MATH portion of OpenMathInstruct-2's five-million-row split, yielding 3,967,527 eligible answer rows and 508,953 unique prompts. Coding uses 4,893,784 eligible OpenCodeInstruct answer rows and 4,772,508 unique prompts. Different solutions to one question remain separate flow-training rows, whereas standalone prompt imitation weights each unique prompt equally. Native Qwen chat sequences must fit the 1,024-token canvas; overlength rows are excluded rather than truncated. Supervised losses include answer content and one terminal token, excluding prompt and padding positions.
+The GSM8K reasoning runs share 2,434,330 answer rows and 275,661 unique prompts. The MATH runs use the MATH/augmented-MATH portion of OpenMathInstruct-2's five-million-row split \citep{openmath}, yielding 3,967,527 eligible answer rows and 508,953 unique prompts. Coding uses 4,893,784 eligible OpenCodeInstruct answer rows and 4,772,508 unique prompts. Different solutions to one question remain separate flow-training rows, whereas standalone prompt imitation weights each unique prompt equally. Native Qwen chat sequences must fit the 1,024-token canvas; overlength rows are excluded rather than truncated. Supervised losses include answer content and one terminal token, excluding prompt and padding positions.
+
+\paragraph{GSM8K training-data provenance.}
+Both GSM8K models use the same mixture of the original \texttt{train} splits of \href{https://huggingface.co/datasets/nvidia/OpenMathInstruct-2}{OpenMathInstruct-2} \citep{openmath}, \href{https://huggingface.co/datasets/microsoft/orca-math-word-problems-200k}{Orca-Math} \citep{orcamath}, and \href{https://huggingface.co/datasets/meta-math/MetaMathQA}{MetaMathQA} \citep{metamath}. OpenMathInstruct-2 contributes only rows whose \texttt{problem\_source} is \texttt{gsm8k} or \texttt{augmented\_gsm8k}; MetaMathQA contributes only types beginning with \texttt{GSM}. Orca-Math contributes all eligible rows. Table~\ref{tab:gsmtrainingmixture} gives the final training counts. Solutions to the same question remain separate training rows, with no additional source reweighting.
+
+\begin{table}[!htb]
+\centering\small
+\setlength{\tabcolsep}{6pt}
+\caption{GSM8K training mixture after filtering and question-group splitting. Counts are answer rows, shared by LFRM-B and LFRM-L. All sources originate from their original training splits.}
+\label{tab:gsmtrainingmixture}
+\begin{tabular}{@{}llr@{}}
+\toprule
+Source & Retained subset & Training rows\\
+\midrule
+OpenMathInstruct-2 & \texttt{gsm8k} & 292,485\\
+ & \texttt{augmented\_gsm8k} & 1,841,419\\
+Orca-Math & Eligible train rows & 147,464\\
+MetaMathQA & \texttt{GSM} types & 152,962\\
+\midrule
+Total & & 2,434,330\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Filtering and formatting.} Corpus construction requires a nonempty question and solution and an extractable numerical final answer, allowing signed integers, decimals, and fractions. OpenMathInstruct-2 supplies its expected answer; Orca-Math and MetaMathQA answers are extracted from the solution. The builder stores a standardized response ending in one \texttt{\#\#\#\# answer} line for the initial length filter. This filter uses the \texttt{inclusionAI/LLaDA-MoE-7B-A1B-Base} tokenizer, requiring at most 256 prompt tokens and at most 1,024 prompt-plus-response tokens, including EOS. For Qwen representation extraction, the retained \texttt{problem} and \texttt{solution} fields are rendered with its native chat template; the question instruction requests a boxed final answer. All 2,434,330 rows fit: the saved Qwen token cache has maximum length 1,019 and zero truncated rows.
+
+\textbf{Splitting and benchmark screening.} Question keys normalize Unicode, case, quotation marks, and whitespace; MetaMathQA also links rewrites through \texttt{original\_question}. Exact matches and near-duplicate candidates retrieved by MinHash/LSH are merged across sources. Near-duplicate splitting uses substring coverage at least 0.90, or word 5-/8-gram Jaccard similarity at least 0.55/0.40. A deterministic hash with seed 20260702 selects 10\% of source-local question keys for validation, and their entire merged groups are held out. The resulting split has 171,556 training groups and 25,949 validation groups (568,999 answer rows); the training population contains 275,661 distinct Qwen prompt prefixes. A 10\% training-row cap on MetaMathQA removes no further rows, since its retained share is 6.28\%.
+
+Before splitting, the builder screens question texts against all 1,319 official GSM8K test questions, using normalized exact matching, substring coverage at least 0.85, and the same 5-/8-gram thresholds over candidates retrieved through shared n-grams. This removes 128 OpenMathInstruct-2, two Orca-Math, and 92 MetaMathQA candidate rows. The final Qwen-cache audit records zero whitespace-normalized exact question matches to GSM8K test; the saved training and validation group IDs are disjoint. These checks establish the stated lexical screening, rather than semantic decontamination or absence of overlap in the teacher's pretraining data.
 
 \paragraph{Stage 1: flow training with frozen teacher conditioning.}
 Initialize the ELF backbone and token decoder with seed 42 and train for 12 answer-row epochs using fixed Qwen prompt representations. Both answer targets and prompt conditions use the learned projectors. Optimize the mixed flow/decoder-CE objective, choosing decoder mode with probability $0.2$ and flow mode otherwise. All representation groups share a synchronous scalar time $t=\operatorname{sigmoid}(-1.5+0.8\xi)$, $\xi\sim\mathcal N(0,1)$, with flow noise scale two. Prompt positions remain clean; bootstrap and SCCFG auxiliary targets are detached. Appendix~\ref{app:methodobjective} gives the exact corruptions, masks, guidance distribution, and loss reductions.
@@ -549,7 +577,7 @@ The loss first averages valid positions and latent coordinates within a prompt, 
 Replace the teacher condition with the learned encoder and continue flow training with differentiable question-prefix latents and fixed answer targets. Preserve the flow model's raw weights, optimizer state, and independent EMAs; initialize the prompt model from its selected standalone EMA and start fresh prompt optimizers. The flow/decoder objective updates both trainable networks through the main conditioned forward, while auxiliary self-conditioning and guidance targets remain detached. Mathematical reasoning uses no additional prompt-MSE loss: LFRM-B trains six more epochs to epoch 18, and LFRM-L trains nine to epoch 21. Coding trains one more epoch to epoch 13 and uses the regularizer below. All three stages retain the same prompt architecture and frozen token table.
 
 \paragraph{Supervised optimization.}
-Flow training, standalone prompt imitation, and joint adaptation use effective batch 512, constant learning rate $0.002$, zero weight decay, and gradient clipping at norm one, applied separately to the flow and prompt models during joint training. Eligible matrices use Muon with momentum $0.95$ and five FP32 Newton--Schulz iterations. Remaining flow-model parameters use the auxiliary Nesterov-Adam optimizer; remaining prompt parameters use ordinary AdamW, with betas $(0.9,0.999)$ and epsilon $10^{-8}$. Trainable parameters and optimizer state use FP32, with compiled BF16 forward computation. Each trainable component maintains independent raw weights and EMAs with decays $0.99$, $0.999$, and $0.9999$, updated at optimizer boundaries. Evaluation selects flow and prompt states independently; Appendices~\ref{app:experimentdetails} and~\ref{app:codingdetails} specify the selectors for the reported results.
+Flow training, standalone prompt imitation, and joint adaptation use effective batch 512, constant learning rate $0.002$, zero weight decay, and gradient clipping at norm one, applied separately to the flow and prompt models during joint training. Eligible matrices use Muon \citep{muon} with momentum $0.95$ and five FP32 Newton--Schulz iterations. Our implementation adapts the \texttt{muon-optimizer} package, with FP32 orthogonalization and Optax-compatible momentum bias correction and shape scaling. Remaining flow-model parameters use the auxiliary Nesterov-Adam optimizer; remaining prompt parameters use ordinary AdamW, with betas $(0.9,0.999)$ and epsilon $10^{-8}$. Trainable parameters and optimizer state use FP32, with compiled BF16 forward computation. Each trainable component maintains independent raw weights and EMAs with decays $0.99$, $0.999$, and $0.9999$, updated at optimizer boundaries. Evaluation selects flow and prompt states independently; Appendices~\ref{app:experimentdetails} and~\ref{app:codingdetails} specify the selectors for the reported results.
 
 \subsection{Coding joint-training regularizer}
 \label{app:codingtraining}
@@ -867,6 +895,8 @@ Table~\ref{tab:inferenceclockfull} compares the four schedules from the main tab
 
 \begin{table}[htbp]
 \centering\small
+\caption{Four-schedule LFRM-L epoch-21 comparison: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns include all entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
+\label{tab:inferenceclockfull}
 \begin{tabular}{lrrrr}
 \toprule
 & \multicolumn{2}{c}{Validation} & \multicolumn{2}{c}{Test} \\
@@ -879,8 +909,6 @@ $(1.5,2,2.5)$ & \textbf{72.80} {\scriptsize (1.13)} & 18.30 {\scriptsize (0.14)}
 $(2.5,2,1.5)$ & 72.15 {\scriptsize (0.35)} & \textbf{18.70} {\scriptsize (0.14)} & \textbf{59.25} {\scriptsize (0.16)} & \textbf{17.90} {\scriptsize (1.27)} \\
 \bottomrule
 \end{tabular}
-\caption{Four-schedule LFRM-L epoch-21 comparison: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns include all entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
-\label{tab:inferenceclockfull}
 \end{table}
 
 For the 32-step test comparison, async $(2.5,2,1.5)$ minus sync $(2,2,2)$ gives +1.74 percentage points on GSM8K (paired 95\% CI $[+0.72,+2.73]$) and +0.50 on MATH500 ($[-0.90,+1.90]$). Repeating the same two-seed comparison at 16 steps gives 55.57\% versus 54.74\% on GSM8K, a difference of +0.83 points ($[-0.15,+1.82]$), and 16.60\% versus 16.90\% on MATH500, a difference of $-0.30$ points ($[-2.00,+1.40]$). All use SCCFG 2. These are pointwise paired problem-bootstrap intervals with 4,000 replicates, conditional on the fixed checkpoints and generation seeds; the standard deviations in the main table instead describe dispersion across full-benchmark seed accuracies.
@@ -1044,7 +1072,7 @@ Each generation seed evaluates all 1,319 GSM8K test problems or all 500 MATH500 
 The headline and inference-allocation math evaluations use a 1,024-token canvas and async clocks $(2.5,2,1.5)$. Table~\ref{tab:trainingstages} lists the supervised and NFT endpoints. Supervised evaluations select backbone/prompt EMA $.9999/.9999$; NFT evaluations select $.99/.99$. Table~\ref{tab:headlinecomparison} uses eight sampling seeds at 64 denoising steps. Table~\ref{tab:headlinelownfe} uses 64, 32, 16, and 8 seeds at 8, 16, 32, and 64 steps, respectively. Our rows in both tables use SCCFG 2 for GSM8K and SCCFG 3 for MATH500. The inference-allocation figures retain SCCFG 2, whose 64-step MATH500 pass@1 is 18.85\% before NFT and 23.60\% afterward.
 
 \subsection{External reports and parameter accounting}
-Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} and~\ref{tab:headlinecomparisonfull} use the comparison papers' reported accuracies and sampling budgets, without re-evaluating their models. GSM8K uses 4-shot prompts for Qwen/LLaDA, 8-shot prompts for Dream/TESS~2, and zero-shot prompts for ours. FMLM+ grades Python solutions, whereas ELF-REG and LFRM produce natural-language reasoning. The low-NFE values come from FMLM+ Table~8 and ELF-REG Tables~13 and~17; ELF-REG uses early stopping \citep{posterior,scalingdlm}. SDAR uses four steps per four-token block. ELF-REG's reported budget includes one terminal decoder call, so our tables mark it with $^{*}$; our NFE excludes prompt encoding and terminal decoding.
+Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} and~\ref{tab:headlinecomparisonfull} use the comparison papers' reported accuracies and sampling budgets, without re-evaluating their models. GSM8K uses 4-shot prompts for Qwen/LLaDA, 8-shot prompts for Dream/TESS~2, and zero-shot prompts for ours. FMLM+ grades Python solutions, whereas ELF-REG and LFRM produce natural-language reasoning. The low-NFE values come from FMLM+ Table~8 and ELF-REG Tables~13 and~17; ELF-REG uses early stopping \citep{posterior,scalingdlm}. The $\mathbb S$-FLM row uses its enhanced hyperspherical configuration with top-1 velocity decoding, rather than its basic sampler. MLFM's 31.24\% result uses context-corrupted guidance and online token promotion: its reported 256 sampling steps need not equal 256 network calls, so Table~\ref{tab:headlinecomparisonfull} marks NFE as unestablished. SDAR uses four steps per four-token block. ELF-REG's reported budget includes one terminal decoder call, so our tables mark it with $^{*}$; our NFE excludes prompt encoding and terminal decoding.
 
 Parameter counts include frozen components. Our inherited Qwen vocabulary input/output maps contain 545M parameters and are called once per response; the denoising backbones contain 90.4M/638M parameters. The $(+X)$ counts include the learned prompt encoder and terminal projection, also used once per response. ELF-REG includes its frozen Qwen prompt encoder, and its reported non-decoder counts retain training-only REPA projectors. MLFM includes unmerged adapters; SDAR counts both untied vocabulary maps. These conventions describe stored parameters and invocation frequency, not equal inference cost across architectures.
 
@@ -1095,7 +1123,7 @@ This section collects the expanded mathematical-reasoning comparison, sampling-s
 \caption{Full mathematical-reasoning comparison, mean pass@1 (\%). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
 \label{tab:headlinecomparisonfull}
 \centering\small
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{2.4pt}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Model & \shortstack{Embedding\\Params (M)} & \shortstack{Other\\Params (M)} & NFE & GSM8K & MATH500\\
@@ -1110,7 +1138,7 @@ Dream-v0-Base-7B \citep{dream} & 1,090 & 6,530 & 256 & 77.20 & ---\\
 SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
-$\mathbb S$-FLM \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
+$\mathbb S$-FLM (top-1) \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
 FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
 ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
 \textbf{LFRM-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & ---\\
@@ -1122,12 +1150,12 @@ ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96
 \textbf{LFRM-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{63.74} & \textbf{24.68}\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: larger backbones (reference)}}\\
-MLFM \citep{mlfm} & 123 & 1,220 & 256 & 31.24 & ---\\
-TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
+MLFM \citep{mlfm} & 123 & 1,220 & NR$^\S$ & 31.24 & ---\\
+TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & $\approx68.9^\ddagger$ & ---\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
-\parbox{\linewidth}{\footnotesize External results are author-reported; $^\dagger$Python scoring, $^\ddagger$figure-derived accuracy. Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
+\parbox{\linewidth}{\footnotesize External results are author-reported; $^\dagger$Python scoring, $^\ddagger$Approximate accuracy read from TESS 2 Figure 3b. $^\S$MLFM reports 256 sampling steps with guidance and online token promotion; the corresponding NFE is not established (NR). Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
 \end{table}
 
 \clearpage
@@ -1391,10 +1419,10 @@ Appendix~\ref{app:training} describes the coding architecture and three-stage re
 \paragraph{Generation and scoring.}
 We use the benchmark task text in the native Qwen chat format, without assistant prefill, with batch size 32, CFG 1, SCCFG 3, and async $(2.5,2,1.5)$ throughout. Answers fill the remaining positions of the 1,024-token canvas and are decoded greedily. Denoising NFE excludes one terminal decoder call. The eight-seed cohort is $\{42,123,456,789,2026,31415,27182,16180\}$. The shorter training curve uses 32 steps and its stated two- or four-seed cohorts.
 
-HumanEval contains 164 tasks; MBPP uses the 378 tasks retained by EvalPlus \citep{evalplus}. We report base and full extended tests on the same generated programs, requiring both suites to pass for a plus score. Standard scoring applies native EvalPlus sanitization without function-name repair. Execution uses a minimum timeout of 4 seconds, reference-runtime multiplier four, and 4 GiB per program; failures and timeouts count as incorrect. Our separate alias condition changes extraction only: if the expected binding is absent and exactly one top-level function is present, append \texttt{expected\_name = generated\_name} and sanitize again. Existing bindings and ambiguous cases are unchanged. This changes which programs the evaluator accepts without changing generation.
+HumanEval \citep{humaneval} contains 164 tasks; MBPP \citep{mbpp} uses the 378 tasks retained by EvalPlus \citep{evalplus}. We report base and full extended tests on the same generated programs, requiring both suites to pass for a plus score. Standard scoring applies native EvalPlus sanitization without function-name repair. Execution uses a minimum timeout of 4 seconds, reference-runtime multiplier four, and 4 GiB per program; failures and timeouts count as incorrect. Our separate alias condition changes extraction only: if the expected binding is absent and exactly one top-level function is present, append \texttt{expected\_name = generated\_name} and sanitize again. Existing bindings and ambiguous cases are unchanged. This changes which programs the evaluator accepts without changing generation.
 
 \paragraph{Mapping external reports.}
-PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our comparison values. ELF-REG Table 1 supplies its aliased HumanEval, HumanEval+, and MBPP-378 base results \citep{scalingdlm}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. We retain their reported values without re-evaluating their models.
+Our PlaidQ comparison uses the author-reported results from arXiv version 1, subsequently withdrawn by the authors to address institutional resource-disclosure requirements \citep{plaidq}. PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our comparison values. ELF-REG Table 1 supplies its aliased HumanEval, HumanEval+, and MBPP-378 base results \citep{scalingdlm}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. We retain their reported values without re-evaluating their models.
 
 For additional discrete-model context, oDLM-0.6B reports HumanEval/HumanEval+ pass@1 of 17.87\%/16.40\% at 128 sampling steps with a 128-token response budget \citep[Table 1 and Appendix B.7]{odlm}. Edit Flow-1.3B reports 12.8\%/10.4\%, and its localized variant reports 14.0\%/10.4\% \citep[Table 3]{editflow}. Our learned-conditioning results without name repair are 27.97\%/25.30\% before joint training and 29.57\%/26.91\% at epoch 13. These comparisons use the authors' reported accuracies; training data, initialization, and sampling protocols differ. We restrict the additional comparison to HumanEval(+) rather than equating differently defined MBPP columns.
 
@@ -1404,6 +1432,8 @@ Table~\ref{tab:codingaliascomparison} separates the ELF-REG-L comparison from st
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{4pt}
+\caption{\textbf{Code generation with single-function name aliasing.} Mean pass@1 (\%) under the matched repair rule. ELF-REG-L values are author-reported; $^{*}128$ denotes 127 denoising calls plus terminal decoding in its reported budget. Our rows use eight seeds: frozen/MSE conditioning at epoch 12, and joint conditioning at epoch 13. Prompting and execution limits still differ across papers, as detailed above. Table~\ref{tab:codingaliasdetail} gives our seed SDs and higher-pass results.}
+\label{tab:codingaliascomparison}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Model / prompt conditioner & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
@@ -1414,8 +1444,6 @@ LFRM-L / prompt MSE (ours) & 128 & 28.05 & 25.38 & 30.99 & 26.32\\
 LFRM-L / joint prompt (ours) & 128 & 29.73 & 27.06 & 32.11 & 27.81\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Code generation with single-function name aliasing.} Mean pass@1 (\%) under the matched repair rule. ELF-REG-L values are author-reported; $^{*}128$ denotes 127 denoising calls plus terminal decoding in its reported budget. Our rows use eight seeds: frozen/MSE conditioning at epoch 12, and joint conditioning at epoch 13. Prompting and execution limits still differ across papers, as detailed above. Table~\ref{tab:codingaliasdetail} gives our seed SDs and higher-pass results.}
-\label{tab:codingaliascomparison}
 \end{table}
 
 \paragraph{Prompt adaptation remains task dependent.}
@@ -1430,6 +1458,8 @@ Table~\ref{tab:codingstages} keeps NFE and guidance fixed across flow-training e
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{4pt}
+\caption{\textbf{Coding training and prompt-substitution results at 32 denoising steps.} Mean pass@1 (\%) with generation-seed SD in parentheses; no aliases. Flow-training epochs 4/8 use seeds 42/123; epoch 12 and both prompt endpoints add 456/789. All rows use SCCFG 3. The prompt-MSE rows retain the same epoch-12 backbone weights.}
+\label{tab:codingstages}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Checkpoint / conditioner & Seeds & HE & HE+ & \shortstack{MBPP-378\\base} & MBPP+\\
@@ -1441,8 +1471,6 @@ Epoch 12 / prompt MSE 1 & 4 & 19.82 {\scriptsize (2.08)} & 18.60 {\scriptsize (2
 Epoch 12 / prompt MSE 10 & 4 & 26.37 {\scriptsize (1.44)} & 24.70 {\scriptsize (2.08)} & 17.59 {\scriptsize (2.61)} & 15.15 {\scriptsize (2.16)}\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Coding training and prompt-substitution results at 32 denoising steps.} Mean pass@1 (\%) with generation-seed SD in parentheses; no aliases. Flow-training epochs 4/8 use seeds 42/123; epoch 12 and both prompt endpoints add 456/789. All rows use SCCFG 3. The prompt-MSE rows retain the same epoch-12 backbone weights.}
-\label{tab:codingstages}
 \end{table}
 
 \paragraph{Eight-seed variation and multiple attempts.}
@@ -1453,6 +1481,8 @@ Before joint training, at 128 steps, aliasing improves MSE-prompt MBPP-378 base 
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
+\caption{\textbf{Standard scoring without aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
+\label{tab:codingstandarddetail}
 \begin{tabular}{@{}llrrrrr@{}}
 \toprule
 Conditioner & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
@@ -1473,13 +1503,13 @@ Joint prompt & MBPP-378 base & 18.45 {\scriptsize (1.53)} & 25.77 {\scriptsize (
 Joint prompt & MBPP+ & 16.40 {\scriptsize (1.45)} & 23.20 {\scriptsize (1.84)} & 29.81 {\scriptsize (2.15)} & 35.98 {\scriptsize (2.48)} & 1.30\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Standard scoring without aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
-\label{tab:codingstandarddetail}
 \end{table}
 
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
+\caption{\textbf{Scoring with single-function aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
+\label{tab:codingaliasdetail}
 \begin{tabular}{@{}llrrrrr@{}}
 \toprule
 Conditioner & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
@@ -1500,8 +1530,6 @@ Joint prompt & MBPP-378 base & 32.11 {\scriptsize (1.91)} & 41.66 {\scriptsize (
 Joint prompt & MBPP+ & 27.81 {\scriptsize (1.86)} & 36.19 {\scriptsize (2.18)} & 43.16 {\scriptsize (2.39)} & 49.21 {\scriptsize (2.60)} & 1.88\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Scoring with single-function aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
-\label{tab:codingaliasdetail}
 \end{table}
 
 
@@ -1512,6 +1540,8 @@ Table~\ref{tab:codingjointdeltas} compares joint epoch 13 with the epoch-12 back
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{4pt}
+\caption{\textbf{Joint epoch 13 minus pre-joint prompt MSE.} Differences in percentage points at 128 denoising calls and SCCFG 3, using the same eight seeds. Brackets give paired 95\% problem-bootstrap intervals from 4,000 replicates. Both models use backbone EMA $0.9999$; prompt EMA is $0.999$ before joint training and $0.9999$ afterward. Differences are computed before rounding the stage accuracies.}
+\label{tab:codingjointdeltas}
 \begin{tabular}{@{}llrr@{}}
 \toprule
 Scoring & Benchmark & $\Delta$ pass@1 [95\% CI] & $\Delta$ pass@8 [95\% CI]\\
@@ -1527,8 +1557,6 @@ Alias & MBPP-378 base & $+1.12$ {\scriptsize $[-0.33,+2.65]$} & $+1.32$ {\script
 Alias & MBPP+ & $+1.49$ {\scriptsize $[+0.17,+2.88]$} & $+2.12$ {\scriptsize $[-1.06,+5.03]$}\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Joint epoch 13 minus pre-joint prompt MSE.} Differences in percentage points at 128 denoising calls and SCCFG 3, using the same eight seeds. Brackets give paired 95\% problem-bootstrap intervals from 4,000 replicates. Both models use backbone EMA $0.9999$; prompt EMA is $0.999$ before joint training and $0.9999$ afterward. Differences are computed before rounding the stage accuracies.}
-\label{tab:codingjointdeltas}
 \end{table}
 
 \clearpage
