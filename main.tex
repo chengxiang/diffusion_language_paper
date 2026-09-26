@@ -83,40 +83,40 @@ Our complete reasoning pipeline comprises the following key contributions:
 Let $q=(q_1,\ldots,q_{L_q})$ and $a=(a_1,\ldots,a_{L_a})$ be prompt and answer tokens in vocabulary $\mathcal V$, with the answer including its terminal token. Their padded canvas $y=(q,a,\mathrm{padding})$ has length $L$; canvas index $i$ and answer index $j$ satisfy $y_{L_q+j}=a_j$. An answer encoder gives $z_{\mathrm{clean}}=\mathcal E(q,a)\in\R^{L_a\times d}$, and a prompt-only encoder gives $c_\phi(q)=P_\phi(q)\in\R^{L_q\times d}$; rows are token vectors. Unlike the teacher's tokenwise lookup $B_\psi[q_i]$, $P_\phi$ uses prompt context. Parameters $\psi$ are frozen teacher weights, $\phi$ the prompt encoder, and $\theta$ the shared denoising/decoding network, with $\Theta=(\theta,\phi)$. Teacher layer $\ell$ contributes width $d_\ell$ to total latent width $d$. Uppercase letters denote random variables.
 
 \paragraph{Flow matching.}
-Flow matching learns a velocity field transporting noise to data \citep{flowmatching}. Our linear Gaussian path runs from noise at $t=0$ to clean answer latents at $t=1$:
+Flow matching transports noise to data \citep{flowmatching}. For noise scale $\sigma>0$, our linear Gaussian path runs from noise at $t=0$ to clean latents at $t=1$:
 \begin{equation}
  z_t=t z_{\mathrm{clean}}+(1-t)\sigma\epsilon,
  \qquad \epsilon\sim\mathcal N(0,I),\qquad
  u_t:=\frac{\mathrm d z_t}{\mathrm d t}=z_{\mathrm{clean}}-\sigma\epsilon.
  \label{eq:methodinterpolant}
 \end{equation}
-For noise scale $\sigma>0$, interpolation time $t\sim\pi(t)$, and independent Gaussian noise, the basic conditional objective is
+Treating text $q$ as the external condition and $c_\phi(q)$ as its internal encoding, write $v_\Theta(z,t;q):=v_\theta(z,t;c_\phi(q))$. The conditional objective is
 \begin{equation}
  \mathcal L_{\mathrm{FM}}^{\mathrm{basic}}(\Theta)
  =\E\!\left[\left\|v_\theta\bigl(z_t,t;c_\phi(q)\bigr)-u_t\right\|_F^2\right].
  \label{eq:basicflowloss}
 \end{equation}
-The expectation samples training pairs $(q,a)$, time, and noise; the Frobenius norm sums over answer positions and latent coordinates. A semicolon separates the clean prompt condition from state and time.
+The expectation samples training pairs $(q,a)$, times $t\sim\pi(t)$, and independent Gaussian noise.
 
 \paragraph{Text and encoded conditioning.}
-The external condition is the text $q$, while $c_\phi(q)$ is the model's internal encoding. Define the complete field by $v_\Theta(z,t;q):=v_\theta(z,t;c_\phi(q))$. Write $p_t(z\mid q)$ for the forward-path density and $s^\star(z,t\mid q)=\nabla_z\log p_t(z\mid q)$ for its exact conditional score. For $0<t<1$, the population-optimal velocity is
+Write $p_t(z\mid q)$ for the forward-path density and $s^\star(z,t\mid q)=\nabla_z\log p_t(z\mid q)$ for its conditional score. For $0<t<1$, the population-optimal velocity is
 \begin{equation}
  v^\star(z,t\mid q)
  =\E[u_t\mid z_t=z,q]
  =\frac{z+\sigma^2(1-t)s^\star(z,t\mid q)}{t}.
  \label{eq:conditionalflowscore}
 \end{equation}
-Here $\star$ denotes a population optimum. Conditioning on $c_\phi(q)$ may merge distinct prompts; Section~\ref{sec:conditionalencoding} characterizes when the encoding preserves the text-conditional score.
+Conditioning on $c_\phi(q)$ may merge distinct prompts; Section~\ref{sec:conditionalencoding} characterizes when the encoding preserves the text-conditional score.
 
 \paragraph{Sampling under a different clock.}
-Let $\tau\in[0,1]$ be the solver clock and $t=f(\tau)$ an increasing differentiable map with $f(0)=0$ and $f(1)=1$. The sampled trajectory obeys $\mathrm d\bar z_\tau/\mathrm d\tau=f'(\tau)v_\Theta(\bar z_\tau,f(\tau);q)$, starting from $\bar z_0\sim\mathcal N(0,\sigma^2I)$. For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration preserves the endpoint, while finite-step accuracy can change. We write $z_r=\bar z_{\tau_r}$ for solver states and $S$ for denoising calls; $k$ attempts cost $kS$ calls. Changing the inference clock leaves the training density $\pi$ unchanged. Section~\ref{sec:clocks} extends this construction to separate group clocks.
+At inference, let $\tau\in[0,1]$ be solver time and $t=f(\tau)$ an increasing differentiable clock with $f(0)=0$, $f(1)=1$. Starting from $\bar z_0\sim\mathcal N(0,\sigma^2I)$, sampling obeys $\mathrm d\bar z_\tau/\mathrm d\tau=f'(\tau)v_\Theta(\bar z_\tau,f(\tau);q)$. For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration preserves the endpoint, while finite-step accuracy can change. Section~\ref{sec:clocks} extends this construction to group-specific clocks.
 
 % BEGIN continuous diffusion framework and design choices
 \section{Continuous Diffusion Reasoning}
 \label{sec:methodology}
 \label{sec:methodflow}
 
-For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding $c=c(q)$, LFRM follows ELF's denoising and token-decoding formulation~\citep{elf}. We use canvas length $L=1024$, latent width $d=1024$, and noise scale $\sigma=2$. Figure~\ref{fig:pipelineoverview} summarizes our pipeline: Section~\ref{sec:representation} learns $\mathcal E$, Section~\ref{sec:conditionalencoding} develops $c(q)$, and Section~\ref{sec:clocks} uses the representation's structure to adapt inference clocks.
+For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding $c=c(q)$, LFRM follows ELF's denoising and token-decoding formulation~\citep{elf} (Figure~\ref{fig:pipelineoverview}). We use canvas length $L=1024$, latent width $d=1024$, and noise scale $\sigma=2$.
 
 % BEGIN inlined figures/pipeline_overview_v1.tex
 \begin{figure}[t]
@@ -131,23 +131,21 @@ For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding
 % END inlined figures/pipeline_overview_v1.tex
 
 \paragraph{Continuous denoising.}
-A bidirectional Transformer jointly processes the clean prompt and noisy answer, with one shared time $t$ per training example. Following ELF, it predicts the endpoint $\widehat z_{\mathrm{clean}}=F_\theta(z_t,t;c,\widehat z_{\mathrm{sc}},g)$, where $\widehat z_{\mathrm{sc}}$ is a self-conditioning prediction and $g$ the guidance scale. Prediction and target give velocities $v_\theta=(\widehat z_{\mathrm{clean}}-z_t)/\Delta_t$ and $u_t^{\mathrm{stab}}=(z_{\mathrm{clean}}-z_t)/\Delta_t$, where $\Delta_t=\max(1-t,0.05)$ stabilizes the endpoint; outside the clamp, $u_t^{\mathrm{stab}}=u_t$. The regression in Eq.~\eqref{eq:basicflowloss} uses this stabilized target, with valid-token normalization specified in Appendix~\ref{app:methodobjective}.
+ELF's bidirectional backbone predicts $\widehat z_{\mathrm{clean}}=F_\theta(z_t,t;c,\widehat z_{\mathrm{sc}},g)$ from the clean prompt and noisy answer at a shared training time $t$. Here $\widehat z_{\mathrm{sc}}$ is an earlier clean prediction and $g$ the guidance scale. We apply Eq.~\eqref{eq:basicflowloss} with velocity $v_\theta=(\widehat z_{\mathrm{clean}}-z_t)/\Delta_t$ and stabilized target $u_t^{\mathrm{stab}}=(z_{\mathrm{clean}}-z_t)/\Delta_t$, with $\Delta_t=\max(1-t,0.05)$; outside the clamp, $u_t^{\mathrm{stab}}=u_t$. Appendix~\ref{app:methodobjective} gives valid-token normalization.
 
 \paragraph{Self-conditioning and SCCFG.}
-Self-conditioning supplies an earlier clean prediction. ELF's self-conditioning classifier-free guidance (SCCFG) trains the network to amplify its effect at the requested scale $g$, using a detached guidance-adjusted target $\widetilde u_t$ in place of $u_t^{\mathrm{stab}}$ (Appendix~\ref{app:methodobjective}). The underlying comparison uses predictions with and without \emph{answer self-conditioning}, retaining the prompt in both. Guidance is learned within the field, so sampling requires one denoiser call per step.
+ELF's self-conditioning classifier-free guidance (SCCFG) learns to amplify answer self-conditioning at scale $g$. It compares predictions with and without \emph{answer self-conditioning}, retaining the prompt in both; Appendix~\ref{app:methodobjective} gives the detached guidance-adjusted target. Guidance is internal to the field, requiring one denoiser call per step.
 
 \paragraph{Recovering discrete tokens.}
-A vocabulary head on the same backbone predicts token probabilities $p_{\theta,i}^{\mathrm{tok}}$ at canvas position $i$. Decoder-mode training uses a separate corruption $z^{\mathrm{dec}}$ and same-position labels $y_i$. For examples $b$ with prompt encodings $c_b$, let $M_{bi}$ select valid answer tokens, including the terminal token:
+A vocabulary head on the same backbone predicts same-position answer tokens under a separate decoder corruption $z^{\mathrm{dec}}$:
 \begin{equation}
- \mathcal L_{\mathrm{CE}}=
- \E\!\left[-\frac{\sum_{bi} M_{bi}\log p_{\theta,i}^{\mathrm{tok}}(y_{bi}\mid z_b^{\mathrm{dec}},c_b)}
- {\sum_{bi} M_{bi}}\right].
+ \mathcal L_{\mathrm{CE}}
+ =\E_{\mathrm{valid}}\!\left[-\log p_{\theta,j}^{\mathrm{tok}}(a_j\mid z^{\mathrm{dec}},c(q))\right].
  \label{eq:methoddecoderloss}
 \end{equation}
-Rows select flow/decoder modes with probabilities $0.8/0.2$, sharing the backbone with separate output heads. Appendix~\ref{app:methodobjective} gives the decoder corruption and exact mixed objective.
+The expectation averages valid answer tokens, including the terminal token; Appendix~\ref{app:methodobjective} specifies the exact batch weighting, decoder corruption, and mode mixing.
 
-\paragraph{Sampling and terminal decoding.}
-Compute $c(q)$ once, keep it clean, and denoise all available answer positions jointly using $S$ Euler steps with recurrent self-conditioning. One terminal call through the shared backbone and vocabulary head decodes the answer in parallel; this call is excluded from denoising NFE. Appendix~\ref{app:methodobjective} specifies initialization and termination.
+At inference, encode the prompt once and keep it clean through $S$ Euler steps with recurrent self-conditioning; one additional backbone call decodes the answer in parallel and is excluded from denoising NFE.
 
 % BEGIN inlined sections/representation.tex
 \subsection{Learning the denoising representation}
@@ -161,6 +159,16 @@ The denoising representation must support both generation and recovery of answer
 \paragraph{Teacher features and latent construction.}
 
 Let $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$ denote the frozen teacher's post-block residual at answer position $j$, with $d_{\mathrm{teacher}}=2560$. For $\mathcal S=\{16,24,32\}$, we learn linear encoders $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$, giving $z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}$, and concatenate their outputs as $z_{\mathrm{clean},j}=\big[z_{\mathrm{clean},j}^{(\ell)}\big]_{\ell\in\mathcal S}$.
+
+Here brackets concatenate layers in ascending order, $(d_{16},d_{24},d_{32})=(256,256,512)$, and $\mu_\ell$ is the training assistant-token mean. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask. The learned answer representation remains fixed during flow training and NFT.
+
+\paragraph{Learning through the teacher's predictions.}
+We learn each encoder with a linear reconstruction decoder $W_\ell^{\mathrm{rec}}\in\R^{d_\ell\times d_{\mathrm{teacher}}}$, giving $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}$ (Figure~\ref{fig:pipelineoverview}, left). Replacing layer-$\ell$ answer activations by these reconstructions and running the frozen Qwen suffix yields $p_{\ell,j}^{\mathrm{recon}}$. We match the unmodified teacher distribution $p_j^{\mathrm{teacher}}$ using $\mathcal L_{\mathrm{repr}}=\sum_{\ell\in\mathcal S}\E_{q,a,j}\,\CE(p_j^{\mathrm{teacher}},p_{\ell,j}^{\mathrm{recon}})$, where $\CE$ is full-vocabulary soft cross-entropy. These distributions predict the next token, whereas LFRM's token decoder predicts the same-position token.
+
+Each layer is intervened on independently. The teacher target is detached; gradients through the frozen suffix train only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$. The reconstruction decoders and Qwen suffixes are used only to learn the representation. We initialize from PCA and maintain whitened latents within each layer group; Appendix~\ref{app:representationimplementation} gives the parameterization and scoring details.
+
+\subsubsection{Which representation should be denoised?}
+\label{sec:representationablations}
 
 % BEGIN inlined figures/representation_comparison.tex
 \begin{wrapfigure}{R}{.44\textwidth}
@@ -192,22 +200,6 @@ Epoch 0 Learned Prompt Encoder & 8.70 {\scriptsize (0.33)} \\
 \end{wrapfigure}
 % END inlined figures/representation_comparison.tex
 
-Here brackets concatenate layers in ascending order, $(d_{16},d_{24},d_{32})=(256,256,512)$, and $\mu_\ell$ is the training assistant-token mean. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask. The learned answer representation remains fixed during flow training and NFT.
-
-\paragraph{Learning through the teacher's predictions.}
-We learn each encoder with a linear reconstruction decoder $W_\ell^{\mathrm{rec}}\in\R^{d_\ell\times d_{\mathrm{teacher}}}$, giving $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}$ (Figure~\ref{fig:pipelineoverview}, left). Replacing layer-$\ell$ answer activations by these reconstructions and running the frozen Qwen suffix yields $p_{\ell,j}^{\mathrm{recon}}$. We match the unmodified teacher distribution $p_j^{\mathrm{teacher}}$ using $\mathcal L_{\mathrm{repr}}=\sum_{\ell\in\mathcal S}\E_{q,a,j}\,\CE(p_j^{\mathrm{teacher}},p_{\ell,j}^{\mathrm{recon}})$, where $\CE$ is full-vocabulary soft cross-entropy. These distributions predict the next token, whereas LFRM's token decoder predicts the same-position token.
-
-Each layer is intervened on independently. The teacher target is detached; gradients through the frozen suffix train only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$. The reconstruction decoders and Qwen suffixes are used only to learn the representation. We initialize from PCA and maintain whitened latents within each layer group; Appendix~\ref{app:representationimplementation} gives the parameterization and scoring details.
-
-% Reserve any remaining wrap height before returning to full-width headings.
-\par
-\ifnum\value{WF@wrappedlines}>1
-  \vspace{\dimexpr\value{WF@wrappedlines}\baselineskip\relax}
-\fi
-\WFclear
-\subsubsection{Which representation should be denoised?}
-\label{sec:representationablations}
-
 The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch LFRM-B training and evaluation settings.
 
 \paragraph{Good decoding does not ensure good generation.}
@@ -218,6 +210,9 @@ We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citeal
 
 \paragraph{Learning the projection subspace.}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
+% End the completed representation wrap before the next subsection.
+\par
+\WFclear
 % END inlined sections/representation.tex
 
 \subsection{Learning the conditional encoding in three stages}
@@ -227,7 +222,7 @@ ELF and ELF-REG retain external contextual encoders for prompt conditioning \cit
 
 \paragraph{The prompt as the condition.}
 
-With self-conditioning and guidance explicit, the complete text-conditioned field is $v_\Theta(z,t;q,\widehat z_{\mathrm{sc}},g):=v_\theta(z,t;c_\phi(q),\widehat z_{\mathrm{sc}},g)$. The observed condition $q$ remains fixed while both $\theta$ and $\phi$ can be optimized. The answer representation and forward corruption also remain fixed. The following identity makes the requirement on the learned interface explicit in terms of conditional scores.
+The text-conditioned field $v_\Theta$ of Section~\ref{sec:preliminaries} includes self-conditioning and guidance as auxiliary inputs. We jointly optimize $\theta$ and $\phi$, keeping the prompt text, answer representation, and forward corruption fixed. The following lemma characterizes what the encoding must preserve.
 
 \begin{lemma}[Preserving the text-conditional score]
 \label{lem:conditionalrepresentation}
@@ -284,7 +279,7 @@ Although training uses a shared time, inference applies the same learned time-em
 \fi
 \WFclear
 
-Given the predicted clean endpoint $\widehat z_{\mathrm{clean},r}$ and local times $t_{\ell,r}=f_\ell(\tau_r)$, the groupwise Euler update is
+For solver state $z_r=\bar z_{\tau_r}$, predicted clean endpoint $\widehat z_{\mathrm{clean},r}$, and local times $t_{\ell,r}=f_\ell(\tau_r)$, the groupwise Euler update is
 \begin{equation}
  z_{r+1}^{(\ell)}=z_r^{(\ell)}+
  (\tau_{r+1}-\tau_r)\,f'_\ell(\tau_r)
@@ -720,6 +715,15 @@ Each row independently draws $\delta_b^{\mathrm{dec}}\sim\mathrm{Bernoulli}(0.2)
  z^{\mathrm{dec}}_{bi}=\lambda_{bi}z_{\mathrm{clean},bi}+(1-\lambda_{bi})\epsilon'_{bi},
 \]
 where $\xi_{bi}$ and $\epsilon'_{bi}$ are standard Gaussian. Decoder noise scale is one. The model receives decoder mode, time one, zero answer self-conditioning, and the clean question prefix. Token CE predicts the original token at each position, without a next-token shift.
+
+The valid-token expectation in Eq.~\eqref{eq:methoddecoderloss} samples a training microbatch and then uniformly selects a valid answer position across its rows. With $c_b=c(q_b)$, its explicit form is
+\begin{equation}
+ \mathcal L_{\mathrm{CE}}=
+ \E\!\left[-\frac{\sum_{bi} M_{bi}\log p_{\theta,i}^{\mathrm{tok}}(y_{bi}\mid z_b^{\mathrm{dec}},c_b)}
+ {\sum_{bi} M_{bi}}\right].
+ \label{eq:methoddecoderlossexpanded}
+\end{equation}
+Here the answer-indexed output $p_{\theta,j}^{\mathrm{tok}}$ in the main text corresponds to canvas position $i=L_q+j$. This averages tokens within each microbatch, rather than weighting solutions equally. Decoder and flow rows use separate output heads on the same backbone, with mode probabilities $0.2$ and $0.8$, respectively.
 
 For valid response mask $M_{bi}$, including the terminal token and excluding question/padding positions, a rank-local microbatch minimizes
 \begin{equation}
