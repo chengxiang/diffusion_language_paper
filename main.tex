@@ -135,9 +135,9 @@ For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding
     \centering
     \includegraphics[width=\textwidth]{figures/pipeline_overview_v8.pdf}
     \caption{\textbf{The LFRM training and inference pipeline.}
-    \textbf{Left:} Cross-entropy (CE) compares the clean teacher distribution $p^{\mathrm{teacher}}$ with $p_{16}^{\mathrm{recon}}$, obtained after encoding and reconstructing assistant activations. This loss trains $W_{16}^{\mathrm{enc}}$ and $W_{16}^{\mathrm{rec}}$ through the frozen Qwen suffix. \textcolor[HTML]{C88A35}{Layer 24} and \textcolor[HTML]{2C917F}{Layer 32} are learned analogously; the three encoders are then frozen and their 256/256/512-dimensional outputs concatenated (bottom). Covariance whitening is incorporated in the encoder parameterization and omitted from the schematic. Snowflakes and flames denote frozen and trained components.
-    \textbf{Center:} A shared bidirectional ELF backbone supports flow matching and token-decoding CE. Training begins with Qwen prompt features, then introduces an MSE-trained question encoder for joint adaptation. The prompt remains clean while answer latents are corrupted.
-    \textbf{Right:} Iterative ELF backbone calls jointly denoise the three representation groups, with local clocks $t_\ell=\tau^{\gamma_\ell}$ and $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$. Each bold vertical outline encloses one token; solid colors identify layer groups and black-and-white static illustrates noise. The schematic states exaggerate the separation between groups for visibility; the clock curves show the actual schedule. A separate terminal call through the shared ELF backbone and token head decodes the answer in parallel.}
+    \textbf{Left:} Learn compact representations from Qwen layers 16/24/32 through teacher cross-entropy supervision, then concatenate their outputs (Section~\ref{sec:representationconstruction}).
+    \textbf{Center:} Train the ELF backbone with flow-matching and token-decoding losses, with staged learning of the prompt encoder (Sections~\ref{sec:methodflow} and~\ref{sec:conditionalencoding}).
+    \textbf{Right:} Denoise the representation groups under asynchronous clocks, then decode the answer in parallel (Section~\ref{sec:clocks}).}
     \label{fig:pipelineoverview}
 \end{figure}
 % END inlined figures/pipeline_overview_v1.tex
@@ -173,15 +173,24 @@ Compute $c(q)$ once, keep it clean, and denoise all available answer positions j
 
 The denoising representation must support both generation and recovery of answer tokens. We extract \textbf{teacher-forced hidden activations of Qwen3-4B-Instruct-2507} \citep{qwen2507} in one forward pass over the question and reference solution. Although these features are causal, our bidirectional denoiser generates the complete answer representation jointly. Section~\ref{sec:representationconstruction} describes the learned representation; Section~\ref{sec:representationablations} examines layer selection and projection learning (Figure~\ref{fig:representationcomparison}).
 
+\subsubsection{Learning compact, teacher-predictive representations}
+\label{sec:representationconstruction}
+
+\paragraph{Teacher features and latent construction.}
+
+Let $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$ denote the frozen teacher's post-block residual at answer position $j$, with $d_{\mathrm{teacher}}=2560$. For $\mathcal S=\{16,24,32\}$, we learn linear encoders $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$ and concatenate their outputs:
+\begin{equation}
+ z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}},
+ \qquad z_{\mathrm{clean},j}=\big[z_{\mathrm{clean},j}^{(\ell)}\big]_{\ell\in\mathcal S},
+ \label{eq:representationencoding}
+\end{equation}
+
 % BEGIN inlined figures/representation_comparison.tex
-\begin{figure}[htbp]
-\centering
-\begin{minipage}[c]{.55\linewidth}
+\begin{wrapfigure}{R}{.44\textwidth}
+\vspace{-\baselineskip}
 \centering
 \includegraphics[width=\linewidth]{figures/representation_shared2_sd.pdf}
-\end{minipage}\hfill
-\begin{minipage}[c]{.43\linewidth}
-\centering
+\par\smallskip
 % BEGIN inlined tables/representation_epoch6_compact.tex
 % Generated from exact per-seed counts; parentheses are sample SD, ddof=1.
 \begingroup
@@ -200,23 +209,12 @@ Epoch 0 Learned Prompt Encoder & 8.70 {\scriptsize (0.33)} \\
 \end{tabular}
 \endgroup
 % END inlined tables/representation_epoch6_compact.tex
-\end{minipage}
-\caption{\textbf{Representation and conditioning choices change reasoning performance.} LFRM-B on GSM8K with shared $t=\tau^2$, 32 steps, and backbone EMA $0.999$. \textbf{Left:} learning curves over seeds 42/123 (bars: seed SD). \textbf{Right:} epoch-six means over seeds 42/123/456/789 (parentheses: seed SD); reporting conventions are in Appendix~\ref{app:experimentdetails}. All latents are whitened and 1,024-dimensional. The first three variants use frozen Qwen prompt activations. The fourth uses learned multilayer answer latents and a randomly initialized prompt encoder trained jointly from epoch zero (prompt EMA $0.999$). The epoch-six ordering persists with the identity clock $t=\tau$ (Appendix~\ref{app:representationclock}); Table~\ref{tab:representationcurvevalues} gives every learning-curve value.}
+\caption{\small\textbf{Representation and conditioning choices change reasoning performance.} LFRM-B on GSM8K, evaluated with 32 steps and $t=\tau^2$. \textbf{Top:} Learning curves. \textbf{Bottom:} Epoch-six accuracy. The first three variants use frozen Qwen prompt conditioning; the fourth jointly trains a randomly initialized prompt encoder. Protocol and numerical values appear in Appendices~\ref{app:representationclock} and~\ref{app:curvevalues}.}
 \label{fig:representationcomparison}
-\end{figure}
+\vspace{-\baselineskip}
+\end{wrapfigure}
 % END inlined figures/representation_comparison.tex
 
-\subsubsection{Learning compact, teacher-predictive representations}
-\label{sec:representationconstruction}
-
-\paragraph{Teacher features and latent construction.}
-
-Let $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$ denote the frozen teacher's post-block residual at answer position $j$, with $d_{\mathrm{teacher}}=2560$. For $\mathcal S=\{16,24,32\}$, we learn linear encoders $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$ and concatenate their outputs:
-\begin{equation}
- z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}},
- \qquad z_{\mathrm{clean},j}=\big[z_{\mathrm{clean},j}^{(\ell)}\big]_{\ell\in\mathcal S},
- \label{eq:representationencoding}
-\end{equation}
 where brackets concatenate layers in ascending order, $(d_{16},d_{24},d_{32})=(256,256,512)$, and $\mu_\ell$ is the training assistant-token mean. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask. The learned answer representation remains fixed during flow training and NFT.
 
 \paragraph{Learning through the teacher's predictions.}
@@ -224,6 +222,12 @@ We learn each encoder with a linear reconstruction decoder $W_\ell^{\mathrm{rec}
 
 Each layer is intervened on independently. The teacher target is detached; gradients through the frozen suffix train only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$. The reconstruction decoders and Qwen suffixes are used only to learn the representation. We initialize from PCA and maintain whitened latents within each layer group; Appendix~\ref{app:representationimplementation} gives the parameterization and scoring details.
 
+% Reserve any remaining wrap height before returning to full-width headings.
+\par
+\ifnum\value{WF@wrappedlines}>1
+  \vspace{\dimexpr\value{WF@wrappedlines}\baselineskip\relax}
+\fi
+\WFclear
 \subsubsection{Which representation should be denoised?}
 \label{sec:representationablations}
 
@@ -248,6 +252,12 @@ The transition in centered kernel alignment (CKA; \citealp{cka}) after layer 16 
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
 % END inlined sections/representation.tex
 
+% Reserve any remaining wrap height before returning to full-width headings.
+\par
+\ifnum\value{WF@wrappedlines}>1
+  \vspace{\dimexpr\value{WF@wrappedlines}\baselineskip\relax}
+\fi
+\WFclear
 \subsection{Learning the conditional encoding in three stages}
 \label{sec:conditionalencoding}
 
@@ -714,7 +724,7 @@ Figure~\ref{fig:representationidentity} changes the evaluation clock to $t=\tau$
 \label{fig:representationidentity}
 \end{figure}
 
-All four arms start from the same seed-42 backbone initialization, use 2,434,330 training rows, and preserve effective batch 512. The PCA multilayer run changes from two to four GPUs during training while maintaining that batch size. Each arm has one training run; seed variation in the figures measures sampling randomness only. The comparisons isolate projector choice at fixed layers and layer choice under PCA, without estimating their interaction. Paired intervals in the main text use 4,000 problem-bootstrap replicates and the four matched epoch-six generation seeds.
+All four arms start from the same seed-42 backbone initialization, use 2,434,330 training rows, and preserve effective batch 512. All answer representations are whitened and 1,024-dimensional. The first three arms use frozen Qwen prompt activations; the fourth uses learned multilayer answer latents and a randomly initialized prompt encoder trained jointly from epoch zero. All select backbone EMA $0.999$, and the fourth selects prompt EMA $0.999$. The PCA multilayer run changes from two to four GPUs during training while maintaining that batch size. Each arm has one training run; seed variation in the figures measures sampling randomness only. The comparisons isolate projector choice at fixed layers and layer choice under PCA, without estimating their interaction. Paired intervals in the main text use 4,000 problem-bootstrap replicates and the four matched epoch-six generation seeds.
 % END inlined sections/representation_appendix.tex
 
 % BEGIN inlined sections/methodology_appendix.tex
@@ -1404,7 +1414,7 @@ Epoch & Prompt & Correct$_{42}$ & Correct$_{123}$ & Mean (SD) & 95\% CI \\
 \end{tabular}
 \end{table}
 \paragraph{Representation-ablation curves.}
-Table~\ref{tab:representationcurvevalues} gives all points and error bars in Figures~\ref{fig:representationcomparison} (left) and~\ref{fig:representationidentity}. These are two-seed learning curves, distinct from the four-seed epoch-six summary on the right of Figure~\ref{fig:representationcomparison}. Both use 32 steps and backbone EMA $0.999$; full controls are described in Appendix~\ref{app:representationclock}.
+Table~\ref{tab:representationcurvevalues} gives all points and error bars in Figures~\ref{fig:representationcomparison} (top) and~\ref{fig:representationidentity}. These are two-seed learning curves, distinct from the four-seed epoch-six summary at the bottom of Figure~\ref{fig:representationcomparison}. The curves use seeds 42/123; the endpoint table adds 456/789. Error bars and parenthesized values are sample SDs across their respective generation seeds. Both use 32 steps and backbone EMA $0.999$; full controls are described in Appendix~\ref{app:representationclock}.
 
 \begin{table}[htbp]
 \centering\small
