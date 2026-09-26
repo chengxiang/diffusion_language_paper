@@ -226,10 +226,7 @@ Each layer is intervened on independently. The teacher target is detached; gradi
 \subsubsection{Which representation should be denoised?}
 \label{sec:representationablations}
 
-We compare LFRM-B models trained for six epochs on the same 2.43M-row GSM8K training population, with the same backbone initialization, optimization batch, and synchronous training clocks. All representations have width 1,024 and use covariance whitening. The main comparisons use original Qwen question conditioning, holding the representation fixed during flow training. We evaluate with a common $t=\tau^2$ clock (Section~\ref{sec:preliminaries}), 32 denoising steps, and backbone EMA $0.999$. The fourth arm in Figure~\ref{fig:representationcomparison} is for a separate but related ablation that is discussed in Section~\ref{sec:conditionalencoding}.
-
-\paragraph{A deep layer is readily decodable, yet difficult to generate from alone.}
-Layer-32 activations support \textbf{99.37\%} token-reconstruction accuracy (Appendix~\ref{app:representationdiagnostics}). Yet using layer 32 alone in our PCA representation yields only \textbf{11.20\%} GSM8K accuracy at epoch six. Thus strong decoding alone does not ensure an effective representation for diffusion generation.
+The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch LFRM-B training and evaluation settings.
 
 \begin{wrapfigure}{R}{.38\textwidth}
 \vspace{-\baselineskip}
@@ -240,14 +237,14 @@ Layer-32 activations support \textbf{99.37\%} token-reconstruction accuracy (App
 \vspace{-\baselineskip}
 \end{wrapfigure}
 
+\paragraph{Good decoding does not ensure good generation.}
+Layer-32 activations support \textbf{99.37\%} token-reconstruction accuracy (Appendix~\ref{app:representationdiagnostics}), yet a diffusion model using only their PCA projection achieves \textbf{11.20\%} GSM8K accuracy (Figure~\ref{fig:representationcomparison}). This motivates evaluating representations for generation beyond their clean-token decodability.
+
 \paragraph{Combining representations across depth.}
-Figure~\ref{fig:representationcka} uses centered kernel alignment (CKA; \citealp{cka}) to examine the teacher's layer structure. A pronounced change after layer 16 suggests retaining a representation at that boundary. We then choose layers 24 and 32 as regularly spaced deeper features. With PCA held fixed as the projection method, replacing the layer-32-only representation by 256/256/512 coordinates from layers 16/24/32 raises epoch-six accuracy from \textbf{11.20\% to 28.43\%}. The multilayer PCA model also leads at every evaluated epoch. Earlier-layer features may supply complementary information that helps the denoiser construct later-layer features as the joint representation is refined. This decomposition also supplies distinct feature groups for the asynchronous denoising framework: representation construction creates the opportunity to assign different dynamics to information extracted at different depths.
+The transition in centered kernel alignment (CKA; \citealp{cka}) after layer 16 motivates retaining that layer and adding regularly spaced deeper features at layers 24 and 32 (Figure~\ref{fig:representationcka}). Holding the projection method and total latent width fixed, multilayer PCA raises accuracy from \textbf{11.20\% to 28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
 
-\paragraph{Learning a predictive subspace improves on variance preservation.}
-PCA retains directions of largest activation variance, minimizing Euclidean reconstruction error at a fixed rank. High variance, however, need not identify the directions most important to the teacher's token predictions or easiest for a diffusion model to use. Our linear encoder--decoder construction offers an efficient way to adapt the subspace to the former criterion using the frozen teacher's own predictions. Holding layers and dimensions fixed, learning the projectors raises epoch-six accuracy from \textbf{28.43\% to 30.76\%}. It also leads multilayer PCA from epoch two onward.
-
-
-Together, the comparisons support selecting representations for their downstream generative utility as well as their information content: both the depths represented and the compression objective matter within a matched training budget.
+\paragraph{Learning the projection subspace.}
+PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
 % END inlined sections/representation.tex
 
 \subsection{Learning the conditional encoding in three stages}
