@@ -455,7 +455,7 @@ The benefit is less uniform for high-$k$ oracle coverage: at eight steps on MATH
 \subsection{Code generation}
 \label{sec:codingresults}
 
-We extend the representation-based recipe to Python code using OpenCodeInstruct \citep{opencodeinstruct}. LFRM-L trains for 12 epochs with frozen Qwen conditioning; we then freeze the flow model and train the six-block prompt encoder for ten epochs using prompt-latent MSE. These checkpoints precede joint refinement and NFT. Table~\ref{tab:codingcomparison} reports eight-seed results at 128 denoising calls, async $(2.5,2,1.5)$, and SCCFG 3. Frozen-Qwen conditioning retains the teacher Transformer at inference; the learned encoder removes it. Appendix~\ref{app:codingdetails} gives the training trajectory and evaluation details.
+On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L trains for 12 epochs with frozen Qwen conditioning, then keeps the flow model fixed while fitting the 121M-parameter prompt encoder for ten MSE epochs to replace the 4B teacher. Table~\ref{tab:codingcomparison} reports eight-seed results with async $(2.5,2,1.5)$ and SCCFG 3, before joint refinement or NFT; Appendix~\ref{app:codingdetails} gives protocols and the training trajectory.
 
 \begin{table}[htbp]
 \centering\small
@@ -464,31 +464,20 @@ We extend the representation-based recipe to Python code using OpenCodeInstruct 
 \toprule
 Model / prompt conditioner & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
 \midrule
-\multicolumn{6}{@{}l}{\textit{Without function-name repair}}\\
 PlaidQ \citep{plaidq} & 128 & 19.02 & 18.05 & 22.18 & ---\\
 PlaidQ+CFG \citep{plaidq} & 256 & 22.04 & 19.70 & 24.58 & ---\\
 LFRM-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 38.72 & 33.99\\
 LFRM-L / learned prompt (ours) & 128 & 27.97 & 25.30 & 19.61 & 16.96\\
-\midrule
-\multicolumn{6}{@{}l}{\textit{With single-function name aliasing}}\\
-ELF-REG-L \citep{scalingdlm} & $^{*}128$ & 22.56 & 21.46 & 28.92 & ---\\
-LFRM-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 43.45 & 37.93\\
-LFRM-L / learned prompt (ours) & 128 & 28.05 & 25.38 & 30.99 & 26.32\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Code generation with and without function-name repair.} Mean pass@1 (\%). HE/HE+ denote HumanEval and its full extended tests; both MBPP columns use 378 tasks. PlaidQ's column named ``MBPP+'' uses base tests and is placed under MBPP-378 base here. External values are reported by the authors. Ours use eight seeds and the same epoch-12 backbone weights in both conditioner rows. NFE excludes terminal decoding: PlaidQ+CFG uses two calls per denoising step, and $^{*}128$ denotes ELF-REG's 127 denoising calls. Prompts, response budgets, and extraction/execution details differ across papers (Appendix~\ref{app:codingdetails}; seed SDs in Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail}).}
+\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use HumanEval base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's reported ``MBPP+'' uses base tests. Our rows share epoch-12 backbone weights. NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Appendix~\ref{app:codingdetails} details protocol differences; Table~\ref{tab:codingstandarddetail} gives seed SDs.}
 \label{tab:codingcomparison}
 \end{table}
 
-\paragraph{Comparisons depend on the scoring protocol.}
-With either conditioner, our HumanEval and HumanEval+ results exceed the reported continuous-diffusion results of PlaidQ and ELF-REG under the respective scoring conventions in Table~\ref{tab:codingcomparison}. The learned encoder also outperforms the reported 0.6B oDLM masked-diffusion model \citep{odlm} and the 1.3B Edit Flow discrete-flow models \citep{editflow} on both benchmarks (Appendix~\ref{app:codingdetails}). These are not controlled encoder comparisons: ELF-REG retains a frozen Qwen3-0.6B-Base contextual network of roughly 440M parameters, versus our 121M learned network (both excluding vocabulary lookups), while our frozen-Qwen reference uses a larger 4B teacher.
-
-PlaidQ's Appendix B.7 explicitly restricts its ``MBPP+'' evaluation to base assertions, whereas our full MBPP+ column requires the extended EvalPlus tests \citep{plaidq,evalplus}. ELF-REG additionally repairs a missing expected function name by aliasing the sole generated top-level function to it \citep[Appendix B.3]{scalingdlm}. We report this rule separately: for our learned encoder it raises MBPP-378 base accuracy from 19.61\% to 30.99\%, so combining repaired and unrepaired scores would obscure a substantial difference in acceptance criteria. With learned conditioning, MBPP-378 base exceeds ELF-REG under aliasing (30.99\% versus 28.92\%), but remains below guided PlaidQ without repair (19.61\% versus 24.58\%).
+Both conditioners outperform reported PlaidQ results on HumanEval(+); learned conditioning also exceeds oDLM-0.6B \citep{odlm} and Edit Flow-1.3B \citep{editflow}, but trails guided PlaidQ on MBPP-378 base. Matching ELF-REG-L's function-name aliasing rule, both variants exceed its reported HumanEval(+)/MBPP-378 scores (Appendix~\ref{app:codingdetails}, Table~\ref{tab:codingaliascomparison}).
 
 \paragraph{Prompt adaptation remains task dependent.}
-At a fixed 32-step budget, frozen-Qwen HumanEval accuracy rises from 23.17\% at epoch 4 to 27.90\% at epoch 12, while MBPP-378 base rises from 26.85\% to 37.76\%. Replacing Qwen with the encoder after one MSE epoch causes a particularly steep MBPP+ drop: 32.34\% to 7.61\%, or 24.74 percentage points, compared with the 12.02-point GSM8K LFRM-L and 2.90-point MATH500 swap losses in Figure~\ref{fig:promptcurriculum}. This highlights that contextual prompt encoding is consequential and difficult to replace. OpenCodeInstruct training prompts average 233 tokens, versus 84 and 89 in the GSM8K and MATH training pipelines: longer contexts are a plausible contributor to the harder compression problem, although this comparison does not isolate length from task or training differences.
-
-Extending prompt-MSE training to ten epochs recovers HumanEval+ from 18.60\% to 24.70\%, close to the original-Qwen 25.61\%; MBPP+ recovers to 15.15\% but retains a substantial gap. These coding checkpoints use imitation alone, with the flow model frozen, so they do not yet exploit the joint compensation described in Section~\ref{sec:conditionalencoding}. Together, the results establish strong code-generation performance while identifying prompt adaptation, particularly on MBPP, as an important remaining challenge. Aliasing reduces but does not eliminate the gap (Appendix~\ref{app:codingdetails}).
+At 32 steps, swapping in the encoder after one MSE epoch drops MBPP+ from 32.34\% to 7.61\%, much more than the math prompt swaps (Figure~\ref{fig:promptcurriculum}). Ten MSE epochs recover HumanEval+ to 24.70\%, near Qwen conditioning's 25.61\%, but MBPP+ reaches only 15.15\%. Coding prompts average 233 tokens versus 84/89 for GSM8K/MATH; longer contexts may contribute to this harder compression problem, although length is not isolated. These imitation-only checkpoints do not yet exploit joint compensation by the flow model (Section~\ref{sec:conditionalencoding}).
 
 % END inlined sections/headline_results.tex
 
@@ -949,7 +938,7 @@ Table~\ref{tab:headlineseedsd} reports standard deviations across independent sa
 \]
 These values describe generation randomness at a fixed checkpoint and test set. They are distinct from uncertainty across test problems and from variation across training runs. We use every completed sampling seed at each denoising budget: $n=64,32,16,8$ for NFE $8,16,32,64$, respectively. Checkpoints, guidance, scorers, and benchmark populations match the main tables.
 
-For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} in Appendix~\ref{app:codingdetails} give Table~\ref{tab:codingcomparison}'s eight-seed coding results with SDs. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:curvevalues} also includes the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
+For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Table~\ref{tab:codingstandarddetail} in Appendix~\ref{app:codingdetails} gives Table~\ref{tab:codingcomparison}'s eight-seed coding results with SDs. Table~\ref{tab:codingaliasdetail} supplies SDs for the separate aliasing comparison in Table~\ref{tab:codingaliascomparison}. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:curvevalues} also includes the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
 
 % BEGIN inlined tables/headline_seed_variability.tex
 \begin{table}[htbp]
@@ -1232,15 +1221,34 @@ The standalone prompt encoder uses the frozen Qwen vocabulary lookup, a $2560\to
 \paragraph{Generation and scoring.}
 We use the benchmark task text in the native Qwen chat format, without assistant prefill, with batch size 32, CFG 1, SCCFG 3, and async $(2.5,2,1.5)$ throughout. Answers fill the remaining positions of the 1,024-token canvas and are decoded greedily. Denoising NFE excludes one terminal decoder call. The eight-seed cohort is $\{42,123,456,789,2026,31415,27182,16180\}$. SCCFG 3 and the 128-step budget follow benchmark sensitivity evaluations rather than an independent code-development-set selection. The shorter training curve uses 32 steps and its stated two- or four-seed cohorts.
 
-HumanEval contains 164 tasks; MBPP uses the 378 tasks retained by EvalPlus. We report base and full extended tests on the same generated programs, requiring both suites to pass for a plus score. Standard scoring applies native EvalPlus sanitization without function-name repair. Execution uses a minimum timeout of 4 seconds, reference-runtime multiplier four, and 4 GiB per program; failures and timeouts count as incorrect. Our separate alias condition changes extraction only: if the expected binding is absent and exactly one top-level function is present, append \texttt{expected\_name = generated\_name} and sanitize again. Existing bindings and ambiguous cases are unchanged. This changes which programs the evaluator accepts without changing generation.
+HumanEval contains 164 tasks; MBPP uses the 378 tasks retained by EvalPlus \citep{evalplus}. We report base and full extended tests on the same generated programs, requiring both suites to pass for a plus score. Standard scoring applies native EvalPlus sanitization without function-name repair. Execution uses a minimum timeout of 4 seconds, reference-runtime multiplier four, and 4 GiB per program; failures and timeouts count as incorrect. Our separate alias condition changes extraction only: if the expected binding is absent and exactly one top-level function is present, append \texttt{expected\_name = generated\_name} and sanitize again. Existing bindings and ambiguous cases are unchanged. This changes which programs the evaluator accepts without changing generation.
 
 \paragraph{Mapping external reports.}
 PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our comparison values. ELF-REG Table 1 supplies its aliased HumanEval, HumanEval+, and MBPP-378 base results \citep{scalingdlm}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. We retain their reported values without re-evaluating their models.
 
 For additional discrete-model context, oDLM-0.6B reports HumanEval/HumanEval+ pass@1 of 17.87\%/16.40\% at 128 sampling steps with a 128-token response budget \citep[Table 1 and Appendix B.7]{odlm}. Edit Flow-1.3B reports 12.8\%/10.4\%, and its localized variant reports 14.0\%/10.4\% \citep[Table 3]{editflow}. Our learned-conditioning results without name repair are 27.97\%/25.30\%. These comparisons use the authors' reported accuracies; training data, initialization, and sampling protocols differ. We restrict the additional comparison to HumanEval(+) rather than equating differently defined MBPP columns.
 
+\paragraph{Comparison under function-name aliasing.}
+Table~\ref{tab:codingaliascomparison} separates the ELF-REG-L comparison from standard scoring in Table~\ref{tab:codingcomparison}. Under the same alias rule, both LFRM-L conditioners exceed ELF-REG-L on all three reported metrics. For learned conditioning, aliasing raises MBPP-378 base accuracy from 19.61\% to 30.99\%, exceeding ELF-REG-L's 28.92\%; without repair, it remains below guided PlaidQ's 24.58\%. Mixing repaired and unrepaired scores would therefore obscure a substantial difference in acceptance criteria.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Model / prompt conditioner & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
+\midrule
+ELF-REG-L \citep{scalingdlm} & $^{*}128$ & 22.56 & 21.46 & 28.92 & ---\\
+LFRM-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 43.45 & 37.93\\
+LFRM-L / learned prompt (ours) & 128 & 28.05 & 25.38 & 30.99 & 26.32\\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Code generation with single-function name aliasing.} Mean pass@1 (\%) under the matched repair rule. ELF-REG-L values are author-reported; $^{*}128$ denotes 127 denoising calls plus terminal decoding in its reported budget. Our rows use eight seeds and the same epoch-12 backbone weights. Prompting and execution limits still differ across papers, as detailed above. Table~\ref{tab:codingaliasdetail} gives our seed SDs and higher-pass results.}
+\label{tab:codingaliascomparison}
+\end{table}
+
 \paragraph{Prompt lengths and encoder size.}
-The recorded mean prefix lengths over unique training prompts are 84.17 tokens for the GSM8K pipeline (275,661 prompts), 89.15 for MATH (508,953), and 233.44 for OpenCodeInstruct (4,772,508). These are native formatted training prefixes, including the assistant header, rather than benchmark question lengths. Code prefixes average 2.77 and 2.62 times the GSM8K and MATH lengths; their median is 216 and 99th percentile 506. The length difference motivates the conditioning hypothesis but is not a controlled length ablation. Likewise, the prompt-swap comparison in the main text uses each task's selected MSE checkpoint (GSM8K LFRM-L epoch 30, MATH epoch 10, code epoch 1) and the stated seed cohorts. The 121,333,180 parameters of our LFRM-L contextual encoder exclude the frozen $151{,}936\times2{,}560$ vocabulary lookup. ELF-REG's Qwen3-0.6B-Base contextual body has approximately 440M parameters, excluding its approximately 156M lookup; its additional Qwen3-1.7B-Base alignment teacher is used only during training.
+The recorded mean prefix lengths over unique training prompts are 84.17 tokens for the GSM8K pipeline (275,661 prompts), 89.15 for MATH (508,953), and 233.44 for OpenCodeInstruct (4,772,508). These are native formatted training prefixes, including the assistant header, rather than benchmark question lengths. Code prefixes average 2.77 and 2.62 times the GSM8K and MATH lengths; their median is 216 and 99th percentile 506. The length difference motivates the conditioning hypothesis but is not a controlled length ablation. Likewise, the prompt-swap comparison in the main text uses each task's selected MSE checkpoint (GSM8K LFRM-L epoch 30, MATH epoch 10, code epoch 1) and the stated seed cohorts. At 32 steps, the code MBPP+ swap loss is 24.74 percentage points, compared with 12.02 points on GSM8K LFRM-L and 2.90 on MATH500. The 121,333,180 parameters of our LFRM-L contextual encoder exclude the frozen $151{,}936\times2{,}560$ vocabulary lookup. ELF-REG's Qwen3-0.6B-Base contextual body has approximately 440M parameters, excluding its approximately 156M lookup; its additional Qwen3-1.7B-Base alignment teacher is used only during training. Our frozen-Qwen reference instead uses a larger 4B teacher, so the cross-paper comparison does not isolate encoder size.
 
 \paragraph{Training trajectory and prompt substitution.}
 Table~\ref{tab:codingstages} keeps NFE and guidance fixed across flow-training epochs 4/8/12 and the prompt-MSE substitution at the fixed epoch-12 backbone checkpoint. The prompt epoch counter starts afresh; prompt epoch 1 is already MSE-trained, not a random encoder. At 32 steps, the four-seed HumanEval+ gap between prompt epoch 10 and original Qwen is $-0.91$ points (paired 95\% problem-bootstrap interval $[-5.03,3.20]$); MBPP+ retains a $-17.20$ point gap ($[-20.24,-14.22]$). These comparisons isolate the conditioner because the backbone weights are identical.
