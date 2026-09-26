@@ -306,42 +306,29 @@ Joint learning from initialization makes the conditioning interface change while
 \subsection{Asynchronous inference with local clocks}
 \label{sec:clocks}
 
-Our representation separates features from three depths of the teacher, allowing us to control \emph{when} each group becomes clean. We extend the shared-clock construction of Section~\ref{sec:preliminaries} to separate clocks at inference, while retaining synchronous training.
-
-\paragraph{From a shared clock to local clocks.}
-With one common map $t=f(\tau)$, Eq.~\eqref{eq:sharedclock} applies to all groups. Our finite-step sampler also updates recurrent self-conditioning at each query, so changing the clock alters both the integration grid in $t$ and the prediction history. We hold the base $\tau$ grid fixed across schedule comparisons.
-
-Asynchronous inference assigns each group $\ell\in\{16,24,32\}$ its own local clock. The corresponding forward corruption describes the local noise levels:
+Our multilayer representation allows different feature groups to become clean at different rates, potentially letting one group use cleaner information from another. We extend the shared clock of Section~\ref{sec:preliminaries} to layer-specific clocks at inference, while retaining synchronous training:
 \begin{equation}
  t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell},
- \qquad
- z_{\bm t}^{(\ell)}=t_\ell z_{\mathrm{clean}}^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}.
+ \qquad \ell\in\{16,24,32\}.
  \label{eq:localclocks}
 \end{equation}
-Equal exponents recover a synchronous schedule. Unequal exponents allow groups to have different noise levels at the same global step, while a single bidirectional denoiser processes their concatenation. This creates an opportunity to reconstruct one feature group using cleaner information from another, rather than requiring every part of the representation to progress together.
+Equal exponents recover synchronous inference; unequal exponents give different noise levels within a single denoiser call.
 
 \paragraph{Adapting a synchronously trained denoiser.}
-Training uses one shared time and one learned time-embedding function $e_\theta^{\mathrm{time}}(t)$. At inference, we duplicate this function into three identical copies, retain all learned weights, and condition the network on their average:
-\begin{equation}
- \bar e_\theta^{\mathrm{time}}(\bm t)
- =\frac{1}{3}\sum_{\ell\in\{16,24,32\}}e_{\theta,\ell}^{\mathrm{time}}(t_\ell),
- \qquad e_{\theta,\ell}^{\mathrm{time}}=e_\theta^{\mathrm{time}}.
- \label{eq:asynctimeembedding}
-\end{equation}
-The copies require no further training, and equal local times recover the original embedding.
+Although training uses a shared time, inference applies the same learned time-embedding function to each local time and averages its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. This requires no retraining and recovers the original embedding when the local times agree.
 
-At step $r$, let $z_r=\bar z_{\tau_r}$ and $\widehat z_{\mathrm{clean},r}$ be the sampled state and its predicted clean endpoint. Each group follows its own endpoint-to-velocity conversion and clock derivative:
+Given the predicted clean endpoint $\widehat z_{\mathrm{clean},r}$ and local times $t_{\ell,r}=f_\ell(\tau_r)$, the groupwise Euler update is
 \begin{equation}
  z_{r+1}^{(\ell)}=z_r^{(\ell)}+
- (\tau_{r+1}-\tau_r)\,\gamma_\ell\tau_r^{\gamma_\ell-1}
+ (\tau_{r+1}-\tau_r)\,f'_\ell(\tau_r)
  \frac{\widehat z_{\mathrm{clean},r}^{(\ell)}-z_r^{(\ell)}}
- {\max(1-\tau_r^{\gamma_\ell},0.05)}.
+ {\Delta_{t_{\ell,r}}},
  \label{eq:asyncsampler}
 \end{equation}
-Question states remain clean, and recurrent self-conditioning carries the previous endpoint prediction to the next call. All groups are updated in the same denoiser forward, so asynchrony does not multiply NFE. The terminal token-decoding call is separate. Unlike the shared reparameterization in Eq.~\eqref{eq:sharedclock}, this extends the model to unequal group times that were not explicitly presented during synchronous training.
+with $\Delta_t$ as in Eq.~\eqref{eq:methodvelocity}. All groups update from the same denoiser call, so asynchrony does not increase NFE. Unlike shared-clock reparameterization, this adapts the model to unequal group times absent from synchronous training; implementation details appear in Appendix~\ref{app:inferenceclocks}.
 
 \paragraph{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$. This choice is consistent with the highest observed accuracy in the six-schedule MATH validation sweep: 18.70\%, versus 17.80\% for $(2,2,2)$ and 15.40\% for $(1,1,1)$, at LFRM-L epoch 21 and 32 steps. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution; the two validation sets need not favor the same schedule.
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the six-schedule MATH validation sweep (Appendix~\ref{app:inferenceclocks}).
 
 % BEGIN inlined tables/inference_clocks.tex
 \begin{table}[htbp]
@@ -357,14 +344,14 @@ $(1.5,2,2.5)$ & 58.07 {\scriptsize($\pm 0.64$)} & 17.60 {\scriptsize($\pm 1.98$)
 $(2.5,2,1.5)$ & \textbf{59.25} {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scriptsize($\pm 1.27$)} \\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Inference clocks change reasoning accuracy without retraining.} LFRM-L epoch 21, 32 denoising steps, SCCFG 2, and backbone/prompt EMA $0.9999/0.9999$. Entries are mean pass@1 (\%) with seed SD over seeds 42/123. Bold marks the highest mean among these four schedules. Scoring and reporting conventions appear in Appendix~\ref{app:experimentdetails}; the complete six-schedule validation/test sweep is in Appendix~\ref{app:inferenceclocks}.}
+\caption{\textbf{Inference clocks change reasoning accuracy without retraining.} LFRM-L epoch 21, 32 denoising steps; mean pass@1 (\%). Protocol and the complete validation/test sweep appear in Appendix~\ref{app:inferenceclocks}.}
 \label{tab:inferenceclocks}
 \end{table}
 % END inlined tables/inference_clocks.tex
 
-Table~\ref{tab:inferenceclocks} compares four schedules under a common test protocol. The shared-square clock substantially improves on the identity clock: from 52.96\% to 57.51\% on GSM8K and from 15.50\% to 17.40\% on MATH500. The $(2.5,2,1.5)$ allocation has the highest mean among these four on both benchmarks, and reversing the exponent assignment reduces accuracy. Its gain over the shared-square clock is larger on GSM8K (+1.74 percentage points) than MATH500 (+0.50 points). The broader sweep and 16-step results show that the ordering depends on the evaluation setting (Appendix~\ref{app:inferenceclocks}).
+The shared-square clock improves on the identity clock, and $(2.5,2,1.5)$ achieves the highest mean among the four schedules in Table~\ref{tab:inferenceclocks} on both benchmarks. The broader sweep and lower-NFE comparisons show that the ordering depends on the evaluation setting (Appendix~\ref{app:inferenceclocks}).
 
-Preliminary reconstruction probes find greater sensitivity to perturbing layer-16 latents than deeper-layer latents, with weaker contrasts after random coordinate grouping. Appendix~\ref{app:inferenceclocks} reports the probes and controls (Figure~\ref{fig:layerreconstruction}); they do not establish why a particular sampling schedule works best.
+Reconstruction probes reveal distinct sensitivities across layer groups, with weaker contrasts under random coordinate grouping (Figure~\ref{fig:layerreconstruction}). These findings motivate studying coordinated denoising across representations, but do not establish the mechanism behind the sampling gains.
 
 % END continuous diffusion framework and design choices
 
@@ -874,16 +861,28 @@ Conditioning Eq.~\eqref{eq:conditioningdecomposition} on time defines an excess 
 \section{Inference clocks and reconstruction diagnostics}
 \label{app:inferenceclocks}
 
+\paragraph{Local corruption and time embeddings.}
+The local clocks in Eq.~\eqref{eq:localclocks} assign each group its own Gaussian corruption, $z_{\bm t}^{(\ell)}=t_\ell z_{\mathrm{clean}}^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}$. The three time embedders are identical copies of the selected scalar-time checkpoint weights:
+\begin{equation}
+ \bar e_\theta^{\mathrm{time}}(\bm t)
+ =\frac{1}{3}\sum_{\ell\in\{16,24,32\}}e_{\theta,\ell}^{\mathrm{time}}(t_\ell),
+ \qquad e_{\theta,\ell}^{\mathrm{time}}=e_\theta^{\mathrm{time}}.
+ \label{eq:asynctimeembedding}
+\end{equation}
+All other tensors are unchanged. The embedding outputs are weighted equally, irrespective of the 256/256/512 group widths, with the mean accumulated in FP64 before casting back to model dtype. The resulting embedding is a shared network condition, not a separate Transformer for each group. In particular, permuting the three exponents preserves this conditioning average while changing the coordinate groups to which the local velocity factors apply. Because the group widths differ, that permutation need not preserve total latent noise energy.
+
 \paragraph{Sampling grid and conditioning.}
 For $S$ denoising steps, we set $\tau_0=0$, $\tau_S=1$, and use the same logit-normal-quantile grid across schedules:
 \begin{equation}
  \tau_r=\operatorname{sigmoid}\!\left[-1.5+0.8\Phi^{-1}(r/S)\right],
  \qquad 0<r<S.
 \end{equation}
-We retain the full $f'_\ell(\tau)$ factor in Eq.~\eqref{eq:asyncsampler}. The three time embedders are identical copies of the selected scalar-time checkpoint weights; all other tensors are unchanged. Their outputs are weighted equally, irrespective of the 256/256/512 group widths, with the mean accumulated in FP64 before casting back to model dtype. The resulting embedding is a shared network condition, not a separate Transformer for each group. In particular, permuting the three exponents preserves this conditioning average while changing the coordinate groups to which the local velocity factors apply. Because the group widths differ, that permutation need not preserve total latent noise energy.
+The base $\tau$ grid is fixed across schedule comparisons. We retain the full derivative $f'_\ell(\tau)=\gamma_\ell\tau^{\gamma_\ell-1}$ in Eq.~\eqref{eq:asyncsampler}, with the endpoint denominator $\Delta_{t_{\ell,r}}=\max(1-\tau_r^{\gamma_\ell},0.05)$. Question states remain clean, and recurrent self-conditioning carries the previous endpoint prediction to the next call. Changing the clock therefore alters both the integration grid in local time and the prediction history. One shared denoiser call updates all groups; the terminal token-decoding call remains separate.
 
 \paragraph{Schedule evidence and operating-point dependence.}
-Table~\ref{tab:inferenceclockfull} reports all six schedules in the matched epoch-21 validation and test sweeps. The MATH validation result corroborates the headline allocation retrospectively; it was not the original selection experiment. The highest GSM8K validation mean instead uses $(1.5,2,2.5)$. On the test set, the two additional shared-power schedules achieve higher MATH500 point estimates than the four schedules in the main table. Thus the main comparison supports the usefulness of time reparameterization and the chosen operating point, without identifying a universally optimal exponent vector.
+Tables~\ref{tab:inferenceclocks} and~\ref{tab:inferenceclockfull} use LFRM-L epoch 21, 32 denoising steps, SCCFG 2, backbone/prompt EMA $0.9999/0.9999$, and seeds 42/123. Scores are canonical GSM8K and primary Math-Verify accuracies (Appendix~\ref{app:experimentdetails}). Entries in Table~\ref{tab:inferenceclocks} give mean pass@1 with sample SD across the two seeds; bold marks the highest mean among its four schedules.
+
+Table~\ref{tab:inferenceclockfull} reports all six schedules in the matched validation and test sweeps. The MATH validation result corroborates the headline allocation retrospectively; it was not the original selection experiment. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution; the two validation sets need not favor the same schedule. The highest GSM8K validation mean instead uses $(1.5,2,2.5)$. On the test set, the two additional shared-power schedules achieve higher MATH500 point estimates than the four schedules in the main table. Thus the main comparison supports the usefulness of time reparameterization and the chosen operating point, without identifying a universally optimal exponent vector.
 
 % BEGIN inlined tables/inference_clocks_full.tex
 \begin{table}[htbp]
