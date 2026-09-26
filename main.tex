@@ -637,6 +637,41 @@ The benefit is less uniform when success is measured by high-$k$ oracle coverage
 Voting makes the benefit more visible than high-$k$ oracle coverage, although the size of the gain depends on the allocation. For MATH500 at 64 steps and eight samples, NFT raises vote accuracy from 26.34\% to 32.42\% ($+6.07$ points, paired 95\% interval $[3.04,8.98]$). At eight steps and 64 samples, voting rises from 24.09\% to 25.79\% despite the nearly unchanged oracle coverage, but the smaller gain has interval $[-0.45,3.85]$. These patterns are consistent with improved concentration on correct answers. Voting depends on the correct answer's frequency relative to competing answer groups, whereas oracle selection needs only one successful draw. For independent samples with problem-specific success probability $p_i$, oracle success is $1-(1-p_i)^k$: at large $k$, gains saturate on problems already solved frequently. Thus increased correctness probability, its distribution across problems, and the distribution of competing answers can affect the two metrics differently. The curves motivate this interpretation but do not by themselves establish a loss of reasoning diversity after NFT. Appendix~\ref{app:budgetvalues} gives the full numerical comparisons and uncertainty.
 
 Appendix~\ref{app:generations} illustrates the generated reasoning with correct GSM8K and MATH500 solutions; Appendix~\ref{app:trajectories} visualizes intermediate states of the GSM8K example.
+
+\subsection{Code generation}
+\label{sec:codingresults}
+
+We extend the representation-based recipe to Python code using OpenCodeInstruct \citep{opencodeinstruct}. ELF-L trains for 12 epochs with frozen Qwen conditioning; we then freeze ELF and train the six-block prompt encoder for ten epochs using prompt-latent MSE. These checkpoints precede joint refinement and NFT. Table~\ref{tab:codingcomparison} reports eight-seed results at 128 denoising calls, async $(2.5,2,1.5)$, and SCCFG 3. Frozen-Qwen conditioning retains the teacher Transformer at inference; the learned encoder removes it. Appendix~\ref{app:codingdetails} gives the training trajectory and evaluation details.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Model / prompt conditioner & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Without function-name repair}}\\
+PlaidQ \citep{plaidq} & 128 & 19.02 & 18.05 & 22.18 & ---\\
+PlaidQ+CFG \citep{plaidq} & 256 & 22.04 & 19.70 & 24.58 & ---\\
+ELF-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 38.72 & 33.99\\
+ELF-L / learned prompt (ours) & 128 & 27.97 & 25.30 & 19.61 & 16.96\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{With single-function name aliasing}}\\
+ELF-REG-L \citep{scalingdlm} & $^{*}128$ & 22.56 & 21.46 & 28.92 & ---\\
+ELF-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 43.45 & 37.93\\
+ELF-L / learned prompt (ours) & 128 & 28.05 & 25.38 & 30.99 & 26.32\\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Code generation with and without function-name repair.} Mean pass@1 (\%). HE/HE+ denote HumanEval and its full extended tests; both MBPP columns use 378 tasks. PlaidQ's column named ``MBPP+'' uses base tests and is placed under MBPP-378 base here. External values are reported by the authors. Ours use eight seeds and the same epoch-12 ELF weights in both conditioner rows. NFE excludes terminal decoding: PlaidQ+CFG uses two calls per denoising step, and $^{*}128$ denotes ELF-REG's 127 denoising calls. Prompts, response budgets, and extraction/execution details differ across papers (Appendix~\ref{app:codingdetails}).}
+\label{tab:codingcomparison}
+\end{table}
+
+\paragraph{Comparisons depend on the scoring protocol.}
+PlaidQ's Appendix B.7 explicitly restricts its ``MBPP+'' evaluation to base assertions, whereas our full MBPP+ column requires the extended EvalPlus tests \citep{plaidq,evalplus}. ELF-REG additionally repairs a missing expected function name by aliasing the sole generated top-level function to it \citep[Appendix B.3]{scalingdlm}. We report this rule separately: for our learned encoder it raises MBPP-378 base accuracy from 19.61\% to 30.99\%, so combining repaired and unrepaired scores would obscure a substantial difference in acceptance criteria. Both conditioners exceed the reported HumanEval(+) results in their respective comparison blocks. With learned conditioning, MBPP-378 base exceeds ELF-REG under aliasing (30.99\% versus 28.92\%), but remains below guided PlaidQ without repair (19.61\% versus 24.58\%).
+
+\paragraph{Prompt adaptation remains task dependent.}
+At a fixed 32-step budget, frozen-Qwen HumanEval accuracy rises from 23.17\% at epoch 4 to 27.90\% at epoch 12, while MBPP-378 base rises from 26.85\% to 37.76\%. After the prompt swap, extending MSE training from one to ten epochs recovers HumanEval+ from 18.60\% to 24.70\%, close to the original-Qwen 25.61\%; MBPP+ recovers from 7.61\% to 15.15\% but remains below 32.34\%. This supports continuous diffusion for code generation while identifying prompt adaptation as an unresolved limitation, particularly on MBPP. Aliasing reduces but does not eliminate that gap (Appendix~\ref{app:codingdetails}).
+
 % END inlined sections/headline_results.tex
 
 \clearpage
@@ -1260,5 +1295,93 @@ SCCFG 3 raises mean pass@1 at every tested depth for both checkpoints, with the 
 
 The pass@1 improvement does not imply a uniform improvement in multi-sample coverage. For the NFT checkpoint at 32 steps and 16 draws, changing SCCFG from 2 to 3 reduces oracle accuracy from 60.40\% to 56.80\% ($-3.60$ points; $[-6.41,-0.80]$), while voting changes by only $+0.04$ points ($[-1.93,2.14]$). At 64 steps and eight draws, post-NFT voting increases from 32.42\% to 33.38\%, but the paired gain of $0.96$ points has interval $[-1.60,3.48]$. Like the NFT comparisons, the guidance sweep illustrates why single-sample quality, oracle coverage, and answer selection should be reported separately. All intervals here use 4,000 paired problem-bootstrap replicates with seed 20260918, conditional on the fixed checkpoints and draws, without multiple-comparison adjustment.
 % END inlined sections/additional_ablations.tex
+
+
+\section{Code generation: protocols and detailed results}
+\label{app:codingdetails}
+
+\paragraph{Training and conditioning.}
+The coding population contains 4,893,784 eligible OpenCodeInstruct answer rows and 4,772,508 unique prompts. Native Qwen chat sequences fit within 1,024 tokens without truncation. We use task-specific learned, covariance-whitened Qwen3-4B-Instruct-2507 features from layers 16/24/32 with widths 256/256/512. ELF-L starts from random initialization and trains for 12 epochs under synchronous clocks, the mixed flow/decoder-CE objective (decoder probability 0.2), and effective batch 512. The coding time distribution uses logit-normal parameters $-1.5/0.8$ and noise scale two. This is a separate task-specific training lineage.
+
+The standalone prompt encoder uses the frozen Qwen vocabulary lookup, a $2560\to512\to1280$ frontend, six bidirectional width-1280 Transformer blocks with 16 heads, and a 1,024-dimensional output. It has 121M trainable parameters. MSE averages over valid positions and coordinates within each prompt, then weights prompts equally; ELF and the target representation stay fixed throughout the ten prompt-training epochs. All results select ELF EMA $0.9999$ and, where applicable, prompt EMA $0.999$. The frozen-Qwen condition executes the external teacher to encode the question; the learned condition executes only the compact prompt encoder and inherited vocabulary lookup before ELF generation. Results in this subsection do not include later joint-training or NFT branches.
+
+\paragraph{Generation and scoring.}
+We use the benchmark task text in the native Qwen chat format, without assistant prefill, with batch size 32, CFG 1, SCCFG 3, and async $(2.5,2,1.5)$ throughout. Answers fill the remaining positions of the 1,024-token canvas and are decoded greedily. Denoising NFE excludes one terminal decoder call. The eight-seed cohort is $\{42,123,456,789,2026,31415,27182,16180\}$. SCCFG 3 and the 128-step budget follow benchmark sensitivity evaluations rather than an independent code-development-set selection. The shorter training curve uses 32 steps and its stated two- or four-seed cohorts.
+
+HumanEval contains 164 tasks; MBPP uses the 378 tasks retained by EvalPlus. We report base and full extended tests on the same generated programs, requiring both suites to pass for a plus score. Standard scoring applies native EvalPlus sanitization without function-name repair. Execution uses a minimum timeout of 4 seconds, reference-runtime multiplier four, and 4 GiB per program; failures and timeouts count as incorrect. Our separate alias condition changes extraction only: if the expected binding is absent and exactly one top-level function is present, append \texttt{expected\_name = generated\_name} and sanitize again. Existing bindings and ambiguous cases are unchanged. This changes which programs the evaluator accepts without changing generation.
+
+\paragraph{Mapping external reports.}
+PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our comparison values. ELF-REG Table 1 supplies its aliased HumanEval, HumanEval+, and MBPP-378 base results \citep{scalingdlm}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. We retain their reported values without re-evaluating their models.
+
+\paragraph{Training trajectory and prompt substitution.}
+Table~\ref{tab:codingstages} keeps NFE and guidance fixed across ELF epochs 4/8/12 and the prompt-MSE substitution at the fixed ELF epoch-12 checkpoint. The prompt epoch counter starts afresh; prompt epoch 1 is already MSE-trained, not a random encoder. At 32 steps, the four-seed HumanEval+ gap between prompt epoch 10 and original Qwen is $-0.91$ points (paired 95\% problem-bootstrap interval $[-5.03,3.20]$); MBPP+ retains a $-17.20$ point gap ($[-20.24,-14.22]$). These comparisons isolate the conditioner because the ELF weights are identical.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Checkpoint / conditioner & Seeds & HE & HE+ & \shortstack{MBPP-378\\base} & MBPP+\\
+\midrule
+ELF 4 / Qwen & 2 & 23.17 {\scriptsize (3.45)} & 21.04 {\scriptsize (2.16)} & 26.85 {\scriptsize (0.19)} & 23.68 {\scriptsize (0.19)}\\
+ELF 8 / Qwen & 2 & 27.74 {\scriptsize (6.47)} & 25.61 {\scriptsize (5.17)} & 34.92 {\scriptsize (2.24)} & 30.42 {\scriptsize (1.87)}\\
+ELF 12 / Qwen & 4 & 27.90 {\scriptsize (1.75)} & 25.61 {\scriptsize (2.49)} & 37.76 {\scriptsize (0.70)} & 32.34 {\scriptsize (0.79)}\\
+ELF 12 / prompt MSE 1 & 4 & 19.82 {\scriptsize (2.08)} & 18.60 {\scriptsize (2.31)} & 8.93 {\scriptsize (1.02)} & 7.61 {\scriptsize (1.23)}\\
+ELF 12 / prompt MSE 10 & 4 & 26.37 {\scriptsize (1.44)} & 24.70 {\scriptsize (2.08)} & 17.59 {\scriptsize (2.61)} & 15.15 {\scriptsize (2.16)}\\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Coding training and prompt-substitution results at 32 denoising steps.} Mean pass@1 (\%) with generation-seed SD in parentheses; no aliases. ELF epochs 4/8 use seeds 42/123; epoch 12 and both prompt endpoints add 456/789. All rows use SCCFG 3. The prompt-MSE rows retain the same ELF epoch-12 weights.}
+\label{tab:codingstages}
+\end{table}
+
+\paragraph{Eight-seed variation and multiple attempts.}
+Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give generation-seed SD for pass@1 and oracle pass@2/4/8. For each problem with $c$ successful samples among eight, pass@$k$ uses $1-\binom{8-c}{k}/\binom{8}{k}$, averaged across problems. Eight samples do not support pass@10, so the main cross-paper comparison uses pass@1. These SDs describe sampling variation for fixed checkpoints, not training variability. Paired uncertainty uses 4,000 problem-bootstrap replicates with seed 20260918, retaining all seeds and both compared conditions within each sampled problem.
+
+At 128 steps, aliasing improves learned-prompt MBPP-378 base by $11.38$ points (95\% interval $[9.19,13.69]$), compared with $4.73$ ($[3.41,6.18]$) for frozen Qwen. With the learned encoder, full MBPP+ improves by $9.36$ points under repair, but remains $11.61$ points below repaired frozen-Qwen performance ($[9.13,14.25]$). Thus entry-point naming accounts for part of the measured conditioning gap; correcting it does not recover the teacher-conditioned result. Standard HumanEval+ also retains a $5.56$ point gap at this longer budget ($[1.75,9.38]$), so the near-recovery at 32 steps should not be interpreted as equivalence at every inference budget.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Conditioner & Benchmark & pass@1 (SD) & pass@2 & pass@4 & pass@8\\
+\midrule
+Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.11)} & 44.66 & 54.13 & 62.20\\
+Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.09)} & 41.53 & 50.82 & 59.15\\
+Frozen Qwen & MBPP-378 base & 38.72 {\scriptsize (1.37)} & 49.17 & 58.26 & 66.40\\
+Frozen Qwen & MBPP+ & 33.99 {\scriptsize (1.62)} & 43.26 & 51.46 & 58.73\\
+\midrule
+Learned prompt & HumanEval & 27.97 {\scriptsize (1.44)} & 35.98 & 42.87 & 48.78\\
+Learned prompt & HumanEval+ & 25.30 {\scriptsize (1.84)} & 32.19 & 37.65 & 42.07\\
+Learned prompt & MBPP-378 base & 19.61 {\scriptsize (1.85)} & 27.44 & 35.41 & 43.92\\
+Learned prompt & MBPP+ & 16.96 {\scriptsize (1.11)} & 23.72 & 30.30 & 36.77\\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Standard scoring without aliases.} ELF epoch 12, 128 denoising calls, SCCFG 3, eight seeds. All values are percentages; parentheses give the sample SD of per-seed pass@1. Higher-$k$ values average all seed subsets.}
+\label{tab:codingstandarddetail}
+\end{table}
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Conditioner & Benchmark & pass@1 (SD) & pass@2 & pass@4 & pass@8\\
+\midrule
+Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.11)} & 44.66 & 54.13 & 62.20\\
+Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.09)} & 41.53 & 50.82 & 59.15\\
+Frozen Qwen & MBPP-378 base & 43.45 {\scriptsize (1.21)} & 53.97 & 62.90 & 70.63\\
+Frozen Qwen & MBPP+ & 37.93 {\scriptsize (1.43)} & 47.21 & 55.07 & 61.90\\
+\midrule
+Learned prompt & HumanEval & 28.05 {\scriptsize (1.38)} & 36.11 & 43.05 & 48.78\\
+Learned prompt & HumanEval+ & 25.38 {\scriptsize (1.78)} & 32.32 & 37.82 & 42.07\\
+Learned prompt & MBPP-378 base & 30.99 {\scriptsize (1.48)} & 40.54 & 48.72 & 55.82\\
+Learned prompt & MBPP+ & 26.32 {\scriptsize (1.54)} & 34.45 & 41.41 & 47.09\\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Scoring with single-function aliases.} ELF epoch 12, 128 denoising calls, SCCFG 3, eight seeds. All values are percentages; parentheses give the sample SD of per-seed pass@1. Higher-$k$ values average all seed subsets.}
+\label{tab:codingaliasdetail}
+\end{table}
+
 
 \end{document}
