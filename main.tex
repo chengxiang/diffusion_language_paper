@@ -200,7 +200,7 @@ Epoch 0 Learned Prompt Encoder & 8.70 {\scriptsize (0.33)} \\
 \endgroup
 % END inlined tables/representation_epoch6_compact.tex
 \end{minipage}
-\caption{\textbf{Representation and conditioning choices change reasoning performance.} LFRM-B on GSM8K with shared $t=\tau^2$, 32 steps, and backbone EMA $0.999$. \textbf{Left:} learning curves over seeds 42/123 (bars: seed SD). \textbf{Right:} epoch-six means over seeds 42/123/456/789 (parentheses: seed SD); reporting conventions are in Appendix~\ref{app:experimentdetails}. All latents are whitened and 1,024-dimensional. The first three variants use frozen Qwen prompt activations. The fourth uses learned multilayer answer latents and a randomly initialized prompt encoder trained jointly from epoch zero (prompt EMA $0.999$). The epoch-six ordering persists with the identity clock $t=\tau$ (Appendix~\ref{app:representationclock}).}
+\caption{\textbf{Representation and conditioning choices change reasoning performance.} LFRM-B on GSM8K with shared $t=\tau^2$, 32 steps, and backbone EMA $0.999$. \textbf{Left:} learning curves over seeds 42/123 (bars: seed SD). \textbf{Right:} epoch-six means over seeds 42/123/456/789 (parentheses: seed SD); reporting conventions are in Appendix~\ref{app:experimentdetails}. All latents are whitened and 1,024-dimensional. The first three variants use frozen Qwen prompt activations. The fourth uses learned multilayer answer latents and a randomly initialized prompt encoder trained jointly from epoch zero (prompt EMA $0.999$). The epoch-six ordering persists with the identity clock $t=\tau$ (Appendix~\ref{app:representationclock}); Table~\ref{tab:representationcurvevalues} gives every learning-curve value.}
 \label{fig:representationcomparison}
 \end{figure}
 % END inlined figures/representation_comparison.tex
@@ -250,11 +250,7 @@ PCA preserves high-variance directions, which need not preserve the teacher's pr
 \subsection{Learning the conditional encoding in three stages}
 \label{sec:conditionalencoding}
 
-\paragraph{Token embedding versus contextual encoding.}
-
-Following Section~\ref{sec:preliminaries}, $P_\phi(q)$ denotes the complete prompt encoder, including the frozen lookup $B_\psi$ and the trainable contextual network. Our learned encoder attends bidirectionally within the prompt; the original Qwen encoding respects the teacher's causal mask. Both provide contextual information beyond a token lookup.
-
-ELF obtains its conditional representations from a frozen T5 encoder \citep{elf}. Concurrent to our paper, ELF-REG retains a frozen Qwen3-0.6B-Base encoder for inference-time prompts \citep{scalingdlm}. The latter is distinct from its training-only Qwen3-1.7B-Base alignment teacher. This provides informative conditioning but preserves a dependency on an external contextual encoder, whose representation is fixed rather than adapted to the denoiser. We replace the teacher Transformer with a compact, trainable prompt encoder while retaining the frozen Qwen token embedding table. The student has six bidirectional Transformer blocks and outputs the same 1,024-dimensional interface as the teacher features. For LFRM-L, contextual encoding from the 4B-parameter Qwen teacher is replaced by a \textbf{121M-parameter trainable network}; the retained 389M-parameter vocabulary lookup is counted separately. Once trained, it encodes the prompt once per response; no Qwen Transformer layers are executed at inference.
+ELF and ELF-REG retain external contextual encoders for prompt conditioning \citep{elf,scalingdlm}. We instead replace the Qwen teacher Transformer with a compact trainable encoder, retaining its frozen token lookup. For LFRM-L, the contextual network has \textbf{121M parameters} (excluding the vocabulary (un)embedding table), replacing the 4B-parameter teacher. The student has six bidirectional attention blocks and encodes the prompt once per response; architecture details appear in Appendix~\ref{app:methodobjective}.
 
 \paragraph{The prompt as the condition.}
 
@@ -270,56 +266,41 @@ The observed condition $q$ remains fixed while both $\theta$ and $\phi$ can be o
 \begin{lemma}[Preserving the text-conditional score]
 \label{lem:conditionalrepresentation}
 Let $Z_{\mathrm{clean}}$ and $Q$ denote the clean answer latents and prompt, with $\E\|Z_{\mathrm{clean}}\|_F^2<\infty$, and fix a deterministic encoder $C=P_\phi(Q)$. Let $s^\star(z,t\mid c)$ denote the score conditioned on $C=c$. Under the independent Gaussian corruption in Eq.~\eqref{eq:methodinterpolant}, for $0<t<1$ and $c=P_\phi(q)$,
+\begingroup\small
 \begin{equation}
-\begin{split}
  s^\star(z,t\mid q)-s^\star(z,t\mid c)
  =\frac{t}{\sigma^2(1-t)^2}
- \bigl(&\E[Z_{\mathrm{clean}}\mid Z_t=z,Q=q]\\
-       &-\E[Z_{\mathrm{clean}}\mid Z_t=z,C=c]\bigr).
-\end{split}
+ \bigl(\E[Z_{\mathrm{clean}}\mid Z_t=z,Q=q]-\E[Z_{\mathrm{clean}}\mid Z_t=z,C=c]\bigr).
  \label{eq:conditionalscoredifference}
 \end{equation}
+\endgroup
 Thus an encoder preserves the full-prompt score exactly when it preserves the posterior mean clean answer. If this holds along the path, the optimal unguided field also agrees by Eq.~\eqref{eq:conditionalflowscore}, giving the same conditional endpoint law under exact integration whenever the flow is well-defined.
 \end{lemma}
 
-Appendix~\ref{app:conditioninglemma} proves the identity and gives the general regression result. For example, an invertible change of a sufficient prompt encoding can incur nonzero teacher-imitation MSE while preserving the conditional score and ideal sampling distribution. Thus the smaller encoder need not reproduce the teacher exactly, even in principle: the jointly trained denoiser can accommodate differences in the internal coordinates, provided the encoding retains the information needed for the posterior mean. This makes a compact encoder viable without requiring it to replicate all of Qwen's contextual computation. Matching the teacher's coordinates is therefore an initialization strategy, rather than the final generative objective. Reaching a useful interface with finite networks still depends on optimization, motivating three stages:
+The encoder need not reproduce the teacher's coordinates: it must preserve the information needed for the posterior mean answer. Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. MSE matching supplies a compatible initialization, while downstream training can adapt the encoder and denoiser jointly. We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:methodobjective}):
 \begin{enumerate}
- \item \textbf{Train the flow model under frozen Qwen conditioning.}
- For the first 12 flow-training epochs, use the projected question-only teacher states, denoted $c_{\mathrm T}(q)$, and optimize the flow/decoder objective. The teacher and representation projectors remain frozen, giving the denoiser a stable, informative condition throughout its initial training.
+ \item \textbf{Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective.
 
- \item \textbf{Fit the prompt encoder by imitation.}
- Hold the flow model fixed and train $P_\phi$ to match the teacher question states:
- \begin{equation}
-  \mathcal L_{\mathrm{prompt}}=
-  \E_q\!\left[\frac{1}{L_qd}\sum_{i=1}^{L_q}
-  \|c_{\phi,i}(q)-c_{\mathrm T,i}(q)\|_2^2\right].
-  \label{eq:methodpromptmse}
- \end{equation}
- Here $c_{\phi,i}(q)$ is row $i$ of the complete learned encoding. Each question has equal weight, and padding is excluded. This stage learns a compatible initialization without advancing the flow model's training epoch.
+ \item \textbf{Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE.
 
- \item \textbf{Adapt the prompt encoder and flow model jointly.}
- Substitute $P_\phi(q)$ for $c_{\mathrm T}(q)$ at flow-training epoch 12 and resume the same flow/decoder training, updating both networks. Answer targets and the vocabulary lookup remain fixed. We apply no additional prompt-MSE objective: the encoder now adapts through the downstream generative losses. Joint training continues to epoch 18 for LFRM-B and epoch 21 for LFRM-L.
+ \item \textbf{Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss, to epoch 18 for LFRM-B or epoch 21 for LFRM-L on the mathematical reasoning tasks.
 \end{enumerate}
 
 % BEGIN inlined figures/prompt_curriculum.tex
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/prompt_curriculum_training.pdf}
-\caption{\textbf{Stable teacher conditioning followed by learned prompt adaptation.} GSM8K LFRM-B/L (left) and MATH500 LFRM-L (right). Circles/squares identify LFRM-B/L; open/filled markers identify Qwen/learned prompt encoding. Orange/blue backgrounds distinguish frozen-Qwen and joint training. The red line marks the epoch-12 switch; arrows show the immediate MSE-prompt swap loss. Prompt-MSE training leaves the flow-training epoch fixed. Axes start at zero; the first evaluated checkpoint is epoch 4. Points average seeds 42/123 at async $(2.5,2,1.5)$, 32 steps, and SCCFG 2 (bars: 95\% CI). backbone EMA is $0.9999$; prompt EMA is $0.999$ at the swap and $0.9999$ afterward.}
+\caption{\textbf{Stable teacher conditioning followed by learned prompt adaptation.} Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. The red line marks the epoch-12 switch; arrows show the immediate MSE-prompt swap loss. Points are two-seed means (bars: 95\% problem-bootstrap CIs). Appendix~\ref{app:curvevalues} gives every plotted value and evaluation settings.}
 \label{fig:promptcurriculum}
 \end{figure}
 % END inlined figures/prompt_curriculum.tex
 
-Figure~\ref{fig:promptcurriculum} shows why imitation and downstream adaptation serve different roles. The MSE-trained encoder causes an immediate accuracy drop, even though the backbone checkpoint is unchanged at the swap. Joint training then recovers much of this loss on GSM8K and surpasses the original epoch-12 teacher-conditioned accuracy on MATH500. For example, the MATH500 curve moves from 15.80\% with Qwen conditioning to 12.90\% after substitution and 17.90\% after joint training. Recovery reflects adaptation of \emph{both} the flow model and its prompt encoder. Matching latent coordinates provides a useful starting point, while the generative objective determines how the condition should ultimately be used.
+Replacing Qwen with the MSE-trained encoder immediately reduces accuracy, despite unchanged flow-model weights (Figure~\ref{fig:promptcurriculum}). Subsequent joint training recovers much of this loss on GSM8K and exceeds the original teacher-conditioned checkpoint on MATH500. This recovery reflects adaptation of \emph{both} networks, showing the value of learning the conditioning interface through the generative objective.
 
 \paragraph{Importance of fixing initial conditioning.}
 \label{sec:conditioningcurriculum}
 
-Learning the conditioning representation and the conditional flow simultaneously couples two difficult problems: the denoiser must learn to interpret a representation that is itself changing, while the encoder receives supervision through an immature denoiser. The joint-from-start control in Figure~\ref{fig:representationcomparison} shows that this can lead to poor training performance. With the same learned answer representation, a randomly initialized prompt encoder trained alongside the flow model reaches only \textbf{8.70\%} GSM8K accuracy at epoch six, compared with \textbf{30.76\%} under frozen teacher conditioning. The contrast shows the importance of anchoring early learning in an informative, stable condition within the tested training budget. The subsequent joint-training curves show that the value of this anchor is compatible with later adaptation.
-
-We therefore use the teacher encoding as a fixed target during the period in which the flow model learns its initial conditional structure, and allow task-specific adaptation only after that structure has formed.
-
-This curriculum connects to REPA's use of pretrained features to ease diffusion training \citep{repa}, with teacher guidance supplied here through the \emph{conditioning interface}. Our results suggest that \emph{when conditioning becomes learnable} is an important design choice: first establish the flow model under stable teacher guidance, then adapt the interface jointly.
+Joint learning from initialization makes the conditioning interface change while the flow model is still learning to interpret it. Under the matched six-epoch comparison, this approach reaches only \textbf{8.70\%} GSM8K accuracy, versus \textbf{30.76\%} with frozen teacher conditioning (Figure~\ref{fig:representationcomparison}). This motivates stabilizing the condition during early learning and adapting it afterward.
 
 \subsection{Asynchronous inference with local clocks}
 \label{sec:clocks}
@@ -766,7 +747,7 @@ Figure~\ref{fig:representationidentity} changes the evaluation clock to $t=\tau$
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=.66\linewidth]{figures/representation_identity_sd.pdf}
-\caption{\textbf{Identity-clock robustness.} The four models from Figure~\ref{fig:representationcomparison}, evaluated with $t=\tau$ and 32 steps. Points average seeds 42/123 (bars: seed SD). Each epoch uses one trained checkpoint per arm.}
+\caption{\textbf{Identity-clock robustness.} The four models from Figure~\ref{fig:representationcomparison}, evaluated with $t=\tau$ and 32 steps. Points average seeds 42/123 (bars: seed SD). Each epoch uses one trained checkpoint per arm. Numerical values appear in Table~\ref{tab:representationcurvevalues}.}
 \label{fig:representationidentity}
 \end{figure}
 
@@ -832,6 +813,15 @@ Given $q$, compute $c(q)$ once and initialize all $L-L_q$ available answer posit
 \paragraph{Prompt encoder.}
 The frozen Qwen token table maps vocabulary IDs to 2,560-dimensional vectors. The learned frontend applies $2560\to512\to d_{\mathrm{model}}$ linear maps without an intervening nonlinearity. Six bidirectional Transformer blocks use width 768 and 12 heads for LFRM-B, or width 1,280 and 16 heads for LFRM-L, followed by RMSNorm and a 1,024-dimensional output projection. Inputs contain only the question prefix, and padding is masked. The standalone objective averages MSE over positions and coordinates within each question, then weights questions equally. Joint training retains the flow/decoder objective and fixed answer targets. The token table stays frozen while the prompt Transformer and flow model receive gradients from the main forward.
 
+Writing the projected question-only teacher states as $c_{\mathrm T}(q)$, standalone prompt imitation minimizes
+\begin{equation}
+ \mathcal L_{\mathrm{prompt}}=
+ \E_q\!\left[\frac{1}{L_qd}\sum_{i=1}^{L_q}
+ \|c_{\phi,i}(q)-c_{\mathrm T,i}(q)\|_2^2\right].
+ \label{eq:methodpromptmse}
+\end{equation}
+The flow model remains fixed during this stage, so prompt-MSE training does not advance the flow-training epoch. The learned encoder then replaces the teacher condition at flow-training epoch 12. On the mathematical reasoning tasks, joint training continues to epoch 18 for LFRM-B and epoch 21 for LFRM-L, with no additional prompt-MSE objective.
+
 \paragraph{Training-curve cohorts.}
 Figure~\ref{fig:promptcurriculum} uses the same two-seed pre-NFT evaluations as the original training-curve campaign: epochs 4, 8, 12 before prompt substitution; epoch 12 immediately after substitution; and epochs 16/18 for LFRM-B or 16/20/21 for LFRM-L. All 20 plotted points retain their saved predictions, canonical scores, and 4,000-replicate problem-bootstrap intervals. Both epoch-12 conditions share identical backbone weights. These curves use 32 steps and SCCFG 2, whereas the headline results use 64 steps and SCCFG 3 for MATH500. The joint-from-start comparison in Figure~\ref{fig:representationcomparison} instead uses the common $t=\tau^2$ clock and backbone EMA $0.999$ for its six-epoch controls; its four-seed endpoint means are not points on the curriculum curves.
 
@@ -874,6 +864,8 @@ The same identity holds with $C=P_\phi(Q)$ in place of $Q$. Subtracting gives Eq
 
 \paragraph{Posterior sufficiency and teacher imitation.}
 For the random counterpart $U$ of $u_t^{\mathrm{stab}}$, namely $U=(Z_{\mathrm{clean}}-Z_t)/\Delta_t$, the posterior mean is $(\E[Z_{\mathrm{clean}}\mid Z_t,t,Q]-Z_t)/\Delta_t$. Thus preserving the posterior mean clean endpoint suffices for this regression target, including where the deterministic denominator clamp is active. Equality of the conditional distributions of $Z_{\mathrm{clean}}$ given $Q$ and $P_\phi(Q)$ is a sufficient condition. The criterion is independent of the coordinate system used by the teacher: an invertible change of encoding coordinates preserves the available information and can be compensated by the denoiser. The finite network class may limit that compensation. Prompt MSE supplies a useful initialization for the existing denoiser, while subsequent training can adapt the interface through the downstream objective.
+
+For a concrete example, suppose $c_{\mathrm T}(q)$ preserves the posterior mean. For any scalar $\alpha$, define $c'_i(q)=c_{\mathrm T,i}(q)+\alpha\mathbf 1_d$ at each valid prompt position. Subtracting the known offset recovers the teacher encoding exactly, so $c'$ preserves the same information and ideal conditional score, while its normalized teacher-imitation MSE in Eq.~\eqref{eq:methodpromptmse} is $\alpha^2$ and can be arbitrarily large. This construction illustrates the information criterion; it does not assert that a fixed finite denoiser can compensate for arbitrary encoder errors without adaptation.
 
 \paragraph{Noise, masks, and optimization.}
 Conditioning Eq.~\eqref{eq:conditioningdecomposition} on time defines an excess risk $\Delta_\phi(t)=\E[\|m_Q-m_\phi\|_2^2\mid t]$. The identity imposes no monotonicity on $\Delta_\phi(t)$. For a token-weighted objective, the same argument applies under the induced probability measure over scored positions, including the position index among the observed variables; all conditional expectations must use that same measure. The lemma assumes that the answer targets and corruption law do not depend on the encoder parameters, as in our joint stage. It justifies the conditional-model parameterization and characterizes its information requirement. It does not assert that joint training from initialization reaches the optimum, or identify a learned SCCFG sampling field with the unguided posterior field.
@@ -923,7 +915,7 @@ We probe a trained LFRM-B model by corrupting one group of clean gold-solution l
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/layer_reconstruction_random.pdf}
-\caption{\textbf{Layer groups expose distinct reconstruction sensitivities.} LFRM-B epoch 18 on 64 GSM8K validation problems. Solid curves perturb actual layer groups; dashed curves average eight random partitions with matched widths, times, and injected Gaussian energy. Colors identify the corresponding layer or control slot. Decoder CE changes are relative to the same pass's clean-input prediction: first without answer self-conditioning (left), then after one refinement on the same corrupted input (right). Bars show 95\% CIs; shading is the range of random-partition means, not a confidence interval.}
+\caption{\textbf{Layer groups expose distinct reconstruction sensitivities.} LFRM-B epoch 18 on 64 GSM8K validation problems. Solid curves perturb actual layer groups; dashed curves average eight random partitions with matched widths, times, and injected Gaussian energy. Colors identify the corresponding layer or control slot. Decoder CE changes are relative to the same pass's clean-input prediction: first without answer self-conditioning (left), then after one refinement on the same corrupted input (right). Bars show 95\% CIs; shading is the range of random-partition means, not a confidence interval. Table~\ref{tab:reconstructioncurvevalues} gives every plotted value.}
 \label{fig:layerreconstruction}
 \end{figure}
 % END inlined figures/layer_reconstruction_random.tex
@@ -1383,5 +1375,134 @@ Learned prompt & MBPP+ & 26.32 {\scriptsize (1.54)} & 34.45 & 41.41 & 47.09\\
 \label{tab:codingaliasdetail}
 \end{table}
 
+
+% BEGIN numerical curve values (generated from saved plotted cohorts)
+\section{Numerical values for plotted curves}
+\label{app:curvevalues}
+
+This section tabulates the prompt-learning, representation-ablation, and reconstruction-sensitivity curves. Values come from the saved figure cohorts and are rounded independently from full precision. The oracle and majority-vote curves in Figures~\ref{fig:headlinestages} and~\ref{fig:elfbstages} are tabulated in Appendix~\ref{app:budgetvalues}; Table~\ref{tab:sccfgsweepvalues} gives the SCCFG sensitivity curve. Across-seed SDs describe sampling variability at fixed checkpoints, while problem-bootstrap intervals describe uncertainty across benchmark problems conditional on the saved draws.
+
+\paragraph{Prompt-learning curves.}
+Table~\ref{tab:promptcurvevalues} contains every point in Figure~\ref{fig:promptcurriculum}. Each uses seeds 42/123, async $(2.5,2,1.5)$, 32 denoising steps, SCCFG 2, and backbone EMA $0.9999$. Prompt EMA is $0.999$ at the MSE swap and $0.9999$ during joint training. GSM8K uses canonical scoring and MATH500 uses Math-Verify. Brackets reproduce the plotted pointwise 95\% intervals from 4,000 problem-bootstrap replicates. Epoch 12 appears twice because prompt substitution does not advance the flow-training epoch; the two rows have identical backbone weights. The axes start at zero, but no epoch-zero accuracy was measured or plotted.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{Numerical values for Figure~\ref{fig:promptcurriculum}. Correct counts for seeds 42/123 and the benchmark size $N$ specify the exact per-seed accuracies. Mean pass@1 and sample seed SD (parentheses) are percentages; brackets give the plotted 95\% problem-bootstrap intervals.}
+\label{tab:promptcurvevalues}
+\begin{tabular}{@{}rlrrrr@{}}
+\toprule
+Epoch & Prompt & Correct$_{42}$ & Correct$_{123}$ & Mean (SD) & 95\% CI \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{GSM8K, LFRM-B; $N=1319$}}\\
+4 & Qwen & 92 & 86 & 6.75 {\scriptsize (0.32)} & $[5.76, 7.81]$ \\
+8 & Qwen & 401 & 424 & 31.27 {\scriptsize (1.23)} & $[29.11, 33.43]$ \\
+12 & Qwen & 514 & 503 & 38.55 {\scriptsize (0.59)} & $[36.28, 40.83]$ \\
+12 & MSE swap & 398 & 381 & 29.53 {\scriptsize (0.91)} & $[27.29, 31.69]$ \\
+16 & Joint & 482 & 462 & 35.78 {\scriptsize (1.07)} & $[33.55, 38.02]$ \\
+18 & Joint & 495 & 483 & 37.07 {\scriptsize (0.64)} & $[34.76, 39.39]$ \\
+\addlinespace
+\multicolumn{6}{@{}l}{\textit{GSM8K, LFRM-L; $N=1319$}}\\
+4 & Qwen & 212 & 202 & 15.69 {\scriptsize (0.54)} & $[14.22, 17.21]$ \\
+8 & Qwen & 755 & 743 & 56.79 {\scriptsize (0.64)} & $[54.40, 59.14]$ \\
+12 & Qwen & 804 & 820 & 61.56 {\scriptsize (0.86)} & $[59.17, 63.80]$ \\
+12 & MSE swap & 647 & 660 & 49.55 {\scriptsize (0.70)} & $[47.12, 51.90]$ \\
+16 & Joint & 728 & 701 & 54.17 {\scriptsize (1.45)} & $[51.78, 56.52]$ \\
+20 & Joint & 761 & 763 & 57.77 {\scriptsize (0.11)} & $[55.38, 60.12]$ \\
+21 & Joint & 783 & 780 & 59.25 {\scriptsize (0.16)} & $[56.67, 61.68]$ \\
+\addlinespace
+\multicolumn{6}{@{}l}{\textit{MATH500, LFRM-L; $N=500$}}\\
+4 & Qwen & 30 & 38 & 6.80 {\scriptsize (1.13)} & $[5.10, 8.70]$ \\
+8 & Qwen & 61 & 65 & 12.60 {\scriptsize (0.57)} & $[10.30, 15.10]$ \\
+12 & Qwen & 82 & 76 & 15.80 {\scriptsize (0.85)} & $[13.10, 18.50]$ \\
+12 & MSE swap & 64 & 65 & 12.90 {\scriptsize (0.14)} & $[10.50, 15.40]$ \\
+16 & Joint & 84 & 92 & 17.60 {\scriptsize (1.13)} & $[14.90, 20.40]$ \\
+20 & Joint & 98 & 91 & 18.90 {\scriptsize (0.99)} & $[16.00, 21.90]$ \\
+21 & Joint & 85 & 94 & 17.90 {\scriptsize (1.27)} & $[15.10, 20.90]$ \\
+\addlinespace
+\bottomrule
+\end{tabular}
+\end{table}
+\paragraph{Representation-ablation curves.}
+Table~\ref{tab:representationcurvevalues} gives all points and error bars in Figures~\ref{fig:representationcomparison} (left) and~\ref{fig:representationidentity}. These are two-seed learning curves, distinct from the four-seed epoch-six summary on the right of Figure~\ref{fig:representationcomparison}. Both use 32 steps and backbone EMA $0.999$; full controls are described in Appendix~\ref{app:representationclock}.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{Numerical learning curves for Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}: mean GSM8K accuracy (\%) with sample SD across seeds 42/123. The final column trains the prompt encoder jointly from epoch zero; the other three retain Qwen prompt conditioning.}
+\label{tab:representationcurvevalues}
+\begin{tabular}{@{}rrrrr@{}}
+\toprule
+Epoch & \shortstack{Learned\\16/24/32} & \shortstack{PCA\\16/24/32} & \shortstack{PCA\\layer 32} & \shortstack{Epoch-0 joint\\prompt training} \\
+\midrule
+\multicolumn{5}{@{}l}{$t=\tau^2$}\\
+1 & 3.75 {\scriptsize (0.05)} & 4.85 {\scriptsize (0.75)} & 2.65 {\scriptsize (0.11)} & 2.46 {\scriptsize (0.05)} \\
+2 & 12.40 {\scriptsize (0.27)} & 11.18 {\scriptsize (0.16)} & 5.50 {\scriptsize (0.70)} & 3.98 {\scriptsize (1.02)} \\
+3 & 20.17 {\scriptsize (0.54)} & 16.38 {\scriptsize (0.32)} & 8.64 {\scriptsize (0.43)} & 3.68 {\scriptsize (0.16)} \\
+4 & 26.61 {\scriptsize (0.86)} & 21.49 {\scriptsize (0.80)} & 7.47 {\scriptsize (0.05)} & 7.77 {\scriptsize (1.02)} \\
+5 & 29.95 {\scriptsize (0.21)} & 25.85 {\scriptsize (0.21)} & 9.82 {\scriptsize (0.16)} & 7.54 {\scriptsize (1.45)} \\
+6 & 31.01 {\scriptsize (0.43)} & 28.39 {\scriptsize (0.27)} & 11.68 {\scriptsize (0.21)} & 8.61 {\scriptsize (0.05)} \\
+\addlinespace
+\multicolumn{5}{@{}l}{$t=\tau$}\\
+1 & 4.40 {\scriptsize (0.75)} & 4.66 {\scriptsize (0.48)} & 3.03 {\scriptsize (0.54)} & 3.26 {\scriptsize (0.11)} \\
+2 & 11.03 {\scriptsize (0.38)} & 10.50 {\scriptsize (0.16)} & 5.38 {\scriptsize (0.54)} & 5.76 {\scriptsize (0.00)} \\
+3 & 18.65 {\scriptsize (0.96)} & 15.16 {\scriptsize (0.86)} & 7.96 {\scriptsize (0.54)} & 5.80 {\scriptsize (0.05)} \\
+4 & 22.18 {\scriptsize (1.45)} & 19.18 {\scriptsize (2.36)} & 10.12 {\scriptsize (0.48)} & 8.15 {\scriptsize (1.88)} \\
+5 & 24.68 {\scriptsize (1.23)} & 21.08 {\scriptsize (0.96)} & 11.94 {\scriptsize (1.02)} & 8.45 {\scriptsize (1.23)} \\
+6 & 26.76 {\scriptsize (0.43)} & 24.22 {\scriptsize (2.52)} & 13.38 {\scriptsize (0.16)} & 8.68 {\scriptsize (0.16)} \\
+\addlinespace
+\bottomrule
+\end{tabular}
+\end{table}
+\paragraph{Reconstruction-sensitivity curves.}
+Table~\ref{tab:reconstructioncurvevalues} reproduces the means, error bars, and shaded ranges in Figure~\ref{fig:layerreconstruction}. The zero-noise points are identically zero because each condition is compared with its own pass's clean-input baseline. Random-partition ranges describe the eight partition means, not uncertainty intervals.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{Numerical values for Figure~\ref{fig:layerreconstruction}, in nats/token. Actual-group entries give $\Delta$CE and its 95\% problem-bootstrap CI; random-group entries give the mean over eight matched partitions and the minimum/maximum partition means. Noise strength is $\eta$; the layer identifies the matched group width.}
+\label{tab:reconstructioncurvevalues}
+\begin{tabular}{@{}rrcc@{}}
+\toprule
+Layer & $\eta$ & Actual group [95\% CI] & Random mean [min, max] \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{First prediction}}\\
+16 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+16 & 0.8 & $0.151\ [-0.006, 0.315]$ & $-0.015\ [-0.053, 0.064]$ \\
+16 & 1.6 & $0.327\ [0.045, 0.633]$ & $0.008\ [-0.057, 0.136]$ \\
+16 & 2 & $0.439\ [0.080, 0.848]$ & $0.026\ [-0.075, 0.209]$ \\
+16 & 3 & $0.651\ [0.158, 1.272]$ & $0.071\ [-0.087, 0.340]$ \\
+24 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+24 & 0.8 & $-0.059\ [-0.201, 0.050]$ & $-0.065\ [-0.154, -0.010]$ \\
+24 & 1.6 & $-0.081\ [-0.314, 0.103]$ & $-0.080\ [-0.231, 0.055]$ \\
+24 & 2 & $-0.085\ [-0.365, 0.131]$ & $-0.084\ [-0.245, 0.075]$ \\
+24 & 3 & $-0.128\ [-0.512, 0.154]$ & $-0.078\ [-0.279, 0.134]$ \\
+32 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+32 & 0.8 & $-0.188\ [-0.533, 0.087]$ & $-0.136\ [-0.294, -0.050]$ \\
+32 & 1.6 & $-0.342\ [-0.950, 0.140]$ & $-0.208\ [-0.588, 0.028]$ \\
+32 & 2 & $-0.395\ [-1.075, 0.140]$ & $-0.226\ [-0.675, 0.065]$ \\
+32 & 3 & $-0.424\ [-1.189, 0.194]$ & $-0.241\ [-0.757, 0.160]$ \\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{Self-conditioned refinement}}\\
+16 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+16 & 0.8 & $0.360\ [0.073, 0.653]$ & $0.142\ [0.060, 0.226]$ \\
+16 & 1.6 & $0.740\ [0.211, 1.330]$ & $0.271\ [0.180, 0.369]$ \\
+16 & 2 & $0.920\ [0.289, 1.637]$ & $0.334\ [0.226, 0.446]$ \\
+16 & 3 & $1.237\ [0.436, 2.179]$ & $0.469\ [0.324, 0.636]$ \\
+24 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+24 & 0.8 & $0.075\ [0.006, 0.150]$ & $0.117\ [0.052, 0.192]$ \\
+24 & 1.6 & $0.119\ [0.005, 0.237]$ & $0.247\ [0.115, 0.392]$ \\
+24 & 2 & $0.149\ [0.019, 0.285]$ & $0.298\ [0.132, 0.455]$ \\
+24 & 3 & $0.223\ [0.051, 0.406]$ & $0.422\ [0.211, 0.600]$ \\
+32 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+32 & 0.8 & $0.007\ [-0.267, 0.295]$ & $0.142\ [0.001, 0.348]$ \\
+32 & 1.6 & $0.036\ [-0.440, 0.508]$ & $0.307\ [-0.031, 0.701]$ \\
+32 & 2 & $0.056\ [-0.509, 0.602]$ & $0.388\ [-0.023, 0.822]$ \\
+32 & 3 & $0.152\ [-0.515, 0.792]$ & $0.533\ [0.030, 1.057]$ \\
+\addlinespace
+\bottomrule
+\end{tabular}
+\end{table}
+% END numerical curve values
 
 \end{document}
