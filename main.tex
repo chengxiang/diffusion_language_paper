@@ -1079,7 +1079,7 @@ These values describe generation randomness at a fixed checkpoint and test set. 
 Bars in the representation learning curves are $\pm1$ seed SD; small parenthesized values in the corresponding tables report the same statistic. External baselines retain author-reported accuracies; we do not impute missing SDs.
 
 \paragraph{Problem-bootstrap uncertainty.}
-Parentheses in Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb} report the standard deviation of the benchmark mean across 4,000 problem-bootstrap replicates, using bootstrap seed 20260918. Each replicate resamples whole problems with replacement while preserving their complete draw sets. These are bootstrap standard errors conditional on the checkpoints and saved generations, not the across-generation-seed SDs in Table~\ref{tab:headlineseedsd}. In particular, the largest-$k$ point uses the entire draw pool and does not provide repeated independent $k$-sample groups from which to estimate a seed-group SD. The bootstrap does not add training-run variability or uncertainty from the fixed voting-subset approximation. All values are rounded independently from full precision.
+Parentheses in Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb} and~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} report the standard deviation of the benchmark mean across 4,000 problem-bootstrap replicates, using bootstrap seed 20260918. Each replicate resamples whole problems with replacement while preserving their complete draw sets. These are bootstrap standard errors conditional on the checkpoints and saved generations, not the across-generation-seed SDs in Table~\ref{tab:headlineseedsd}. In particular, the largest-$k$ point uses the entire draw pool and does not provide repeated independent $k$-sample groups from which to estimate a seed-group SD. The bootstrap does not add training-run variability or uncertainty from the fixed voting-subset approximation. All values are rounded independently from full precision.
 
 \paragraph{Confidence intervals and paired comparisons.}
 A 95\% CI is a pointwise percentile interval from 4,000 problem-bootstrap replicates. This convention applies to the prompt curriculum, reconstruction probe, and SCCFG-sensitivity figures. For pre/post comparisons, we resample the same problem indices in both stages and form the difference within each replicate. Pointwise 95\% percentile intervals for changes therefore use paired differences. None of these measures estimates variation across independent training runs.
@@ -1139,7 +1139,7 @@ TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
 
 Table~\ref{tab:headlineseedsd} reports standard deviations across independent sampling seeds for all our settings in Tables~\ref{tab:headlinecomparison} and~\ref{tab:headlinelownfe}, together with the SCCFG 2 MATH500 settings used in Figure~\ref{fig:headlinestages}. Each seed generates one solution per problem across the full fixed test set. We use every completed sampling seed at each denoising budget: $n=64,32,16,8$ for NFE $8,16,32,64$, respectively. Checkpoints, guidance, scorers, and benchmark populations match the main tables.
 
-For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Table~\ref{tab:codingstandarddetail} in Appendix~\ref{app:codingdetails} gives Table~\ref{tab:codingcomparison}'s eight-seed coding results with SDs. Table~\ref{tab:codingaliasdetail} supplies SDs for the separate aliasing comparison in Table~\ref{tab:codingaliascomparison}. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:representationclock} also includes the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
+For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} in Appendix~\ref{app:codingdetails} give pass@1 seed SDs in their final columns for the eight-seed coding comparisons in Tables~\ref{tab:codingcomparison} and~\ref{tab:codingaliascomparison}, respectively. Their pass@$k$ columns additionally report problem-bootstrap SEs. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:representationclock} also includes the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
 
 \begin{table}[htbp]
 \caption{Mean accuracy $\pm$ standard deviation across sampling seeds, in percentage points. Each seed evaluates the complete benchmark at the same fixed checkpoint. Columns use 64, 32, 16, and 8 seeds, respectively. The 64-NFE column supplies the results in Table~\ref{tab:headlinecomparison}; SCCFG 3 supplies the MATH500 rows in Tables~\ref{tab:headlinecomparison} and~\ref{tab:headlinelownfe}. SCCFG 2 MATH500 rows correspond to Figure~\ref{fig:headlinestages}.}
@@ -1449,61 +1449,61 @@ Epoch 12 / prompt MSE 10 & 4 & 26.37 {\scriptsize (1.44)} & 24.70 {\scriptsize (
 \end{table}
 
 \paragraph{Eight-seed variation and multiple attempts.}
-Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1 with its generation-seed SD, alongside oracle pass@2/4/8. For each problem with $c$ successful samples among eight, pass@$k$ uses $1-\binom{8-c}{k}/\binom{8}{k}$, averaged across problems. Eight samples do not support pass@10, so the main cross-paper comparison uses pass@1. These SDs describe sampling variation for fixed checkpoints, not training variability. Paired uncertainty uses 4,000 problem-bootstrap replicates with seed 20260918, retaining all seeds and both compared conditions within each sampled problem.
+Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give oracle pass@1/2/4/8 with problem-bootstrap standard errors in parentheses, and retain the pass@1 generation-seed SD in a separate column. For each problem with $c$ successful samples among eight, pass@$k$ uses $1-\binom{8-c}{k}/\binom{8}{k}$, averaged across problems. Eight samples do not support pass@10, so the main cross-paper comparison uses pass@1. Bootstrap uncertainty uses 4,000 problem resamples with seed 20260918, retaining all eight generations per problem and pairing compared conditions. The bootstrap SE measures uncertainty across problems conditional on the saved generations; the seed SD describes sampling variation over the fixed benchmark. Neither estimates training variability (Appendix~\ref{app:uncertainty}).
 
 Before joint training, at 128 steps, aliasing improves MSE-prompt MBPP-378 base by $11.38$ points (95\% interval $[9.19,13.69]$), compared with $4.73$ ($[3.41,6.18]$) for frozen Qwen. With the MSE encoder, full MBPP+ improves by $9.36$ points under repair, but remains $11.61$ points below repaired frozen-Qwen performance ($[9.13,14.25]$). Thus entry-point naming accounts for part of the measured conditioning gap; correcting it does not recover the teacher-conditioned result. Standard HumanEval+ also retains a $5.56$ point gap at this longer budget ($[1.75,9.38]$), so the near-recovery at 32 steps should not be interpreted as equivalence at every inference budget.
 
 \begin{table}[htbp]
 \centering\small
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{@{}llrrrr@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llrrrrr@{}}
 \toprule
-Conditioner & Benchmark & pass@1 (SD) & pass@2 & pass@4 & pass@8\\
+Conditioner & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
 \midrule
-Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.11)} & 44.66 & 54.13 & 62.20\\
-Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.09)} & 41.53 & 50.82 & 59.15\\
-Frozen Qwen & MBPP-378 base & 38.72 {\scriptsize (1.37)} & 49.17 & 58.26 & 66.40\\
-Frozen Qwen & MBPP+ & 33.99 {\scriptsize (1.62)} & 43.26 & 51.46 & 58.73\\
+Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.78)} & 44.66 {\scriptsize (3.21)} & 54.13 {\scriptsize (3.46)} & 62.20 {\scriptsize (3.75)} & 2.11\\
+Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.70)} & 41.53 {\scriptsize (3.18)} & 50.82 {\scriptsize (3.45)} & 59.15 {\scriptsize (3.77)} & 2.09\\
+Frozen Qwen & MBPP-378 base & 38.72 {\scriptsize (2.01)} & 49.17 {\scriptsize (2.21)} & 58.26 {\scriptsize (2.32)} & 66.40 {\scriptsize (2.48)} & 1.37\\
+Frozen Qwen & MBPP+ & 33.99 {\scriptsize (2.00)} & 43.26 {\scriptsize (2.25)} & 51.46 {\scriptsize (2.40)} & 58.73 {\scriptsize (2.60)} & 1.62\\
 \midrule
-Prompt MSE & HumanEval & 27.97 {\scriptsize (1.44)} & 35.98 & 42.87 & 48.78\\
-Prompt MSE & HumanEval+ & 25.30 {\scriptsize (1.84)} & 32.19 & 37.65 & 42.07\\
-Prompt MSE & MBPP-378 base & 19.61 {\scriptsize (1.85)} & 27.44 & 35.41 & 43.92\\
-Prompt MSE & MBPP+ & 16.96 {\scriptsize (1.11)} & 23.72 & 30.30 & 36.77\\
+Prompt MSE & HumanEval & 27.97 {\scriptsize (2.84)} & 35.98 {\scriptsize (3.27)} & 42.87 {\scriptsize (3.58)} & 48.78 {\scriptsize (3.90)} & 1.44\\
+Prompt MSE & HumanEval+ & 25.30 {\scriptsize (2.81)} & 32.19 {\scriptsize (3.25)} & 37.65 {\scriptsize (3.55)} & 42.07 {\scriptsize (3.85)} & 1.84\\
+Prompt MSE & MBPP-378 base & 19.61 {\scriptsize (1.54)} & 27.44 {\scriptsize (1.90)} & 35.41 {\scriptsize (2.17)} & 43.92 {\scriptsize (2.53)} & 1.85\\
+Prompt MSE & MBPP+ & 16.96 {\scriptsize (1.47)} & 23.72 {\scriptsize (1.84)} & 30.30 {\scriptsize (2.14)} & 36.77 {\scriptsize (2.48)} & 1.11\\
 \midrule
-Joint prompt & HumanEval & 29.57 {\scriptsize (2.33)} & 39.07 & 47.23 & 54.27\\
-Joint prompt & HumanEval+ & 26.91 {\scriptsize (1.99)} & 35.26 & 42.22 & 47.56\\
-Joint prompt & MBPP-378 base & 18.45 {\scriptsize (1.23)} & 25.77 & 32.95 & 39.95\\
-Joint prompt & MBPP+ & 16.40 {\scriptsize (1.30)} & 23.20 & 29.81 & 35.98\\
+Joint prompt & HumanEval & 29.57 {\scriptsize (2.74)} & 39.07 {\scriptsize (3.23)} & 47.23 {\scriptsize (3.55)} & 54.27 {\scriptsize (3.87)} & 2.33\\
+Joint prompt & HumanEval+ & 26.91 {\scriptsize (2.73)} & 35.26 {\scriptsize (3.22)} & 42.22 {\scriptsize (3.58)} & 47.56 {\scriptsize (3.92)} & 1.99\\
+Joint prompt & MBPP-378 base & 18.45 {\scriptsize (1.53)} & 25.77 {\scriptsize (1.90)} & 32.95 {\scriptsize (2.20)} & 39.95 {\scriptsize (2.53)} & 1.23\\
+Joint prompt & MBPP+ & 16.40 {\scriptsize (1.45)} & 23.20 {\scriptsize (1.84)} & 29.81 {\scriptsize (2.15)} & 35.98 {\scriptsize (2.48)} & 1.30\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Standard scoring without aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. All values are percentages; parentheses give the sample SD of per-seed pass@1. Higher-$k$ values average all seed subsets.}
+\caption{\textbf{Standard scoring without aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
 \label{tab:codingstandarddetail}
 \end{table}
 
 \begin{table}[htbp]
 \centering\small
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{@{}llrrrr@{}}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}llrrrrr@{}}
 \toprule
-Conditioner & Benchmark & pass@1 (SD) & pass@2 & pass@4 & pass@8\\
+Conditioner & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
 \midrule
-Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.11)} & 44.66 & 54.13 & 62.20\\
-Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.09)} & 41.53 & 50.82 & 59.15\\
-Frozen Qwen & MBPP-378 base & 43.45 {\scriptsize (1.21)} & 53.97 & 62.90 & 70.63\\
-Frozen Qwen & MBPP+ & 37.93 {\scriptsize (1.43)} & 47.21 & 55.07 & 61.90\\
+Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.78)} & 44.66 {\scriptsize (3.21)} & 54.13 {\scriptsize (3.46)} & 62.20 {\scriptsize (3.75)} & 2.11\\
+Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.70)} & 41.53 {\scriptsize (3.18)} & 50.82 {\scriptsize (3.45)} & 59.15 {\scriptsize (3.77)} & 2.09\\
+Frozen Qwen & MBPP-378 base & 43.45 {\scriptsize (2.06)} & 53.97 {\scriptsize (2.22)} & 62.90 {\scriptsize (2.28)} & 70.63 {\scriptsize (2.39)} & 1.21\\
+Frozen Qwen & MBPP+ & 37.93 {\scriptsize (2.07)} & 47.21 {\scriptsize (2.28)} & 55.07 {\scriptsize (2.40)} & 61.90 {\scriptsize (2.55)} & 1.43\\
 \midrule
-Prompt MSE & HumanEval & 28.05 {\scriptsize (1.38)} & 36.11 & 43.05 & 48.78\\
-Prompt MSE & HumanEval+ & 25.38 {\scriptsize (1.78)} & 32.32 & 37.82 & 42.07\\
-Prompt MSE & MBPP-378 base & 30.99 {\scriptsize (1.48)} & 40.54 & 48.72 & 55.82\\
-Prompt MSE & MBPP+ & 26.32 {\scriptsize (1.54)} & 34.45 & 41.41 & 47.09\\
+Prompt MSE & HumanEval & 28.05 {\scriptsize (2.84)} & 36.11 {\scriptsize (3.27)} & 43.05 {\scriptsize (3.59)} & 48.78 {\scriptsize (3.90)} & 1.38\\
+Prompt MSE & HumanEval+ & 25.38 {\scriptsize (2.81)} & 32.32 {\scriptsize (3.25)} & 37.82 {\scriptsize (3.56)} & 42.07 {\scriptsize (3.85)} & 1.78\\
+Prompt MSE & MBPP-378 base & 30.99 {\scriptsize (1.88)} & 40.54 {\scriptsize (2.18)} & 48.72 {\scriptsize (2.37)} & 55.82 {\scriptsize (2.57)} & 1.48\\
+Prompt MSE & MBPP+ & 26.32 {\scriptsize (1.81)} & 34.45 {\scriptsize (2.14)} & 41.41 {\scriptsize (2.38)} & 47.09 {\scriptsize (2.61)} & 1.54\\
 \midrule
-Joint prompt & HumanEval & 29.73 {\scriptsize (2.34)} & 39.16 & 47.24 & 54.27\\
-Joint prompt & HumanEval+ & 27.06 {\scriptsize (2.14)} & 35.39 & 42.31 & 47.56\\
-Joint prompt & MBPP-378 base & 32.11 {\scriptsize (1.72)} & 41.66 & 49.82 & 57.14\\
-Joint prompt & MBPP+ & 27.81 {\scriptsize (1.88)} & 36.19 & 43.16 & 49.21\\
+Joint prompt & HumanEval & 29.73 {\scriptsize (2.76)} & 39.16 {\scriptsize (3.23)} & 47.24 {\scriptsize (3.55)} & 54.27 {\scriptsize (3.87)} & 2.34\\
+Joint prompt & HumanEval+ & 27.06 {\scriptsize (2.74)} & 35.39 {\scriptsize (3.23)} & 42.31 {\scriptsize (3.59)} & 47.56 {\scriptsize (3.92)} & 2.14\\
+Joint prompt & MBPP-378 base & 32.11 {\scriptsize (1.91)} & 41.66 {\scriptsize (2.20)} & 49.82 {\scriptsize (2.37)} & 57.14 {\scriptsize (2.57)} & 1.72\\
+Joint prompt & MBPP+ & 27.81 {\scriptsize (1.86)} & 36.19 {\scriptsize (2.18)} & 43.16 {\scriptsize (2.39)} & 49.21 {\scriptsize (2.60)} & 1.88\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Scoring with single-function aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. All values are percentages; parentheses give the sample SD of per-seed pass@1. Higher-$k$ values average all seed subsets.}
+\caption{\textbf{Scoring with single-function aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets.}
 \label{tab:codingaliasdetail}
 \end{table}
 
