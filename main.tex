@@ -170,13 +170,7 @@ Compute $c(q)$ once, keep it clean, and denoise all available answer positions j
 \subsection{Learning the denoising representation}
 \label{sec:representation}
 
-The choice of denoising representation determines both what a continuous diffusion model must learn and how its outputs can be converted back to language. Pretrained networks offer a useful starting point: ELF uses contextual embeddings from a bidirectional T5 encoder \citep{elf}. TextLDM uses Qwen as an alignment teacher for a learned VAE encoder \citep{textldm}. In image generation, REPA aligns denoiser features with clean visual features \citep{repa}; Semantic-First Diffusion (SFD) and Latent Forcing instead augment the generated state with semantic representations derived from pretrained vision encoders \citep{sfd,latentforcing}. These successes motivate using a powerful model's output features, but leave open which layers and compression objectives are most suitable for reasoning in language.
-
-We use \textbf{teacher-forced hidden activations of Qwen3-4B-Instruct-2507} \citep{qwen2507}. Qwen provides a strong reasoning model: for instance, a basic autoregressive evaluation achieves 92.19\% on GSM8K (Appendix~\ref{app:representationdiagnostics}). Given a question and its complete reference solution, all token activations can be computed in one teacher-forced forward pass. Although these activations come from a causal language model, the generator trained on them need not be causal. Our bidirectional denoiser generates the complete sequence of answer latents jointly, making the teacher's representation available to a different generative process.
-
-A useful representation must satisfy two requirements: \textbf{ease-of-decoding} (retaining the information needed to recover a solution) and \textbf{ease-of-generation} (having a structure that can be constructed through iterative denoising). These are distinct requirements: accurate reconstruction from clean latents does not establish that a diffusion model can readily generate those latents from noise. Our ablations in Section~\ref{sec:representationablations} and Figure~\ref{fig:representationcomparison} examine this distinction.
-
-%Strong decoding alone does not establish the second property. In particular, the effectiveness of final visual-encoder features in prior work does not determine the best depth to use in an autoregressive language model. We describe our learned, multilayer construction in Section~\ref{sec:representationconstruction}, then examine layer selection and projection learning in Section~\ref{sec:representationablations}. Figure~\ref{fig:representationcomparison} summarizes the resulting differences in reasoning performance.
+The denoising representation must support both generation and recovery of answer tokens. We extract \textbf{teacher-forced hidden activations of Qwen3-4B-Instruct-2507} \citep{qwen2507} in one forward pass over the question and reference solution. Although these features are causal, our bidirectional denoiser generates the complete answer representation jointly. Section~\ref{sec:representationconstruction} describes the learned representation; Section~\ref{sec:representationablations} examines layer selection and projection learning (Figure~\ref{fig:representationcomparison}).
 
 % BEGIN inlined figures/representation_comparison.tex
 \begin{figure}[htbp]
@@ -216,41 +210,18 @@ Epoch 0 Learned Prompt Encoder & 8.70 {\scriptsize (0.33)} \\
 
 \paragraph{Teacher features and latent construction.}
 
-Using the token convention of Section~\ref{sec:preliminaries}, let $h_j^{(\ell)}\in\R^{d_{\mathrm{teacher}}}$ be the frozen teacher's post-block residual at answer position $j$, with $d_{\mathrm{teacher}}=2560$. The native causal mask gives $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})$; extracting all these states requires a single forward pass over $(q,a)$. For $\mathcal S=\{16,24,32\}$, we learn a linear encoder $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$ and form
+Let $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$ denote the frozen teacher's post-block residual at answer position $j$, with $d_{\mathrm{teacher}}=2560$. For $\mathcal S=\{16,24,32\}$, we learn linear encoders $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$ and concatenate their outputs:
 \begin{equation}
- \begin{aligned}
- z_{\mathrm{clean},j}^{(\ell)}&=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}},\\
- z_{\mathrm{clean},j}&=\big[z_{\mathrm{clean},j}^{(16)},z_{\mathrm{clean},j}^{(24)},z_{\mathrm{clean},j}^{(32)}\big]\in\R^{1024},
- \end{aligned}
+ z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}},
+ \qquad z_{\mathrm{clean},j}=\big[z_{\mathrm{clean},j}^{(\ell)}\big]_{\ell\in\mathcal S},
  \label{eq:representationencoding}
 \end{equation}
-where $(d_{16},d_{24},d_{32})=(256,256,512)$ and $\mu_\ell$ is the training assistant-token mean. The same maps encode question-prefix states for the initial flow-training stage. Causal feature extraction ensures that these question states do not depend on the subsequent answer tokens. Once learned, the answer representation remains fixed throughout flow training and post-training diffusion RL.
+where brackets concatenate layers in ascending order, $(d_{16},d_{24},d_{32})=(256,256,512)$, and $\mu_\ell$ is the training assistant-token mean. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask. The learned answer representation remains fixed during flow training and NFT.
 
 \paragraph{Learning through the teacher's predictions.}
-We train the encoders to preserve the teacher's predictive behavior, as illustrated in the first column of Figure~\ref{fig:pipelineoverview}. For each selected layer, a trainable linear reconstruction decoder $W_\ell^{\mathrm{rec}}\in\R^{d_\ell\times d_{\mathrm{teacher}}}$ maps latents back to the original hidden width:
-\begin{equation}
- \widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}.
- \label{eq:representationreconstruction}
-\end{equation}
-We replace the assistant-content activations at layer $\ell$ by these reconstructions and run the remaining frozen Qwen blocks, final normalization, and vocabulary head. Write $p_j^{\mathrm{teacher}}$ for the unmodified teacher's next-token distribution and $p_{\ell,j}^{\mathrm{recon}}$ for this intervened branch. Both predict $a_{j+1}$ from the state at $a_j$; this differs from LFRM's same-position token decoder. The representation objective is full-vocabulary cross-entropy:
-\begin{equation}
- \mathcal L_{\mathrm{repr}}
- =\sum_{\ell\in\mathcal S}\E_{q,a,j}
- \left[-\sum_{w\in\mathcal V}p_j^{\mathrm{teacher}}(w)
- \log p_{\ell,j}^{\mathrm{recon}}(w)\right].
- \label{eq:representationloss}
-\end{equation}
-The teacher target is detached, while gradients through the frozen suffix train $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$. Each layer is intervened on independently; prompt and control-token states remain unchanged. Scored positions predict the following assistant-content token. Thus the objective asks whether compression preserves the teacher's decisions, rather than requiring an accurate reconstruction of every hidden-state coordinate. The reconstruction decoders and Qwen suffixes are used to learn the representation; generation later uses LFRM's shared backbone and token head.
+We learn each encoder with a linear reconstruction decoder $W_\ell^{\mathrm{rec}}\in\R^{d_\ell\times d_{\mathrm{teacher}}}$, giving $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}$ (Figure~\ref{fig:pipelineoverview}, left). Replacing layer-$\ell$ answer activations by these reconstructions and running the frozen Qwen suffix yields $p_{\ell,j}^{\mathrm{recon}}$. We match the unmodified teacher distribution $p_j^{\mathrm{teacher}}$ using $\mathcal L_{\mathrm{repr}}=\sum_{\ell\in\mathcal S}\E_{q,a,j}\,\CE(p_j^{\mathrm{teacher}},p_{\ell,j}^{\mathrm{recon}})$, where $\CE$ is full-vocabulary soft cross-entropy. These distributions predict the next token, whereas LFRM's token decoder predicts the same-position token.
 
-\paragraph{Fixing the latent geometry.}
-The reconstruction map admits changes of latent scale that can be absorbed by its decoder. We fix this freedom before applying isotropic diffusion noise. With regularized assistant-token covariance $\widetilde\Sigma_\ell$, we parameterize
-\begin{equation}
- Q_\ell=\operatorname{qf}(R_\ell),\qquad
- W_\ell^{\mathrm{enc}}=\widetilde\Sigma_\ell^{-1/2}Q_\ell,\qquad
- (W_\ell^{\mathrm{enc}})^\top\widetilde\Sigma_\ell W_\ell^{\mathrm{enc}}=I_{d_\ell},
- \label{eq:representationwhitening}
-\end{equation}
-where $\operatorname{qf}$ is a differentiable thin QR factorization and $R_\ell$ is trainable. We initialize from the leading PCA directions and then optimize Eq.~\eqref{eq:representationloss}, allowing $W_\ell^{\mathrm{rec}}$ to adapt freely. This maintains a nondegenerate coordinate scale while the subspace changes. Whitening acts within each layer group; correlations between groups remain. Appendix~\ref{app:representationimplementation} specifies covariance regularization and initialization.
+Each layer is intervened on independently. The teacher target is detached; gradients through the frozen suffix train only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$. The reconstruction decoders and Qwen suffixes are used only to learn the representation. We initialize from PCA and maintain whitened latents within each layer group; Appendix~\ref{app:representationimplementation} gives the parameterization and scoring details.
 
 \subsubsection{Which representation should be denoised?}
 \label{sec:representationablations}
@@ -746,23 +717,43 @@ Each generation seed evaluates all 1,319 GSM8K test problems or all 500 MATH500 
 \section{Representation construction details}
 \label{app:representationimplementation}
 
-For each selected layer, estimate the mean $\mu_\ell$ and covariance $\Sigma_\ell$ over training assistant-content tokens. Write $\Sigma_\ell=U_\ell\Lambda_\ell U_\ell^\top$, with eigenvalues in descending order, and define
+\paragraph{Whitening and initialization.}
+The linear encoder and reconstruction decoder admit changes of latent scale that leave reconstruction unchanged. We fix this freedom before applying isotropic diffusion noise. For each selected layer, estimate the mean $\mu_\ell$ and covariance $\Sigma_\ell$ over training assistant-content tokens. Write $\Sigma_\ell=U_\ell\Lambda_\ell U_\ell^\top$, with eigenvalues in descending order, and define
 \[
  \widetilde\Sigma_\ell=U_\ell\operatorname{diag}\!\big(\max(\lambda_{\ell i},10^{-5})\big)U_\ell^\top.
 \]
+We parameterize the encoder by
+\begin{equation}
+ Q_\ell=\operatorname{qf}(R_\ell),\qquad
+ W_\ell^{\mathrm{enc}}=\widetilde\Sigma_\ell^{-1/2}Q_\ell,\qquad
+ (W_\ell^{\mathrm{enc}})^\top\widetilde\Sigma_\ell W_\ell^{\mathrm{enc}}=I_{d_\ell},
+ \label{eq:representationwhitening}
+\end{equation}
+where $\operatorname{qf}$ is a differentiable thin QR factorization and $R_\ell$ is trainable. This maintains a nondegenerate coordinate scale while the subspace changes.
 Initialize $Q_{\ell,0}=U_{\ell,:d_\ell}$, $W_{\ell,0}^{\mathrm{enc}}=\widetilde\Sigma_\ell^{-1/2}Q_{\ell,0}$, and $W_{\ell,0}^{\mathrm{rec}}=Q_{\ell,0}^\top\widetilde\Sigma_\ell^{1/2}$. The resulting reconstruction is ordinary rank-$d_\ell$ PCA:
 \[
  \widehat h_{j,0}^{(\ell)}=\mu_\ell+(h_j^{(\ell)}-\mu_\ell)U_{\ell,:d_\ell}U_{\ell,:d_\ell}^\top.
 \]
-During optimization, gradients pass through the thin QR factorization and the decoder is unconstrained. The whitening identity in Eq.~\eqref{eq:representationwhitening} refers to the fixed regularized training covariance; it does not imply identity covariance on every minibatch, on question features, or across concatenated layer groups.
+Starting from this initialization, we optimize Eq.~\eqref{eq:representationloss}, passing gradients through the thin QR factorization while leaving the decoder unconstrained. The whitening identity in Eq.~\eqref{eq:representationwhitening} refers to the fixed regularized training covariance; it does not imply identity covariance on every minibatch, on question features, or across concatenated layer groups.
 
-The three reconstruction branches run frozen Qwen blocks 17--36, 25--36, and 33--36, respectively, followed by final normalization and the vocabulary head. We intervene on all assistant-content states at a single layer in each branch, retaining clean prefix/control states. Full-vocabulary soft cross-entropy scores positions that predict the next assistant-content token; the first assistant token, terminal token, prompt, and padding are excluded as targets. The clean teacher distribution is detached. Teacher-to-reconstruction KL differs from this objective only by the fixed teacher entropy. These reconstruction decoders are separate from LFRM's token decoder.
+\paragraph{Teacher-predictive reconstruction.}
+For each layer, the linear decoder reconstructs the original hidden width:
+\begin{equation}
+ \widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}.
+ \label{eq:representationreconstruction}
+\end{equation}
+The three reconstruction branches run frozen Qwen blocks 17--36, 25--36, and 33--36, respectively, followed by final normalization and the vocabulary head. We intervene on all assistant-content states at a single layer in each branch, retaining clean prefix/control states. Full-vocabulary soft cross-entropy scores positions that predict the next assistant-content token; the first assistant token, terminal token, prompt, and padding are excluded as targets. The objective is
+\begin{equation}
+ \mathcal L_{\mathrm{repr}}
+ =\sum_{\ell\in\mathcal S}\E_{q,a,j}
+ \left[-\sum_{w\in\mathcal V}p_j^{\mathrm{teacher}}(w)
+ \log p_{\ell,j}^{\mathrm{recon}}(w)\right].
+ \label{eq:representationloss}
+\end{equation}
+Both distributions predict $a_{j+1}$ from the state at $a_j$. The clean teacher distribution is detached. Teacher-to-reconstruction KL differs from this objective only by the fixed teacher entropy. These reconstruction decoders are separate from LFRM's token decoder.
 
-\section{Teacher and representation diagnostics}
+\section{Representation diagnostics}
 \label{app:representationdiagnostics}
-
-\paragraph{Autoregressive teacher evaluation.}
-Our native Qwen3-4B-Instruct-2507 evaluation solves 1,216/1,319 GSM8K test problems (92.19\%), scoring the saved generations with the same boxed-answer-first numerical extractor used for our LFRM evaluations. It uses the native chat template, question-only zero-shot prompting with a request for step-by-step reasoning and a boxed answer, seed 42, temperature 0.7, top-$p$ 0.8, top-$k$ 20, and a maximum of 1,024 \emph{new} tokens. All capped completions are retained and scored; 53 reach the generation cap. This result motivates the teacher choice; its answer-length budget differs from LFRM's 1,024-position question-plus-answer canvas.
 
 \paragraph{Clean-token decoding probes.}
 Each probe maps a full 2,560-dimensional post-block activation through a learned 1,024-dimensional linear bottleneck, GELU, and a vocabulary projection to its same-position token. We train the three probes for two epochs with identical seed-42 initialization, batches, and optimization settings; the final raw weights are evaluated on 12,436 held-out solution rows from 4,647 prompt groups, comprising 2,112,672 assistant-content tokens. Splits are disjoint by prompt. First assistant tokens are included, while prompt, terminal, and padding tokens are excluded. Token-weighted accuracies are 99.6314\%, 99.5330\%, and 99.3658\% for layers 16, 24, and 32. These probes evaluate clean full-layer information through a learned bottleneck, without a fixed PCA transform or diffusion noise. The teacher has 36 blocks, so layer 32 is a deep-layer control rather than its final block.
