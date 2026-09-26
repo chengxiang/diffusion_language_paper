@@ -114,14 +114,7 @@ The external condition is the text $q$, while $c_\phi(q)$ is the model's interna
 Here $\star$ denotes a population optimum. Conditioning on $c_\phi(q)$ may merge distinct prompts; Section~\ref{sec:conditionalencoding} characterizes when the encoding preserves the text-conditional score.
 
 \paragraph{Sampling under a different clock.}
-Let $\tau\in[0,1]$ be the solver clock and $t=f(\tau)$ an increasing differentiable map with $f(0)=0$ and $f(1)=1$. The sampled trajectory $\bar z_\tau$ obeys
-\begin{equation}
- \frac{\mathrm d\bar z_\tau}{\mathrm d\tau}
- =f'(\tau)v_\Theta\bigl(\bar z_\tau,f(\tau);q\bigr),
- \qquad \bar z_0\sim\mathcal N(0,\sigma^2I).
- \label{eq:sharedclock}
-\end{equation}
-For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration preserves the endpoint, while finite-step accuracy can change. We write $z_r=\bar z_{\tau_r}$ for solver states and $S$ for denoising calls; $k$ attempts cost $kS$ calls. Changing the inference clock leaves the training density $\pi$ unchanged. Section~\ref{sec:clocks} extends this construction to separate group clocks.
+Let $\tau\in[0,1]$ be the solver clock and $t=f(\tau)$ an increasing differentiable map with $f(0)=0$ and $f(1)=1$. The sampled trajectory obeys $\mathrm d\bar z_\tau/\mathrm d\tau=f'(\tau)v_\Theta(\bar z_\tau,f(\tau);q)$, starting from $\bar z_0\sim\mathcal N(0,\sigma^2I)$. For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration preserves the endpoint, while finite-step accuracy can change. We write $z_r=\bar z_{\tau_r}$ for solver states and $S$ for denoising calls; $k$ attempts cost $kS$ calls. Changing the inference clock leaves the training density $\pi$ unchanged. Section~\ref{sec:clocks} extends this construction to separate group clocks.
 
 % BEGIN continuous diffusion framework and design choices
 \section{Continuous Diffusion Reasoning}
@@ -143,13 +136,7 @@ For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding
 % END inlined figures/pipeline_overview_v1.tex
 
 \paragraph{Continuous denoising.}
-A bidirectional Transformer jointly processes the clean prompt and noisy answer, with one shared time $t$ per training example. Following ELF, it predicts the endpoint $\widehat z_{\mathrm{clean}}=F_\theta(z_t,t;c,\widehat z_{\mathrm{sc}},g)$, where $\widehat z_{\mathrm{sc}}$ is a self-conditioning prediction and $g$ the guidance scale. Prediction and target are converted to velocities as
-\begin{equation}
- v_\theta=\frac{\widehat z_{\mathrm{clean}}-z_t}{\Delta_t},
- \qquad u_t^{\mathrm{stab}}=\frac{z_{\mathrm{clean}}-z_t}{\Delta_t}.
- \label{eq:methodvelocity}
-\end{equation}
-where $\Delta_t=\max(1-t,0.05)$ stabilizes the endpoint; outside the clamp, $u_t^{\mathrm{stab}}=u_t$. The regression in Eq.~\eqref{eq:basicflowloss} uses this stabilized target, with valid-token normalization specified in Appendix~\ref{app:methodobjective}.
+A bidirectional Transformer jointly processes the clean prompt and noisy answer, with one shared time $t$ per training example. Following ELF, it predicts the endpoint $\widehat z_{\mathrm{clean}}=F_\theta(z_t,t;c,\widehat z_{\mathrm{sc}},g)$, where $\widehat z_{\mathrm{sc}}$ is a self-conditioning prediction and $g$ the guidance scale. Prediction and target give velocities $v_\theta=(\widehat z_{\mathrm{clean}}-z_t)/\Delta_t$ and $u_t^{\mathrm{stab}}=(z_{\mathrm{clean}}-z_t)/\Delta_t$, where $\Delta_t=\max(1-t,0.05)$ stabilizes the endpoint; outside the clamp, $u_t^{\mathrm{stab}}=u_t$. The regression in Eq.~\eqref{eq:basicflowloss} uses this stabilized target, with valid-token normalization specified in Appendix~\ref{app:methodobjective}.
 
 \paragraph{Self-conditioning and SCCFG.}
 Self-conditioning supplies an earlier clean prediction. ELF's self-conditioning classifier-free guidance (SCCFG) trains the network to amplify its effect at the requested scale $g$, using a detached guidance-adjusted target $\widetilde u_t$ in place of $u_t^{\mathrm{stab}}$ (Appendix~\ref{app:methodobjective}). The underlying comparison uses predictions with and without \emph{answer self-conditioning}, retaining the prompt in both. Guidance is learned within the field, so sampling requires one denoiser call per step.
@@ -178,12 +165,7 @@ The denoising representation must support both generation and recovery of answer
 
 \paragraph{Teacher features and latent construction.}
 
-Let $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$ denote the frozen teacher's post-block residual at answer position $j$, with $d_{\mathrm{teacher}}=2560$. For $\mathcal S=\{16,24,32\}$, we learn linear encoders $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$ and concatenate their outputs:
-\begin{equation}
- z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}},
- \qquad z_{\mathrm{clean},j}=\big[z_{\mathrm{clean},j}^{(\ell)}\big]_{\ell\in\mathcal S},
- \label{eq:representationencoding}
-\end{equation}
+Let $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$ denote the frozen teacher's post-block residual at answer position $j$, with $d_{\mathrm{teacher}}=2560$. For $\mathcal S=\{16,24,32\}$, we learn linear encoders $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$, giving $z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}$, and concatenate their outputs as $z_{\mathrm{clean},j}=\big[z_{\mathrm{clean},j}^{(\ell)}\big]_{\ell\in\mathcal S}$.
 
 % BEGIN inlined figures/representation_comparison.tex
 \begin{wrapfigure}{R}{.44\textwidth}
@@ -215,7 +197,7 @@ Epoch 0 Learned Prompt Encoder & 8.70 {\scriptsize (0.33)} \\
 \end{wrapfigure}
 % END inlined figures/representation_comparison.tex
 
-where brackets concatenate layers in ascending order, $(d_{16},d_{24},d_{32})=(256,256,512)$, and $\mu_\ell$ is the training assistant-token mean. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask. The learned answer representation remains fixed during flow training and NFT.
+Here brackets concatenate layers in ascending order, $(d_{16},d_{24},d_{32})=(256,256,512)$, and $\mu_\ell$ is the training assistant-token mean. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask. The learned answer representation remains fixed during flow training and NFT.
 
 \paragraph{Learning through the teacher's predictions.}
 We learn each encoder with a linear reconstruction decoder $W_\ell^{\mathrm{rec}}\in\R^{d_\ell\times d_{\mathrm{teacher}}}$, giving $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}$ (Figure~\ref{fig:pipelineoverview}, left). Replacing layer-$\ell$ answer activations by these reconstructions and running the frozen Qwen suffix yields $p_{\ell,j}^{\mathrm{recon}}$. We match the unmodified teacher distribution $p_j^{\mathrm{teacher}}$ using $\mathcal L_{\mathrm{repr}}=\sum_{\ell\in\mathcal S}\E_{q,a,j}\,\CE(p_j^{\mathrm{teacher}},p_{\ell,j}^{\mathrm{recon}})$, where $\CE$ is full-vocabulary soft cross-entropy. These distributions predict the next token, whereas LFRM's token decoder predicts the same-position token.
@@ -265,14 +247,7 @@ ELF and ELF-REG retain external contextual encoders for prompt conditioning \cit
 
 \paragraph{The prompt as the condition.}
 
-With self-conditioning and guidance explicit, the complete text-conditioned field is
-\begin{equation}
- v_\Theta(z,t;q,\widehat z_{\mathrm{sc}},g)
- :=v_\theta\bigl(z,t;c_\phi(q),\widehat z_{\mathrm{sc}},g\bigr).
- \label{eq:tokenconditionalfield}
-\end{equation}
-
-The observed condition $q$ remains fixed while both $\theta$ and $\phi$ can be optimized. The answer representation and forward corruption also remain fixed. The following identity makes the requirement on the learned interface explicit in terms of conditional scores.
+With self-conditioning and guidance explicit, the complete text-conditioned field is $v_\Theta(z,t;q,\widehat z_{\mathrm{sc}},g):=v_\theta(z,t;c_\phi(q),\widehat z_{\mathrm{sc}},g)$. The observed condition $q$ remains fixed while both $\theta$ and $\phi$ can be optimized. The answer representation and forward corruption also remain fixed. The following identity makes the requirement on the learned interface explicit in terms of conditional scores.
 
 \begin{lemma}[Preserving the text-conditional score]
 \label{lem:conditionalrepresentation}
@@ -316,13 +291,7 @@ Joint learning from initialization makes the conditioning interface change while
 \subsection{Asynchronous inference with local clocks}
 \label{sec:clocks}
 
-Our multilayer representation allows different feature groups to become clean at different rates, potentially letting one group use cleaner information from another. We extend the shared clock of Section~\ref{sec:preliminaries} to layer-specific clocks at inference, while retaining synchronous training:
-\begin{equation}
- t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell},
- \qquad \ell\in\{16,24,32\}.
- \label{eq:localclocks}
-\end{equation}
-Equal exponents recover synchronous inference; unequal exponents give different noise levels within a single denoiser call.
+Our multilayer representation allows different feature groups to become clean at different rates, potentially letting one group use cleaner information from another. We extend the shared clock of Section~\ref{sec:preliminaries} to layer-specific clocks $t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell}$ for $\ell\in\{16,24,32\}$ at inference, while retaining synchronous training. Equal exponents recover synchronous inference; unequal exponents give different noise levels within a single denoiser call.
 
 \paragraph{Adapting a synchronously trained denoiser.}
 Although training uses a shared time, inference applies the same learned time-embedding function to each local time and averages its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. This requires no retraining and recovers the original embedding when the local times agree.
@@ -335,7 +304,7 @@ Given the predicted clean endpoint $\widehat z_{\mathrm{clean},r}$ and local tim
  {\Delta_{t_{\ell,r}}},
  \label{eq:asyncsampler}
 \end{equation}
-with $\Delta_t$ as in Eq.~\eqref{eq:methodvelocity}. All groups update from the same denoiser call, so asynchrony does not increase NFE. Unlike shared-clock reparameterization, this adapts the model to unequal group times absent from synchronous training; implementation details appear in Appendix~\ref{app:inferenceclocks}.
+with $\Delta_t$ defined in Section~\ref{sec:methodflow}. All groups update from the same denoiser call, so asynchrony does not increase NFE. Unlike shared-clock reparameterization, this adapts the model to unequal group times absent from synchronous training; implementation details appear in Appendix~\ref{app:inferenceclocks}.
 
 \paragraph{Schedule choice and reasoning accuracy.}
 Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the six-schedule MATH validation sweep (Appendix~\ref{app:inferenceclocks}).
@@ -391,7 +360,7 @@ For each policy $p\in\{\mathrm{cur},\mathrm{old},\mathrm{ref}\}$, forward-noise 
  \sg\!\left[b_{\mathrm{sc}}(1-g^{-1})(v_p^{\mathrm{main}}-v_p^0)\right],
  \label{eq:nftcorrectedfield}
 \end{equation}
-where $g>0$ is the SCCFG scale. Our update applies Eq.~\eqref{eq:nftquadratic} to $f=\widetilde v_{\mathrm{cur}}$, $h=\sg(\widetilde v_{\mathrm{old}})$, and $u=u_t^{\mathrm{stab}}$ from Eq.~\eqref{eq:methodvelocity}. We use $\beta=1$ and add a squared-velocity penalty toward the corrected field $\widetilde v_{\mathrm{ref}}$ of the fixed initial reference.
+where $g>0$ is the SCCFG scale. Our update applies Eq.~\eqref{eq:nftquadratic} to $f=\widetilde v_{\mathrm{cur}}$, $h=\sg(\widetilde v_{\mathrm{old}})$, and $u=u_t^{\mathrm{stab}}$ from Section~\ref{sec:methodflow}. We use $\beta=1$ and add a squared-velocity penalty toward the corrected field $\widetilde v_{\mathrm{ref}}$ of the fixed initial reference.
 
 With self-conditioning enabled, the corrected value is $v_p^0+(v_p^{\mathrm{main}}-v_p^0)/g$. Detaching the correction preserves the main-pass Jacobian rather than scaling it by $1/g$ (Appendix~\ref{app:nftdetails}).
 
@@ -405,13 +374,10 @@ Each question contributes 15 old-policy generations and one gold latent endpoint
 
 \begin{lemma}[Gold endpoints as field anchors]
 \label{lem:goldanchor}
-For a gold endpoint, let $\mathcal H$ contain the noisy state, time, question, coefficient $\rho_G\in[1/2,1]$, and any auxiliary inputs held fixed for the update. Let $U$ denote the random stabilized target $u_t^{\mathrm{stab}}$, assume its conditional second moment is finite, and set $m_G=\E[U\mid\mathcal H,\mathrm{gold}]$. For $\mathcal H$-measurable current and old velocity-field values $f,h$, the beta-one NFT loss satisfies
+For a gold endpoint, let $\mathcal H$ contain the noisy state, time, question, coefficient $\rho_G\in[1/2,1]$, and any auxiliary inputs held fixed for the update. Let $U$ denote the random stabilized target $u_t^{\mathrm{stab}}$, assume its conditional second moment is finite, and set $m_G=\E[U\mid\mathcal H,\mathrm{gold}]$. For $\mathcal H$-measurable current and old velocity-field values $f,h$, define $a_G=(2\rho_G-1)m_G+2(1-\rho_G)h$. The beta-one NFT loss satisfies
 \begin{equation}
-\begin{split}
  \E[\ell_1(f,h;U,\rho_G)\mid\mathcal H,\mathrm{gold}]
- &=\|f-a_G\|_2^2+C_{\mathcal H},\\
- a_G&=(2\rho_G-1)m_G+2(1-\rho_G)h,
-\end{split}
+ =\|f-a_G\|_2^2+C_{\mathcal H},
 \label{eq:nftgoldanchor}
 \end{equation}
 where $C_{\mathcal H}$ is independent of $f$ with the conditioning information and auxiliary fields fixed. Thus the gold term attracts the current field toward a convex combination of the gold posterior target and the old field.
@@ -738,7 +704,7 @@ For a flow row, sample $t=\operatorname{sigmoid}(-1.5+0.8\xi)$ with $\xi\sim\mat
  \qquad \Delta_t=\max(1-t,0.05).
  \label{eq:methodendpoint}
 \end{equation}
-Equation~\eqref{eq:methodvelocity} uses this denominator for both prediction and target, so the executed target differs from $u_t=z_{\mathrm{clean}}-2\epsilon$ where the clamp is active.
+The velocity conversion in Section~\ref{sec:methodflow} uses this denominator for both prediction and target, so the executed target differs from $u_t=z_{\mathrm{clean}}-2\epsilon$ where the clamp is active.
 
 \paragraph{Masked flow regression.}
 The normalized counterpart of Eq.~\eqref{eq:basicflowloss}, before the SCCFG target adjustment, is
@@ -844,7 +810,7 @@ Conditioning Eq.~\eqref{eq:conditioningdecomposition} on time defines an excess 
 \label{app:inferenceclocks}
 
 \paragraph{Local corruption and time embeddings.}
-The local clocks in Eq.~\eqref{eq:localclocks} assign each group its own Gaussian corruption, $z_{\bm t}^{(\ell)}=t_\ell z_{\mathrm{clean}}^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}$. The three time embedders are identical copies of the selected scalar-time checkpoint weights:
+The local clocks in Section~\ref{sec:clocks} assign each group its own Gaussian corruption, $z_{\bm t}^{(\ell)}=t_\ell z_{\mathrm{clean}}^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}$. The three time embedders are identical copies of the selected scalar-time checkpoint weights:
 \begin{equation}
  \bar e_\theta^{\mathrm{time}}(\bm t)
  =\frac{1}{3}\sum_{\ell\in\{16,24,32\}}e_{\theta,\ell}^{\mathrm{time}}(t_\ell),
@@ -963,7 +929,7 @@ This averages coordinates and valid tokens, rather than averaging a separate mea
 
 Current, old, and reference policies are initialized from the selected supervised source states, with fresh NFT optimizers. The current flow backbone and prompt body are trainable. The Qwen vocabulary lookup and representation projectors remain fixed, as do LFRM's decoder-specific mode tokens, output projection, and vocabulary-head parameters. The shared backbone continues to change, so freezing these leaves does not freeze the entire decoding function. Old and reference roles receive no optimizer gradients, and each retains its own prompt encoder.
 
-Equation~\eqref{eq:tokenconditionalfield} makes the question tokens the external condition for all roles. Thus the current, old, and reference policies use their respective encoders $P_\phi$, $P_{\phi_{\mathrm{old}}}$, and $P_{\phi_{\mathrm{ref}}}$ while being compared under the same question $q$.
+The parameterization in Section~\ref{sec:conditionalencoding} makes the question tokens the external condition for all roles. Thus the current, old, and reference policies use their respective encoders $P_\phi$, $P_{\phi_{\mathrm{old}}}$, and $P_{\phi_{\mathrm{ref}}}$ while being compared under the same question $q$.
 
 Both trainable components use constant learning rate $10^{-4}$, zero weight decay, and separate gradient clipping at norm one. The flow backbone uses Muon with its auxiliary Nesterov-Adam optimizer; the prompt body uses Muon/AdamW. Computation uses BF16. After successful update $n$, both old-policy components are updated by
 \begin{equation}
