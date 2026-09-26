@@ -169,7 +169,7 @@ Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}
 \vspace{-\baselineskip}
 \centering
 \includegraphics[width=\linewidth]{figures/representation_shared2_sd.pdf}
-\caption{\small\textbf{Representation and conditioning affect reasoning.} LFRM-B learning curves on GSM8K, with 32 steps and $t=\tau^2$. The first three variants retain Qwen conditioning; the fourth jointly trains a randomly initialized prompt encoder. Protocol: Appendix~\ref{app:representationclock}; values and SDs: Table~\ref{tab:representationcurvevalues} (Appendix~\ref{app:curvevalues}).}
+\caption{\small\textbf{Representation and conditioning affect reasoning.} LFRM-B learning curves on GSM8K, with 32 steps and $t=\tau^2$. The first three variants retain Qwen conditioning; the fourth jointly trains a randomly initialized prompt encoder. Protocol: Appendix~\ref{app:representationclock}; values and SDs: Table~\ref{tab:representationcurvevalues} (Appendix~\ref{app:promptcurves}).}
 \label{fig:representationcomparison}
 \vspace{-\baselineskip}
 \end{wrapfigure}
@@ -182,7 +182,7 @@ The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-
 Layer-32 activations support \textbf{99.37\%} token-reconstruction accuracy (Appendix~\ref{app:representationdiagnostics}), yet a diffusion model using only their PCA projection achieves \textbf{11.20\%} GSM8K accuracy (Figure~\ref{fig:representationcomparison}). This motivates assessing generation beyond clean-token decodability.
 
 \textbf{Layer selection.}
-We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationdiagnostics} gives the analysis. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy from \textbf{11.20\% to 28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
+We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationcka} gives the analysis. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy from \textbf{11.20\% to 28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
 
 \textbf{Learned versus PCA.}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
@@ -223,7 +223,7 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 \vspace{-\baselineskip}
 \centering
 \includegraphics[width=\linewidth]{figures/prompt_curriculum_training.pdf}
-\caption{\small\textbf{From teacher conditioning to learned prompts.} Top: GSM8K; bottom: MATH500. Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Values and settings: Appendix~\ref{app:curvevalues}.}
+\caption{\small\textbf{From teacher conditioning to learned prompts.} Top: GSM8K; bottom: MATH500. Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Values and settings: Appendix~\ref{app:promptcurves}.}
 \label{fig:promptcurriculum}
 \vspace{-\baselineskip}
 \end{wrapfigure}
@@ -354,7 +354,7 @@ We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math50
 \label{sec:mathresults}
 % BEGIN inlined tables/headline_comparison.tex
 \begin{table}[!htb]
-\caption{Mathematical reasoning, mean pass@1 (\%). Parameter counts include frozen weights; Embedding covers vocabulary input/output maps, and $(+X)$ denotes parameters used once per response. Bold/underline mark best/second within each continuous-backbone group. $^{*}N$ denotes $N-1$ denoising calls; slashes separate GSM8K/MATH500 budgets. $^\dagger$Python scoring. Full comparisons and protocol details: Appendix~\ref{app:experimentdetails}; seed SDs: Appendix~\ref{app:seedvariability}.}
+\caption{Mathematical reasoning, mean pass@1 (\%). Parameter counts include frozen weights; Embedding covers vocabulary input/output maps, and $(+X)$ denotes parameters used once per response. Bold/underline mark best/second within each continuous-backbone group. $^{*}N$ denotes $N-1$ denoising calls; slashes separate GSM8K/MATH500 budgets. $^\dagger$Python scoring. Full comparisons: Appendix~\ref{app:fullcomparison}; protocols: Appendix~\ref{app:experimentdetails}; seed SDs: Appendix~\ref{app:seedvariability}.}
 \label{tab:headlinecomparison}
 \centering\small
 \setlength{\tabcolsep}{3pt}
@@ -563,211 +563,10 @@ Both trainable components use constant learning rate $10^{-4}$, zero weight deca
 We compare updates 100/200/300/400 for GSM8K LFRM-B, 100/300/500 for GSM8K LFRM-L, and 200/400/600 for MATH LFRM-L. Selection uses mean accuracy over seeds 42/123 on fixed development panels of 1,000 GSM8K and 500 MATH problems (Appendix~\ref{app:inferenceclocks}), with async $(2.5,2,1.5)$, 32 steps, and SCCFG two. Canonical numerical scoring selects update 300 for GSM8K LFRM-B and 500 for GSM8K LFRM-L; Math-Verify selects update 600 for MATH LFRM-L. These are selections among the evaluated checkpoints, not claims about all possible update counts.
 
 \clearpage
-\section{Generated solutions}
-\label{app:generations}
-
-Figure~\ref{fig:headlineexamples} presents one correct GSM8K generation and one correct MATH500 generation from the post-NFT LFRM-L models. The solutions combine intermediate calculations into a final answer: successive multiplicative changes in the GSM8K example, and substitution followed by rational arithmetic in the MATH500 example. Both are drawn from saved benchmark generations and retain the original model text.
-
-% BEGIN inlined tables/headline_examples.tex
-\begin{figure}[htbp]
-\centering
-\setlength{\fboxsep}{8pt}
-\fbox{\begin{minipage}{0.94\linewidth}
-\small
-\setlength{\fboxsep}{3pt}
-\textbf{GSM8K: reasoning across successive changes}\par\medskip
-\textbf{Problem.} A new program had 60 downloads in the first month. The number of downloads in the second month was three times as many as the downloads in the first month, but then reduced by 30\% in the third month. How many downloads did the program have total over the three months?
-
-\medskip\textbf{Generated solution.}\par\smallskip
-Let's break down the downloads for the program month by month.
-
-In the first month, the program had 60 downloads.
-
-In the second month, the program had three times as many as the downloads in the first month, so it had 60 * 3 = 180 downloads.
-
-In the third month, the downloads were reduced by 30\%, which means it had 180 - (180 * 30 / 100) = 180 - 54 = 126 downloads.
-
-To find the total number of downloads over the three months, we add up the downloads from each month: 60 + 180 + 126 = 240 + 126 = 366
-
-Thus, the program had a total of $\boxed{366}$ downloads over the three months.
-\end{minipage}}
-
-\medskip
-\fbox{\begin{minipage}{0.94\linewidth}
-\small
-\setlength{\fboxsep}{3pt}
-\textbf{MATH500: evaluating a rational function}\par\medskip
-\textbf{Problem.} If $f(x) = \frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.
-
-\medskip\textbf{Generated solution.}\par\smallskip
-To find the value of $f(-2)+f(-1)+f(0)$ we need to substitute $x=-2, x=-1,$ and $x=0$ into the function $f(x)$.
-
-For $f(-2)$: $f(-2) = \frac{3(-2) - 2}{-2 - 2} = \frac{-6 - 2}{-4} = \frac{-8}{-4} = 2$
-
-For $f(-1)$: $f(-1) = \frac{3(-1) - 2}{-1 - 2} = \frac{-3 - 2}{-3} = \frac{-5}{-3} = \frac{5}{3}$
-
-For $f(0)$: $f(0) = \frac{3(0) - 2}{0 - 2} = \frac{-2}{-2} = 1$
-
-Now we can add these together to find the sum: $f(-2) + f(-1) + f(0) = 2 + \frac{5}{3} + 1 = \frac{11}{3} + 1 = \frac{11}{3} + \frac{3}{3} = \frac{14}{3}$ $\boxed{\frac{14}{3}}$
-\end{minipage}}
-\caption{Correct generations from LFRM-L at 64 denoising NFEs, async $(2.5,2,1.5)$, SCCFG 2, and seed 42. GSM8K uses NFT update 500; MATH500 uses NFT update 600. Displayed equations have been moved inline to save space; model wording and calculations are unchanged. Both answers and the intermediate calculations are correct.}
-\label{fig:headlineexamples}
-\end{figure}
-% END inlined tables/headline_examples.tex
-
-\section{Intermediate generation trajectory}
-\label{app:trajectories}
-
-Figure~\ref{fig:gsmtrajectory} shows steps 20, 40, 49, 60, 62, and 64 of the GSM8K example in Figure~\ref{fig:headlineexamples}. After sampling, we apply the terminal decoder (time $1$, SCCFG~2, zero decoder self-conditioning) to each saved state. These premature readouts neither feed back into sampling nor represent intermediate clean-latent predictions. The final text exactly reproduces the archived generation.
-
-Light blue marks exact token-ID equality at the same position in the final answer, before its EOS; matches need not persist. Panels label the local clocks $(t_{16},t_{24},t_{32})$: $0$ is noise and $1$ is clean. Each readout retains its native extraction and EOS; only whitespace layout changes.
-
-\clearpage
-\begin{figure}[p]
-\centering
-\includegraphics[width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/gsm8k_trajectory_steps20_40_49_60_62_64.pdf}
-\caption{\textbf{GSM8K generation trajectory.} Steps 20, 40, 49, 60, 62, and 64, from top to bottom, for the GSM8K example in Figure~\ref{fig:headlineexamples}. LFRM-L NFT update 500; backbone/prompt EMA $.99/.99$; seed 42; async $(2.5,2,1.5)$; 64 denoising steps; CFG~1 and SCCFG~2. Light blue identifies tokens matching the final answer at the same position.}
-\label{fig:gsmtrajectory}
-\end{figure}
-\clearpage
-
-\section{Evaluation details and reporting conventions}
-\label{app:experimentdetails}
-
-\paragraph{Benchmarks and scoring.}
-Each generation seed evaluates all 1,319 GSM8K test problems or all 500 MATH500 problems in fixed benchmark order. GSM8K uses the canonical numerical-answer scorer, with boxed-answer-first extraction. Math-Verify is the primary MATH scorer throughout, including the schedule comparison in Table~\ref{tab:inferenceclocks}; PRM800K scores are retained as a secondary diagnostic. Validation comparisons use the separate fixed 1,000-problem GSM8K and 500-problem MATH panels described in Appendix~\ref{app:inferenceclocks}. Checkpoint, EMA, clock, guidance, and seed choices are specified with each comparison.
-
-\paragraph{Math checkpoints and generation settings.}
-The headline and inference-allocation math evaluations use a 1,024-token canvas and async clocks $(2.5,2,1.5)$. Table~\ref{tab:trainingstages} lists the supervised and NFT endpoints. Supervised evaluations select backbone/prompt EMA $.9999/.9999$; NFT evaluations select $.99/.99$. Table~\ref{tab:headlinecomparison} uses eight sampling seeds at 64 denoising steps. Table~\ref{tab:headlinelownfe} uses 64, 32, 16, and 8 seeds at 8, 16, 32, and 64 steps, respectively. Our rows in both tables use SCCFG 2 for GSM8K and SCCFG 3 for MATH500. The latter follows a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); the inference-allocation figures retain SCCFG 2, whose 64-step MATH500 pass@1 is 18.85\% before NFT and 23.60\% afterward.
-
-\paragraph{External reports and parameter accounting.}
-Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} and~\ref{tab:headlinecomparisonfull} use the comparison papers' reported accuracies and sampling budgets, without re-evaluating their models. GSM8K uses 4-shot prompts for Qwen/LLaDA, 8-shot prompts for Dream/TESS~2, and zero-shot prompts for ours. FMLM+ grades Python solutions, whereas ELF-REG and LFRM produce natural-language reasoning. The low-NFE values come from FMLM+ Table~8 and ELF-REG Tables~13 and~17; ELF-REG uses early stopping \citep{posterior,scalingdlm}. SDAR uses four steps per four-token block. ELF-REG's reported budget includes one terminal decoder call, so our tables mark it with $^{*}$; our NFE excludes prompt encoding and terminal decoding.
-
-Parameter counts include frozen components. Our inherited Qwen vocabulary input/output maps contain 545M parameters and are called once per response; the denoising backbones contain 90.4M/638M parameters. The $(+X)$ counts include the learned prompt encoder and terminal projection, also used once per response. ELF-REG includes its frozen Qwen prompt encoder, and its reported non-decoder counts retain training-only REPA projectors. MLFM includes unmerged adapters; SDAR counts both untied vocabulary maps. These conventions describe stored parameters and invocation frequency, not equal inference cost across architectures.
-
-\paragraph{Uncertainty notation.}
-\emph{Seed SD} denotes the sample standard deviation of full-benchmark accuracies across generation seeds at a fixed checkpoint, using denominator $n-1$ (Appendix~\ref{app:seedvariability}). Bars in the representation learning curves are $\pm1$ seed SD; small parenthesized values in the accompanying table report the same statistic. \emph{95\% CI} denotes a pointwise problem-bootstrap interval with 4,000 replicates: complete problems, including their saved draws, are resampled together. This convention applies to the prompt curriculum, reconstruction probe, and SCCFG-sensitivity figures. Paired comparisons resample the same problems in both conditions. The numerical inference-allocation tables instead report bootstrap standard errors, as detailed in Appendix~\ref{app:budgetvalues}. None of these measures estimates variability across independent training runs.
-
-% Full comparison retains all broader-context rows from the original headline table.
-\begin{table}[p]
-\caption{Full mathematical-reasoning comparison, mean pass@1 (\%). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
-\label{tab:headlinecomparisonfull}
-\centering\small
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{@{}lrrrrr@{}}
-\toprule
-Model & \shortstack{Embedding\\Params (M)} & \shortstack{Other\\Params (M)} & NFE & GSM8K & MATH500\\
-\midrule
-\multicolumn{6}{@{}l}{\textit{Autoregressive}}\\
-Qwen3-0.6B-Base \citep{qwen3} & 156 & 440 & --- & 59.59 & ---\\
-Qwen3-0.6B, thinking \citep{qwen3} & 156 & 440 & --- & --- & 77.60\\
-\midrule
-\multicolumn{6}{@{}l}{\textit{Discrete diffusion / blockwise diffusion}}\\
-LLaDA-8B-Base \citep{llada} & 1,040 & 6,980 & 1,024 & 70.30 & ---\\
-Dream-v0-Base-7B \citep{dream} & 1,090 & 6,530 & 256 & 77.20 & ---\\
-SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
-\midrule
-\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
-$\mathbb S$-FLM \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
-FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
-ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
-\textbf{LFRM-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & ---\\
-\textbf{LFRM-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{42.16} & ---\\
-\midrule
-\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone 200M--1B}}\\
-ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96 & 13.39\\
-\textbf{LFRM-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{58.67} & \underline{21.18}\\
-\textbf{LFRM-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{63.74} & \textbf{24.68}\\
-\midrule
-\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: larger backbones (reference)}}\\
-MLFM \citep{mlfm} & 123 & 1,220 & 256 & 31.24 & ---\\
-TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
-\bottomrule
-\end{tabular}
-\vspace{3pt}
-\parbox{\linewidth}{\footnotesize External results are author-reported; $^\dagger$Python scoring, $^\ddagger$figure-derived accuracy. Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
-\end{table}
-% Flush the full comparison within its evaluation-details appendix.
-\clearpage
-
-% BEGIN inlined sections/representation_appendix.tex
-\section{Representation construction details}
-\label{app:representationimplementation}
-
-\paragraph{Feature geometry.}
-The frozen teacher's post-block residual is $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$, with $d_{\mathrm{teacher}}=2560$. Each encoder $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$ produces $z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}$, and its reconstruction decoder has shape $W_\ell^{\mathrm{rec}}\in\R^{d_\ell\times d_{\mathrm{teacher}}}$. Brackets in Section~\ref{sec:representation} concatenate layer blocks in ascending order. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask.
-
-\paragraph{Whitening and initialization.}
-The linear encoder and reconstruction decoder admit changes of latent scale that leave reconstruction unchanged. We fix this freedom before applying isotropic diffusion noise. For each selected layer, estimate the mean $\mu_\ell$ and covariance $\Sigma_\ell$ over training assistant-content tokens. Write $\Sigma_\ell=U_\ell\Lambda_\ell U_\ell^\top$, with eigenvalues in descending order, and define
-\[
- \widetilde\Sigma_\ell=U_\ell\operatorname{diag}\!\big(\max(\lambda_{\ell i},10^{-5})\big)U_\ell^\top.
-\]
-We parameterize the encoder by
-\begin{equation}
- Q_\ell=\operatorname{qf}(R_\ell),\qquad
- W_\ell^{\mathrm{enc}}=\widetilde\Sigma_\ell^{-1/2}Q_\ell,\qquad
- (W_\ell^{\mathrm{enc}})^\top\widetilde\Sigma_\ell W_\ell^{\mathrm{enc}}=I_{d_\ell},
- \label{eq:representationwhitening}
-\end{equation}
-where $\operatorname{qf}$ is a differentiable thin QR factorization and $R_\ell$ is trainable. This maintains a nondegenerate coordinate scale while the subspace changes.
-Initialize $Q_{\ell,0}=U_{\ell,:d_\ell}$, $W_{\ell,0}^{\mathrm{enc}}=\widetilde\Sigma_\ell^{-1/2}Q_{\ell,0}$, and $W_{\ell,0}^{\mathrm{rec}}=Q_{\ell,0}^\top\widetilde\Sigma_\ell^{1/2}$. The resulting reconstruction is ordinary rank-$d_\ell$ PCA:
-\[
- \widehat h_{j,0}^{(\ell)}=\mu_\ell+(h_j^{(\ell)}-\mu_\ell)U_{\ell,:d_\ell}U_{\ell,:d_\ell}^\top.
-\]
-Starting from this initialization, we optimize Eq.~\eqref{eq:representationloss}, passing gradients through the thin QR factorization while leaving the decoder unconstrained. The whitening identity in Eq.~\eqref{eq:representationwhitening} refers to the fixed regularized training covariance; it does not imply identity covariance on every minibatch, on question features, or across concatenated layer groups.
-
-\paragraph{Teacher-predictive reconstruction.}
-For each layer, the linear decoder reconstructs the original hidden width:
-\begin{equation}
- \widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}.
- \label{eq:representationreconstruction}
-\end{equation}
-The three reconstruction branches run frozen Qwen blocks 17--36, 25--36, and 33--36, respectively, followed by final normalization and the vocabulary head. We intervene on all assistant-content states at a single layer in each branch, retaining clean prefix/control states. Full-vocabulary soft cross-entropy scores positions that predict the next assistant-content token; the first assistant token, terminal token, prompt, and padding are excluded as targets. The objective is
-\begin{equation}
- \mathcal L_{\mathrm{repr}}
- =\sum_{\ell\in\mathcal S}\E_{q,a,j}
- \left[-\sum_{w\in\mathcal V}p_j^{\mathrm{teacher}}(w)
- \log p_{\ell,j}^{\mathrm{recon}}(w)\right].
- \label{eq:representationloss}
-\end{equation}
-Each layer is intervened on independently. Both distributions predict $a_{j+1}$ from the state at $a_j$, whereas LFRM's token decoder predicts the same-position token. The clean teacher distribution is detached; gradients through the frozen suffix train only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$. Teacher-to-reconstruction KL differs from this objective only by the fixed teacher entropy. These reconstruction decoders are separate from LFRM's token decoder and, together with the Qwen suffixes, are used only to learn the representation.
-
-\section{Representation diagnostics}
-\label{app:representationdiagnostics}
-
-\paragraph{Clean-token decoding probes.}
-Each probe maps a full 2,560-dimensional post-block activation through a learned 1,024-dimensional linear bottleneck, GELU, and a vocabulary projection to its same-position token. We train the three probes for two epochs with identical seed-42 initialization, batches, and optimization settings; the final raw weights are evaluated on 12,436 held-out solution rows from 4,647 prompt groups, comprising 2,112,672 assistant-content tokens. Splits are disjoint by prompt. First assistant tokens are included, while prompt, terminal, and padding tokens are excluded. Token-weighted accuracies are 99.6314\%, 99.5330\%, and 99.3658\% for layers 16, 24, and 32. These probes evaluate clean full-layer information through a learned bottleneck, without a fixed PCA transform or diffusion noise. The teacher has 36 blocks, so layer 32 is a deep-layer control rather than its final block.
-
-\paragraph{Layer similarity.}
-The CKA study uses disjoint discovery and confirmation panels of 4,096 problems each, totaling 8,192 equally weighted problems. For each problem, teacher-forced assistant activations are mean-pooled into eight relative-position bins and concatenated before computing linear CKA. Figure~\ref{fig:representationcka} shows the combined panel. The layer-16/17 CKA is 0.038; the selected-layer similarities are 0.124 (16/24), 0.543 (16/32), and 0.842 (24/32). We use the transition after layer 16 and regular spacing thereafter to motivate the representation, without claiming that CKA identifies an optimal triplet.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=.55\linewidth]{figures/cka.pdf}
-\caption{\textbf{Qwen layer structure.} Linear CKA of teacher-forced activations on the combined discovery and confirmation panels. White markers select layers 16, 24, and 32. The transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features.}
-\label{fig:representationcka}
-\end{figure}
-% Keep the CKA figure with its diagnostics, before the next appendix heading.
-\clearpage
-
-\section{Representation comparisons under the identity clock}
-\label{app:representationclock}
-
-Figure~\ref{fig:representationidentity} changes the evaluation clock to $t=\tau$, retaining the trained checkpoints, 32 steps, guidance, and EMA selectors. Shared $t=\tau^2$ was chosen for the main presentation after inspecting test results; the identity-clock comparison shows that the epoch-six ordering persists under another schedule. The two-seed identity-clock means are 26.76\%, 24.22\%, 13.38\%, and 8.68\% for learned multilayer, PCA multilayer, PCA layer 32, and joint prompt training from initialization. Learned multilayer leads PCA multilayer from epoch two onward under both clocks, and multilayer PCA leads layer-32 PCA at every epoch.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=.66\linewidth]{figures/representation_identity_sd.pdf}
-\caption{\textbf{Identity-clock robustness.} The four models from Figure~\ref{fig:representationcomparison}, evaluated with $t=\tau$ and 32 steps. Points average seeds 42/123 (bars: seed SD). Each epoch uses one trained checkpoint per arm. Numerical values appear in Table~\ref{tab:representationcurvevalues}.}
-\label{fig:representationidentity}
-\end{figure}
-
-All four arms start from the same seed-42 backbone initialization, use 2,434,330 training rows, and preserve effective batch 512. All answer representations are whitened and 1,024-dimensional. The first three arms use frozen Qwen prompt activations; the fourth uses learned multilayer answer latents and a randomly initialized prompt encoder trained jointly from epoch zero. All select backbone EMA $0.999$, and the fourth selects prompt EMA $0.999$. The PCA multilayer run changes from two to four GPUs during training while maintaining that batch size. Each arm has one training run; seed variation in the figures measures sampling randomness only. The comparisons isolate projector choice at fixed layers and layer choice under PCA, without estimating their interaction. Paired intervals in the main text use 4,000 problem-bootstrap replicates and the four matched epoch-six generation seeds.
-% END inlined sections/representation_appendix.tex
-
-% BEGIN inlined sections/methodology_appendix.tex
-\section{LFRM objective and conditioning details}
+\section{LFRM objective and conditional encoding}
 \label{app:methodobjective}
+
+\subsection{Flow and token-decoding objectives}
 
 \paragraph{Canvas and scoring positions.}
 Training sequences satisfy $L_q+L_a\le L=1024$, with latent width $d=1024$. For example $b$, the mask $M_{bi}$ equals one on $L_{q,b}<i\le L_{q,b}+L_{a,b}$ and zero elsewhere. It includes the answer's terminal token and excludes prompt and padding positions. Answer latents and velocities at answer index $j$ occupy canvas position $i=L_{q,b}+j$.
@@ -830,7 +629,7 @@ Here $\widetilde u_{bi}$ is the SCCFG-adjusted target at example $b$'s sampled t
 \paragraph{Sampling initialization and termination.}
 Given $q$, compute $c(q)$ once and initialize all $L-L_q$ available answer positions independently from $\mathcal N(0,\sigma^2I)$. The prompt remains clean throughout. For $S$ denoising calls, Euler evaluates at $\tau_r$, $r=0,\ldots,S-1$, and advances to $\tau_S=1$; Appendix~\ref{app:inferenceclocks} specifies the grid. Answer self-conditioning starts at zero and subsequently carries the preceding clean prediction. The requested SCCFG scale is supplied to each call. A separate call through the shared backbone and token head decodes all answer positions in parallel; the first terminal token determines the returned length. Denoising NFE counts only the $S$ denoising calls.
 
-The prompt architecture, imitation objective, and stage durations are collected in Appendix~\ref{app:training}; Eq.~\eqref{eq:methodpromptmse} defines the standalone prompt loss. Figure~\ref{fig:promptcurriculum}'s evaluation cohorts are specified in Appendix~\ref{app:curvevalues}.
+The prompt architecture, imitation objective, and stage durations are collected in Appendix~\ref{app:training}; Eq.~\eqref{eq:methodpromptmse} defines the standalone prompt loss. Figure~\ref{fig:promptcurriculum}'s evaluation cohorts are specified in Appendix~\ref{app:promptcurves}.
 
 \subsection{Conditional representation: proof and scope}
 \label{app:conditioninglemma}
@@ -877,8 +676,165 @@ For a concrete example, suppose $c_{\mathrm T}(q)$ preserves the posterior mean.
 \paragraph{Noise, masks, and optimization.}
 Conditioning Eq.~\eqref{eq:conditioningdecomposition} on time defines an excess risk $\Delta_\phi(t)=\E[\|m_Q-m_\phi\|_2^2\mid t]$. The identity imposes no monotonicity on $\Delta_\phi(t)$. For a token-weighted objective, the same argument applies under the induced probability measure over scored positions, including the position index among the observed variables; all conditional expectations must use that same measure. The lemma assumes that the answer targets and corruption law do not depend on the encoder parameters, as in our joint stage. It justifies the conditional-model parameterization and characterizes its information requirement. It does not assert that joint training from initialization reaches the optimum, or identify a learned SCCFG sampling field with the unguided posterior field.
 
+\subsection{Prompt-learning curves and numerical results}
+\label{app:promptcurves}
+Table~\ref{tab:promptcurvevalues} contains every point in Figure~\ref{fig:promptcurriculum}. Points are means over seeds 42/123, evaluated with async $(2.5,2,1.5)$, 32 denoising steps, SCCFG 2, and backbone EMA $0.9999$. Prompt EMA is $0.999$ at the MSE swap and $0.9999$ during joint training. GSM8K uses canonical scoring and MATH500 uses Math-Verify. Error bars show pointwise 95\% intervals from 4,000 problem-bootstrap replicates; brackets in the table give their bounds. Epoch 12 appears twice because prompt substitution does not advance the flow-training epoch; the two rows have identical backbone weights. The axes start at zero, but no epoch-zero accuracy was measured or plotted.
+
+The curve samples flow epochs 4, 8, and 12 before prompt substitution; epoch 12 immediately after substitution; and epochs 16/18 for LFRM-B or 16/20/21 for LFRM-L. All 20 points retain their saved predictions and canonical scores. The joint-from-start comparison in Figure~\ref{fig:representationcomparison} instead uses the common $t=\tau^2$ clock and backbone EMA $0.999$ for its six-epoch controls; its four-seed endpoint means are not points on these curriculum curves. Training durations are summarized in Table~\ref{tab:trainingstages}.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{Numerical values for Figure~\ref{fig:promptcurriculum}. Correct counts for seeds 42/123 and the benchmark size $N$ specify the exact per-seed accuracies. Mean pass@1 and sample seed SD (parentheses) are percentages; brackets give the plotted 95\% problem-bootstrap intervals.}
+\label{tab:promptcurvevalues}
+\begin{tabular}{@{}rlrrrr@{}}
+\toprule
+Epoch & Prompt & Correct$_{42}$ & Correct$_{123}$ & Mean (SD) & 95\% CI \\
+\midrule
+\multicolumn{6}{@{}l}{\textit{GSM8K, LFRM-B; $N=1319$}}\\
+4 & Qwen & 92 & 86 & 6.75 {\scriptsize (0.32)} & $[5.76, 7.81]$ \\
+8 & Qwen & 401 & 424 & 31.27 {\scriptsize (1.23)} & $[29.11, 33.43]$ \\
+12 & Qwen & 514 & 503 & 38.55 {\scriptsize (0.59)} & $[36.28, 40.83]$ \\
+12 & MSE swap & 398 & 381 & 29.53 {\scriptsize (0.91)} & $[27.29, 31.69]$ \\
+16 & Joint & 482 & 462 & 35.78 {\scriptsize (1.07)} & $[33.55, 38.02]$ \\
+18 & Joint & 495 & 483 & 37.07 {\scriptsize (0.64)} & $[34.76, 39.39]$ \\
+\addlinespace
+\multicolumn{6}{@{}l}{\textit{GSM8K, LFRM-L; $N=1319$}}\\
+4 & Qwen & 212 & 202 & 15.69 {\scriptsize (0.54)} & $[14.22, 17.21]$ \\
+8 & Qwen & 755 & 743 & 56.79 {\scriptsize (0.64)} & $[54.40, 59.14]$ \\
+12 & Qwen & 804 & 820 & 61.56 {\scriptsize (0.86)} & $[59.17, 63.80]$ \\
+12 & MSE swap & 647 & 660 & 49.55 {\scriptsize (0.70)} & $[47.12, 51.90]$ \\
+16 & Joint & 728 & 701 & 54.17 {\scriptsize (1.45)} & $[51.78, 56.52]$ \\
+20 & Joint & 761 & 763 & 57.77 {\scriptsize (0.11)} & $[55.38, 60.12]$ \\
+21 & Joint & 783 & 780 & 59.25 {\scriptsize (0.16)} & $[56.67, 61.68]$ \\
+\addlinespace
+\multicolumn{6}{@{}l}{\textit{MATH500, LFRM-L; $N=500$}}\\
+4 & Qwen & 30 & 38 & 6.80 {\scriptsize (1.13)} & $[5.10, 8.70]$ \\
+8 & Qwen & 61 & 65 & 12.60 {\scriptsize (0.57)} & $[10.30, 15.10]$ \\
+12 & Qwen & 82 & 76 & 15.80 {\scriptsize (0.85)} & $[13.10, 18.50]$ \\
+12 & MSE swap & 64 & 65 & 12.90 {\scriptsize (0.14)} & $[10.50, 15.40]$ \\
+16 & Joint & 84 & 92 & 17.60 {\scriptsize (1.13)} & $[14.90, 20.40]$ \\
+20 & Joint & 98 & 91 & 18.90 {\scriptsize (0.99)} & $[16.00, 21.90]$ \\
+21 & Joint & 85 & 94 & 17.90 {\scriptsize (1.27)} & $[15.10, 20.90]$ \\
+\addlinespace
+\bottomrule
+\end{tabular}
+\end{table}
+
+\clearpage
+\section{Representation construction and ablations}
+\label{app:representationimplementation}
+
+\subsection{Construction and covariance whitening}
+\label{app:representationgeometry}
+
+\paragraph{Feature geometry.}
+The frozen teacher's post-block residual is $h_j^{(\ell)}=h_\psi^{(\ell)}(q,a_{\leq j})\in\R^{d_{\mathrm{teacher}}}$, with $d_{\mathrm{teacher}}=2560$. Each encoder $W_\ell^{\mathrm{enc}}\in\R^{d_{\mathrm{teacher}}\times d_\ell}$ produces $z_{\mathrm{clean},j}^{(\ell)}=(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}$, and its reconstruction decoder has shape $W_\ell^{\mathrm{rec}}\in\R^{d_\ell\times d_{\mathrm{teacher}}}$. Brackets in Section~\ref{sec:representation} concatenate layer blocks in ascending order. The same maps initially encode prompt states, which cannot access subsequent answers under the teacher's causal mask.
+
+\paragraph{Whitening and initialization.}
+The linear encoder and reconstruction decoder admit changes of latent scale that leave reconstruction unchanged. We fix this freedom before applying isotropic diffusion noise. For each selected layer, estimate the mean $\mu_\ell$ and covariance $\Sigma_\ell$ over training assistant-content tokens. Write $\Sigma_\ell=U_\ell\Lambda_\ell U_\ell^\top$, with eigenvalues in descending order, and define
+\[
+ \widetilde\Sigma_\ell=U_\ell\operatorname{diag}\!\big(\max(\lambda_{\ell i},10^{-5})\big)U_\ell^\top.
+\]
+We parameterize the encoder by
+\begin{equation}
+ Q_\ell=\operatorname{qf}(R_\ell),\qquad
+ W_\ell^{\mathrm{enc}}=\widetilde\Sigma_\ell^{-1/2}Q_\ell,\qquad
+ (W_\ell^{\mathrm{enc}})^\top\widetilde\Sigma_\ell W_\ell^{\mathrm{enc}}=I_{d_\ell},
+ \label{eq:representationwhitening}
+\end{equation}
+where $\operatorname{qf}$ is a differentiable thin QR factorization and $R_\ell$ is trainable. This maintains a nondegenerate coordinate scale while the subspace changes.
+Initialize $Q_{\ell,0}=U_{\ell,:d_\ell}$, $W_{\ell,0}^{\mathrm{enc}}=\widetilde\Sigma_\ell^{-1/2}Q_{\ell,0}$, and $W_{\ell,0}^{\mathrm{rec}}=Q_{\ell,0}^\top\widetilde\Sigma_\ell^{1/2}$. The resulting reconstruction is ordinary rank-$d_\ell$ PCA:
+\[
+ \widehat h_{j,0}^{(\ell)}=\mu_\ell+(h_j^{(\ell)}-\mu_\ell)U_{\ell,:d_\ell}U_{\ell,:d_\ell}^\top.
+\]
+Starting from this initialization, we optimize Eq.~\eqref{eq:representationloss}, passing gradients through the thin QR factorization while leaving the decoder unconstrained. The whitening identity in Eq.~\eqref{eq:representationwhitening} refers to the fixed regularized training covariance; it does not imply identity covariance on every minibatch, on question features, or across concatenated layer groups.
+
+\paragraph{Teacher-predictive reconstruction.}
+For each layer, the linear decoder reconstructs the original hidden width:
+\begin{equation}
+ \widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}.
+ \label{eq:representationreconstruction}
+\end{equation}
+The three reconstruction branches run frozen Qwen blocks 17--36, 25--36, and 33--36, respectively, followed by final normalization and the vocabulary head. We intervene on all assistant-content states at a single layer in each branch, retaining clean prefix/control states. Full-vocabulary soft cross-entropy scores positions that predict the next assistant-content token; the first assistant token, terminal token, prompt, and padding are excluded as targets. The objective is
+\begin{equation}
+ \mathcal L_{\mathrm{repr}}
+ =\sum_{\ell\in\mathcal S}\E_{q,a,j}
+ \left[-\sum_{w\in\mathcal V}p_j^{\mathrm{teacher}}(w)
+ \log p_{\ell,j}^{\mathrm{recon}}(w)\right].
+ \label{eq:representationloss}
+\end{equation}
+Each layer is intervened on independently. Both distributions predict $a_{j+1}$ from the state at $a_j$, whereas LFRM's token decoder predicts the same-position token. The clean teacher distribution is detached; gradients through the frozen suffix train only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$. Teacher-to-reconstruction KL differs from this objective only by the fixed teacher entropy. These reconstruction decoders are separate from LFRM's token decoder and, together with the Qwen suffixes, are used only to learn the representation.
+
+\subsection{Clean-token decoding probes}
+\label{app:representationdiagnostics}
+Each probe maps a full 2,560-dimensional post-block activation through a learned 1,024-dimensional linear bottleneck, GELU, and a vocabulary projection to its same-position token. We train the three probes for two epochs with identical seed-42 initialization, batches, and optimization settings; the final raw weights are evaluated on 12,436 held-out solution rows from 4,647 prompt groups, comprising 2,112,672 assistant-content tokens. Splits are disjoint by prompt. First assistant tokens are included, while prompt, terminal, and padding tokens are excluded. Token-weighted accuracies are 99.6314\%, 99.5330\%, and 99.3658\% for layers 16, 24, and 32. These probes evaluate clean full-layer information through a learned bottleneck, without a fixed PCA transform or diffusion noise. The teacher has 36 blocks, so layer 32 is a deep-layer control rather than its final block.
+
+\subsection{Layer similarity and CKA}
+\label{app:representationcka}
+The CKA study uses disjoint discovery and confirmation panels of 4,096 problems each, totaling 8,192 equally weighted problems. For each problem, teacher-forced assistant activations are mean-pooled into eight relative-position bins and concatenated before computing linear CKA. Figure~\ref{fig:representationcka} shows the combined panel. The layer-16/17 CKA is 0.038; the selected-layer similarities are 0.124 (16/24), 0.543 (16/32), and 0.842 (24/32). We use the transition after layer 16 and regular spacing thereafter to motivate the representation, without claiming that CKA identifies an optimal triplet.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=.55\linewidth]{figures/cka.pdf}
+\caption{\textbf{Qwen layer structure.} Linear CKA of teacher-forced activations on the combined discovery and confirmation panels. White markers select layers 16, 24, and 32. The transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features.}
+\label{fig:representationcka}
+\end{figure}
+
+\subsection{Representation ablations and clock robustness}
+\label{app:representationclock}
+
+Figure~\ref{fig:representationidentity} changes the evaluation clock to $t=\tau$, retaining the trained checkpoints, 32 steps, guidance, and EMA selectors. Shared $t=\tau^2$ was chosen for the main presentation after inspecting test results; the identity-clock comparison shows that the epoch-six ordering persists under another schedule. The two-seed identity-clock means are 26.76\%, 24.22\%, 13.38\%, and 8.68\% for learned multilayer, PCA multilayer, PCA layer 32, and joint prompt training from initialization. Learned multilayer leads PCA multilayer from epoch two onward under both clocks, and multilayer PCA leads layer-32 PCA at every epoch.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=.66\linewidth]{figures/representation_identity_sd.pdf}
+\caption{\textbf{Identity-clock robustness.} The four models from Figure~\ref{fig:representationcomparison}, evaluated with $t=\tau$ and 32 steps. Points average seeds 42/123 (bars: seed SD). Each epoch uses one trained checkpoint per arm. Numerical values appear in Table~\ref{tab:representationcurvevalues}.}
+\label{fig:representationidentity}
+\end{figure}
+
+All four arms start from the same seed-42 backbone initialization, use 2,434,330 training rows, and preserve effective batch 512. All answer representations are whitened and 1,024-dimensional. The first three arms use frozen Qwen prompt activations; the fourth uses learned multilayer answer latents and a randomly initialized prompt encoder trained jointly from epoch zero. All select backbone EMA $0.999$, and the fourth selects prompt EMA $0.999$. The PCA multilayer run changes from two to four GPUs during training while maintaining that batch size. Each arm has one training run; seed variation in the figures measures sampling randomness only. The comparisons isolate projector choice at fixed layers and layer choice under PCA, without estimating their interaction. Paired intervals in the main text use 4,000 problem-bootstrap replicates and the four matched epoch-six generation seeds.
+
+\paragraph{Representation-ablation curves.}
+Table~\ref{tab:representationcurvevalues} gives all points and error bars in Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}, followed by the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. The curves use seeds 42/123; the endpoint summary adds 456/789. Error bars and parenthesized values are sample SDs across their respective generation seeds. Both use 32 steps and backbone EMA $0.999$; The controls above apply to both clocks.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{Numerical learning curves and endpoint summary for Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}: mean GSM8K accuracy (\%) with sample seed SD in parentheses. Curves use two seeds (42/123); the final block reports the four-seed epoch-six comparison (42/123/456/789). The final column trains the prompt encoder jointly from epoch zero; the other three retain Qwen prompt conditioning.}
+\label{tab:representationcurvevalues}
+\begin{tabular}{@{}rrrrr@{}}
+\toprule
+Epoch & \shortstack{Learned\\16/24/32} & \shortstack{PCA\\16/24/32} & \shortstack{PCA\\layer 32} & \shortstack{Epoch-0 joint\\prompt training} \\
+\midrule
+\multicolumn{5}{@{}l}{$t=\tau^2$}\\
+1 & 3.75 {\scriptsize (0.05)} & 4.85 {\scriptsize (0.75)} & 2.65 {\scriptsize (0.11)} & 2.46 {\scriptsize (0.05)} \\
+2 & 12.40 {\scriptsize (0.27)} & 11.18 {\scriptsize (0.16)} & 5.50 {\scriptsize (0.70)} & 3.98 {\scriptsize (1.02)} \\
+3 & 20.17 {\scriptsize (0.54)} & 16.38 {\scriptsize (0.32)} & 8.64 {\scriptsize (0.43)} & 3.68 {\scriptsize (0.16)} \\
+4 & 26.61 {\scriptsize (0.86)} & 21.49 {\scriptsize (0.80)} & 7.47 {\scriptsize (0.05)} & 7.77 {\scriptsize (1.02)} \\
+5 & 29.95 {\scriptsize (0.21)} & 25.85 {\scriptsize (0.21)} & 9.82 {\scriptsize (0.16)} & 7.54 {\scriptsize (1.45)} \\
+6 & 31.01 {\scriptsize (0.43)} & 28.39 {\scriptsize (0.27)} & 11.68 {\scriptsize (0.21)} & 8.61 {\scriptsize (0.05)} \\
+\addlinespace
+\multicolumn{5}{@{}l}{$t=\tau$}\\
+1 & 4.40 {\scriptsize (0.75)} & 4.66 {\scriptsize (0.48)} & 3.03 {\scriptsize (0.54)} & 3.26 {\scriptsize (0.11)} \\
+2 & 11.03 {\scriptsize (0.38)} & 10.50 {\scriptsize (0.16)} & 5.38 {\scriptsize (0.54)} & 5.76 {\scriptsize (0.00)} \\
+3 & 18.65 {\scriptsize (0.96)} & 15.16 {\scriptsize (0.86)} & 7.96 {\scriptsize (0.54)} & 5.80 {\scriptsize (0.05)} \\
+4 & 22.18 {\scriptsize (1.45)} & 19.18 {\scriptsize (2.36)} & 10.12 {\scriptsize (0.48)} & 8.15 {\scriptsize (1.88)} \\
+5 & 24.68 {\scriptsize (1.23)} & 21.08 {\scriptsize (0.96)} & 11.94 {\scriptsize (1.02)} & 8.45 {\scriptsize (1.23)} \\
+6 & 26.76 {\scriptsize (0.43)} & 24.22 {\scriptsize (2.52)} & 13.38 {\scriptsize (0.16)} & 8.68 {\scriptsize (0.16)} \\
+\addlinespace
+\multicolumn{5}{@{}l}{Epoch-six summary: $t=\tau^2$, four seeds}\\
+6 & 30.76 {\scriptsize (0.39)} & 28.43 {\scriptsize (0.19)} & 11.20 {\scriptsize (0.56)} & 8.70 {\scriptsize (0.33)} \\
+\addlinespace
+\bottomrule
+\end{tabular}
+\end{table}
+
+\clearpage
 \section{Inference clocks and reconstruction diagnostics}
 \label{app:inferenceclocks}
+
+\subsection{Local clocks, time embeddings, and sampling grid}
 
 \paragraph{Local corruption and time embeddings.}
 The local clocks in Section~\ref{sec:clocks} assign each group its own Gaussian corruption, $z_{\bm t}^{(\ell)}=t_\ell z_{\mathrm{clean}}^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}$. The three time embedders are identical copies of the selected scalar-time checkpoint weights:
@@ -898,12 +854,11 @@ For $S$ denoising steps, we set $\tau_0=0$, $\tau_S=1$, and use the same logit-n
 \end{equation}
 The base $\tau$ grid is fixed across schedule comparisons. We retain the full derivative $f'_\ell(\tau)=\gamma_\ell\tau^{\gamma_\ell-1}$ in Eq.~\eqref{eq:asyncsampler}, with the endpoint denominator $\Delta_{t_{\ell,r}}=\max(1-\tau_r^{\gamma_\ell},0.05)$. Question states remain clean, and recurrent self-conditioning carries the previous endpoint prediction to the next call. Changing the clock therefore alters both the integration grid in local time and the prediction history. One shared denoiser call updates all groups; the terminal token-decoding call remains separate.
 
-\paragraph{Schedule evidence and operating-point dependence.}
+\subsection{Schedule comparisons}
 Tables~\ref{tab:inferenceclocks} and~\ref{tab:inferenceclockfull} use LFRM-L epoch 21, 32 denoising steps, SCCFG 2, backbone/prompt EMA $0.9999/0.9999$, and seeds 42/123. Scores are canonical GSM8K and primary Math-Verify accuracies (Appendix~\ref{app:experimentdetails}). Entries in Table~\ref{tab:inferenceclocks} give mean pass@1 with sample SD across the two seeds; bold marks the highest mean among its four schedules.
 
 Table~\ref{tab:inferenceclockfull} reports all six schedules in the matched validation and test sweeps. The MATH validation result corroborates the headline allocation retrospectively; it was not the original selection experiment. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution; the two validation sets need not favor the same schedule. The highest GSM8K validation mean instead uses $(1.5,2,2.5)$. On the test set, the two additional shared-power schedules achieve higher MATH500 point estimates than the four schedules in the main table. Thus the main comparison supports the usefulness of time reparameterization and the chosen operating point, without identifying a universally optimal exponent vector.
 
-% BEGIN inlined tables/inference_clocks_full.tex
 \begin{table}[htbp]
 \centering\small
 \begin{tabular}{lrrrr}
@@ -923,21 +878,18 @@ $(2.5,2,1.5)$ & 72.15 {\scriptsize (0.35)} & \textbf{18.70} {\scriptsize (0.14)}
 \caption{Complete six-schedule LFRM-L epoch-21 sweep: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns include all entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
 \label{tab:inferenceclockfull}
 \end{table}
-% END inlined tables/inference_clocks_full.tex
 
 For the 32-step test comparison, async $(2.5,2,1.5)$ minus sync $(2,2,2)$ gives +1.74 percentage points on GSM8K (paired 95\% CI $[+0.72,+2.73]$) and +0.50 on MATH500 ($[-0.90,+1.90]$). Repeating the same two-seed comparison at 16 steps gives 55.57\% versus 54.74\% on GSM8K, a difference of +0.83 points ($[-0.15,+1.82]$), and 16.60\% versus 16.90\% on MATH500, a difference of $-0.30$ points ($[-2.00,+1.40]$). All use SCCFG 2. These are pointwise paired problem-bootstrap intervals with 4,000 replicates, conditional on the fixed checkpoints and generation seeds; the standard deviations in the main table instead describe dispersion across full-benchmark seed accuracies.
 
-\paragraph{What does the layer decomposition capture?}
+\subsection{Layer decomposition and reconstruction sensitivity}
 We probe a trained LFRM-B model by corrupting one group of clean gold-solution latents, predicting the clean representation, and decoding it to tokens. A matched control replaces the layer groups by eight random partitions of the same 256/256/512 widths, keeping the assigned times and injected Gaussian energy fixed. Figure~\ref{fig:layerreconstruction} shows that the actual groups have different reconstruction sensitivities: perturbing layer-16 features is more damaging than perturbing deeper features, with the clearest contrast against layer 24. Random grouping attenuates these contrasts. The layer decomposition thus exposes structure that is obscured when coordinates are grouped arbitrarily.
 
-% BEGIN inlined figures/layer_reconstruction_random.tex
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/layer_reconstruction_random.pdf}
 \caption{\textbf{Layer groups expose distinct reconstruction sensitivities.} LFRM-B epoch 18 on 64 GSM8K validation problems. Solid curves perturb actual layer groups; dashed curves average eight random partitions with matched widths, times, and injected Gaussian energy. Colors identify the corresponding layer or control slot. Decoder CE changes are relative to the same pass's clean-input prediction: first without answer self-conditioning (left), then after one refinement on the same corrupted input (right). Bars show 95\% CIs; shading is the range of random-partition means, not a confidence interval. Table~\ref{tab:reconstructioncurvevalues} gives every plotted value.}
 \label{fig:layerreconstruction}
 \end{figure}
-% END inlined figures/layer_reconstruction_random.tex
 
 \paragraph{Reconstruction intervention.}
 Figure~\ref{fig:layerreconstruction} uses LFRM-B epoch 18, backbone/prompt EMA $0.9999/0.9999$, SCCFG 1, noise seeds 42/123, and a fixed 64-problem GSM8K validation panel. For a selected group $\ell$, we set $t_\ell=2/[2+\eta\,\mathrm{RMS}(z_{\mathrm{clean}}^{(\ell)})]$ and replace its assistant-content coordinates by $t_\ell z_{\mathrm{clean}}^{(\ell)}+2(1-t_\ell)\epsilon^{(\ell)}$, for $\eta\in\{0.8,1.6,2,3\}$. Other coordinates, question positions, terminal tokens, and padding remain clean. The model predicts the full clean latent, which its own token head decodes. The second pass reuses the same corrupted input with the first prediction as self-conditioning; it is not another integration step. CE averages gold-token losses within each problem, then noise seeds and problems equally. Negative changes mean lower CE than the clean-input \emph{prediction} baseline, not a negative loss.
@@ -947,13 +899,59 @@ The random control uses eight fixed NumPy PCG64 partitions (seeds 20260918--2026
 \paragraph{Interpretation.}
 For $0<\tau<1$, our chosen powers give $t_{16}<t_{24}<t_{32}$: layer 16 becomes clean relatively later, while all groups reach their endpoint together. One possible explanation is that the more sensitive layer-16 representation benefits from being reconstructed with cleaner deeper-layer features available as context. This is a hypothesis about coordination between representations, rather than a consequence of the local probe. In particular, a separate generation control that assigns the clocks to random coordinates gives nearly identical GSM8K accuracy (below). The probe motivates investigating layer-dependent denoising, but further experiments are needed to establish whether this proposed mechanism explains its sampling benefits.
 
-\paragraph{Random-coordinate clocks during generation.}
-A separate LFRM-L epoch-21 GSM8K control assigns $(2.5,2,1.5)$ to a random 256/256/512 partition for each of seeds 42/123/456/789, keeping that partition fixed throughout generation. At 32 steps and SCCFG 2, actual layer groups yield 58.53\% mean pass@1 and random groups 58.40\%; random minus actual is $-0.13$ points (paired 95\% CI $[-0.80,+0.51]$). This comparison does not demonstrate an accuracy advantage from matching the clocks to the teacher-layer boundaries. Together, the probes establish a distinction between measured local reconstruction geometry and a causal explanation of end-to-end sampling gains.
-% END inlined sections/methodology_appendix.tex
+\paragraph{Reconstruction-sensitivity curves.}
+Table~\ref{tab:reconstructioncurvevalues} reproduces the means, error bars, and shaded ranges in Figure~\ref{fig:layerreconstruction}. The zero-noise points are identically zero because each condition is compared with its own pass's clean-input baseline. Random-partition ranges describe the eight partition means, not uncertainty intervals.
 
-% BEGIN inlined sections/nft_appendix.tex
-% Scientific sources: handoffs/qwen3_{elf_b,elf_l,math5m_elf_l}_paper*handoff.md
-% in the parent experiment workspace; headline synchronous NFT branches only.
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{Numerical values for Figure~\ref{fig:layerreconstruction}, in nats/token. Actual-group entries give $\Delta$CE and its 95\% problem-bootstrap CI; random-group entries give the mean over eight matched partitions and the minimum/maximum partition means. Noise strength is $\eta$; the layer identifies the matched group width.}
+\label{tab:reconstructioncurvevalues}
+\begin{tabular}{@{}rrcc@{}}
+\toprule
+Layer & $\eta$ & Actual group [95\% CI] & Random mean [min, max] \\
+\midrule
+\multicolumn{4}{@{}l}{\textit{First prediction}}\\
+16 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+16 & 0.8 & $0.151\ [-0.006, 0.315]$ & $-0.015\ [-0.053, 0.064]$ \\
+16 & 1.6 & $0.327\ [0.045, 0.633]$ & $0.008\ [-0.057, 0.136]$ \\
+16 & 2 & $0.439\ [0.080, 0.848]$ & $0.026\ [-0.075, 0.209]$ \\
+16 & 3 & $0.651\ [0.158, 1.272]$ & $0.071\ [-0.087, 0.340]$ \\
+24 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+24 & 0.8 & $-0.059\ [-0.201, 0.050]$ & $-0.065\ [-0.154, -0.010]$ \\
+24 & 1.6 & $-0.081\ [-0.314, 0.103]$ & $-0.080\ [-0.231, 0.055]$ \\
+24 & 2 & $-0.085\ [-0.365, 0.131]$ & $-0.084\ [-0.245, 0.075]$ \\
+24 & 3 & $-0.128\ [-0.512, 0.154]$ & $-0.078\ [-0.279, 0.134]$ \\
+32 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+32 & 0.8 & $-0.188\ [-0.533, 0.087]$ & $-0.136\ [-0.294, -0.050]$ \\
+32 & 1.6 & $-0.342\ [-0.950, 0.140]$ & $-0.208\ [-0.588, 0.028]$ \\
+32 & 2 & $-0.395\ [-1.075, 0.140]$ & $-0.226\ [-0.675, 0.065]$ \\
+32 & 3 & $-0.424\ [-1.189, 0.194]$ & $-0.241\ [-0.757, 0.160]$ \\
+\addlinespace
+\multicolumn{4}{@{}l}{\textit{Self-conditioned refinement}}\\
+16 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+16 & 0.8 & $0.360\ [0.073, 0.653]$ & $0.142\ [0.060, 0.226]$ \\
+16 & 1.6 & $0.740\ [0.211, 1.330]$ & $0.271\ [0.180, 0.369]$ \\
+16 & 2 & $0.920\ [0.289, 1.637]$ & $0.334\ [0.226, 0.446]$ \\
+16 & 3 & $1.237\ [0.436, 2.179]$ & $0.469\ [0.324, 0.636]$ \\
+24 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+24 & 0.8 & $0.075\ [0.006, 0.150]$ & $0.117\ [0.052, 0.192]$ \\
+24 & 1.6 & $0.119\ [0.005, 0.237]$ & $0.247\ [0.115, 0.392]$ \\
+24 & 2 & $0.149\ [0.019, 0.285]$ & $0.298\ [0.132, 0.455]$ \\
+24 & 3 & $0.223\ [0.051, 0.406]$ & $0.422\ [0.211, 0.600]$ \\
+32 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
+32 & 0.8 & $0.007\ [-0.267, 0.295]$ & $0.142\ [0.001, 0.348]$ \\
+32 & 1.6 & $0.036\ [-0.440, 0.508]$ & $0.307\ [-0.031, 0.701]$ \\
+32 & 2 & $0.056\ [-0.509, 0.602]$ & $0.388\ [-0.023, 0.822]$ \\
+32 & 3 & $0.152\ [-0.515, 0.792]$ & $0.533\ [0.030, 1.057]$ \\
+\addlinespace
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Random-coordinate clocks during generation}
+A separate LFRM-L epoch-21 GSM8K control assigns $(2.5,2,1.5)$ to a random 256/256/512 partition for each of seeds 42/123/456/789, keeping that partition fixed throughout generation. At 32 steps and SCCFG 2, actual layer groups yield 58.53\% mean pass@1 and random groups 58.40\%; random minus actual is $-0.13$ points (paired 95\% CI $[-0.80,+0.51]$). This comparison does not demonstrate an accuracy advantage from matching the clocks to the teacher-layer boundaries. Together, the probes establish a distinction between measured local reconstruction geometry and a causal explanation of end-to-end sampling gains.
+
 \section{NFT implementation and gold-anchor analysis}
 \label{app:nftdetails}
 
@@ -1032,23 +1030,113 @@ In the executed reward mapping, the gold raw reward exceeds its group's mean, so
 
 \paragraph{Relation to NFT and detached guidance.}
 The moving old policy centers NFT's implicit positive/negative construction, while our fixed reference appears in the additional penalty of Eq.~\eqref{eq:nftexecutedloss}. Lemma~\ref{lem:goldanchor} characterizes a third source of anchoring supplied by gold data: attraction toward the gold posterior target, interpolated with the old field. It holds for the field-level quadratic with auxiliary inputs fixed. In the SCCFG implementation, differentiation treats the guidance correction as fixed within each update, even though it is recomputed from the current network on subsequent forwards. The lemma consequently interprets the local corrected-field regression; it supplies no monotonic-improvement guarantee for the full recurrent sampler. Group filtering changes the training population, and the information in self-conditioning differs between collection and forward-noising updates. Our benchmark comparisons assess the resulting complete procedure empirically.
-% END inlined sections/nft_appendix.tex
 
-% BEGIN inlined sections/headline_appendix.tex
-% Keep the seed-variability discussion and table together on an appendix page.
-\clearpage
-\section{Variation across evaluation seeds}
-\label{app:seedvariability}
+\section{Evaluation protocols and uncertainty}
+\label{app:experimentdetails}
 
-Table~\ref{tab:headlineseedsd} reports standard deviations across independent sampling seeds for all our settings in Tables~\ref{tab:headlinecomparison} and~\ref{tab:headlinelownfe}, together with the SCCFG 2 MATH500 settings used in Figure~\ref{fig:headlinestages}. Each seed generates one solution per problem across the full fixed test set. For seed accuracies $A_1,\ldots,A_n$, expressed as percentages, we report the mean $\bar A$ and sample standard deviation
+\subsection{Benchmarks, checkpoints, and scoring}
+
+\paragraph{Benchmarks and scoring.}
+Each generation seed evaluates all 1,319 GSM8K test problems or all 500 MATH500 problems in fixed benchmark order. GSM8K uses the canonical numerical-answer scorer, with boxed-answer-first extraction. Math-Verify is the primary MATH scorer throughout, including the schedule comparison in Table~\ref{tab:inferenceclocks}; PRM800K scores are retained as a secondary diagnostic. Validation comparisons use the separate fixed 1,000-problem GSM8K and 500-problem MATH panels described in Appendix~\ref{app:inferenceclocks}. Checkpoint, EMA, clock, guidance, and seed choices are specified with each comparison.
+
+\paragraph{Math checkpoints and generation settings.}
+The headline and inference-allocation math evaluations use a 1,024-token canvas and async clocks $(2.5,2,1.5)$. Table~\ref{tab:trainingstages} lists the supervised and NFT endpoints. Supervised evaluations select backbone/prompt EMA $.9999/.9999$; NFT evaluations select $.99/.99$. Table~\ref{tab:headlinecomparison} uses eight sampling seeds at 64 denoising steps. Table~\ref{tab:headlinelownfe} uses 64, 32, 16, and 8 seeds at 8, 16, 32, and 64 steps, respectively. Our rows in both tables use SCCFG 2 for GSM8K and SCCFG 3 for MATH500. The latter follows a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); the inference-allocation figures retain SCCFG 2, whose 64-step MATH500 pass@1 is 18.85\% before NFT and 23.60\% afterward.
+
+\subsection{External reports and parameter accounting}
+Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} and~\ref{tab:headlinecomparisonfull} use the comparison papers' reported accuracies and sampling budgets, without re-evaluating their models. GSM8K uses 4-shot prompts for Qwen/LLaDA, 8-shot prompts for Dream/TESS~2, and zero-shot prompts for ours. FMLM+ grades Python solutions, whereas ELF-REG and LFRM produce natural-language reasoning. The low-NFE values come from FMLM+ Table~8 and ELF-REG Tables~13 and~17; ELF-REG uses early stopping \citep{posterior,scalingdlm}. SDAR uses four steps per four-token block. ELF-REG's reported budget includes one terminal decoder call, so our tables mark it with $^{*}$; our NFE excludes prompt encoding and terminal decoding.
+
+Parameter counts include frozen components. Our inherited Qwen vocabulary input/output maps contain 545M parameters and are called once per response; the denoising backbones contain 90.4M/638M parameters. The $(+X)$ counts include the learned prompt encoder and terminal projection, also used once per response. ELF-REG includes its frozen Qwen prompt encoder, and its reported non-decoder counts retain training-only REPA projectors. MLFM includes unmerged adapters; SDAR counts both untied vocabulary maps. These conventions describe stored parameters and invocation frequency, not equal inference cost across architectures.
+
+\subsection{Oracle pass@k and majority voting}
+\label{app:passkprotocol}
+
+With $N$ benchmark problems, $n$ saved draws per problem, and $C_b$ correct draws for problem $b$, the oracle estimator is
+\begin{equation}
+ \widehat{\operatorname{pass@}k}
+ =\frac{1}{N}\sum_{b=1}^{N}
+ \left[1-\frac{\binom{n-C_b}{k}}{\binom{n}{k}}\right],
+ \qquad \binom{n-C_b}{k}=0\quad\text{if }n-C_b<k.
+\end{equation}
+Each depth $S\in\{8,16,32,64\}$ has $n=512/S$ saved draws per problem, giving $64,32,16,8$ draws, respectively. Thus every available draw contributes to each supported $k$, rather than selecting one arbitrary group of $k$ seeds. At $k=n$, this becomes the fraction of problems with any correct saved answer.
+
+\paragraph{Voting and answer equivalence.}
+We use ``majority vote'' for the plurality rule, which does not require more than half the samples to agree. We average voting accuracy over uniformly selected $k$-subsets of the same draws. Numerical normalization groups GSM8K answers; the pinned mutual Math-Verify comparison groups MATH500 answers. Invalid extractions abstain, and an all-invalid subset fails. Ties among the largest answer groups are resolved uniformly, with a uniformly selected representative within the chosen group; the reported accuracy averages over these choices. Gold correctness labels score the selected representative but do not determine the selection. Equivalence partitions permit exact hypergeometric subset averaging. For nontransitive MATH comparisons, we recluster within each subset, enumerating up to 65,536 subsets and otherwise using a fixed 16,384-subset approximation. At $k=1$, voting and oracle accuracy coincide; with two valid answers, uniform tie-breaking also prevents a systematic voting advantage over a single draw.
+
+\subsection{Uncertainty and reporting conventions}
+\label{app:uncertainty}
+
+\paragraph{Sampling-seed variation.}
+For seed accuracies $A_1,\ldots,A_n$, expressed as percentages, we report the mean $\bar A$ and sample standard deviation
 \[
   \operatorname{SD}_{\mathrm{seed}}=\sqrt{\frac{1}{n-1}\sum_{m=1}^{n}(A_m-\bar A)^2}.
 \]
-These values describe generation randomness at a fixed checkpoint and test set. They are distinct from uncertainty across test problems and from variation across training runs. We use every completed sampling seed at each denoising budget: $n=64,32,16,8$ for NFE $8,16,32,64$, respectively. Checkpoints, guidance, scorers, and benchmark populations match the main tables.
+These values describe generation randomness at a fixed checkpoint and test set. They are distinct from uncertainty across test problems and from variation across training runs.
 
-For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Table~\ref{tab:codingstandarddetail} in Appendix~\ref{app:codingdetails} gives Table~\ref{tab:codingcomparison}'s eight-seed coding results with SDs. Table~\ref{tab:codingaliasdetail} supplies SDs for the separate aliasing comparison in Table~\ref{tab:codingaliascomparison}. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:curvevalues} also includes the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
+Bars in the representation learning curves are $\pm1$ seed SD; small parenthesized values in the corresponding tables report the same statistic. External baselines retain author-reported accuracies; we do not impute missing SDs.
 
-% BEGIN inlined tables/headline_seed_variability.tex
+\paragraph{Problem-bootstrap uncertainty.}
+Parentheses in Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb} report the standard deviation of the benchmark mean across 4,000 problem-bootstrap replicates, using bootstrap seed 20260918. Each replicate resamples whole problems with replacement while preserving their complete draw sets. These are bootstrap standard errors conditional on the checkpoints and saved generations, not the across-generation-seed SDs in Table~\ref{tab:headlineseedsd}. In particular, the largest-$k$ point uses the entire draw pool and does not provide repeated independent $k$-sample groups from which to estimate a seed-group SD. The bootstrap does not add training-run variability or uncertainty from the fixed voting-subset approximation. All values are rounded independently from full precision.
+
+\paragraph{Confidence intervals and paired comparisons.}
+A 95\% CI is a pointwise percentile interval from 4,000 problem-bootstrap replicates. This convention applies to the prompt curriculum, reconstruction probe, and SCCFG-sensitivity figures. For pre/post comparisons, we resample the same problem indices in both stages and form the difference within each replicate. Pointwise 95\% percentile intervals for changes therefore use paired differences. None of these measures estimates variation across independent training runs.
+
+
+\clearpage
+\section{Additional mathematical-reasoning results}
+\label{app:mathresults}
+
+This section collects the expanded mathematical-reasoning comparison, sampling-seed variation, and inference-allocation results. Appendix~\ref{app:experimentdetails} defines the protocols and uncertainty measures.
+
+\subsection{Full baseline comparison}
+\label{app:fullcomparison}
+
+\begin{table}[!htb]
+\caption{Full mathematical-reasoning comparison, mean pass@1 (\%). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
+\label{tab:headlinecomparisonfull}
+\centering\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Model & \shortstack{Embedding\\Params (M)} & \shortstack{Other\\Params (M)} & NFE & GSM8K & MATH500\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Autoregressive}}\\
+Qwen3-0.6B-Base \citep{qwen3} & 156 & 440 & --- & 59.59 & ---\\
+Qwen3-0.6B, thinking \citep{qwen3} & 156 & 440 & --- & --- & 77.60\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Discrete diffusion / blockwise diffusion}}\\
+LLaDA-8B-Base \citep{llada} & 1,040 & 6,980 & 1,024 & 70.30 & ---\\
+Dream-v0-Base-7B \citep{dream} & 1,090 & 6,530 & 256 & 77.20 & ---\\
+SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
+$\mathbb S$-FLM \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
+FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
+ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
+\textbf{LFRM-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & ---\\
+\textbf{LFRM-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{42.16} & ---\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone 200M--1B}}\\
+ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96 & 13.39\\
+\textbf{LFRM-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{58.67} & \underline{21.18}\\
+\textbf{LFRM-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{63.74} & \textbf{24.68}\\
+\midrule
+\multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: larger backbones (reference)}}\\
+MLFM \citep{mlfm} & 123 & 1,220 & 256 & 31.24 & ---\\
+TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
+\bottomrule
+\end{tabular}
+\vspace{3pt}
+\parbox{\linewidth}{\footnotesize External results are author-reported; $^\dagger$Python scoring, $^\ddagger$figure-derived accuracy. Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
+\end{table}
+
+\clearpage
+\subsection{Variation across evaluation seeds}
+\label{app:seedvariability}
+
+Table~\ref{tab:headlineseedsd} reports standard deviations across independent sampling seeds for all our settings in Tables~\ref{tab:headlinecomparison} and~\ref{tab:headlinelownfe}, together with the SCCFG 2 MATH500 settings used in Figure~\ref{fig:headlinestages}. Each seed generates one solution per problem across the full fixed test set. We use every completed sampling seed at each denoising budget: $n=64,32,16,8$ for NFE $8,16,32,64$, respectively. Checkpoints, guidance, scorers, and benchmark populations match the main tables.
+
+For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Table~\ref{tab:codingstandarddetail} in Appendix~\ref{app:codingdetails} gives Table~\ref{tab:codingcomparison}'s eight-seed coding results with SDs. Table~\ref{tab:codingaliasdetail} supplies SDs for the separate aliasing comparison in Table~\ref{tab:codingaliascomparison}. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:representationclock} also includes the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
+
 \begin{table}[htbp]
 \caption{Mean accuracy $\pm$ standard deviation across sampling seeds, in percentage points. Each seed evaluates the complete benchmark at the same fixed checkpoint. Columns use 64, 32, 16, and 8 seeds, respectively. The 64-NFE column supplies the results in Table~\ref{tab:headlinecomparison}; SCCFG 3 supplies the MATH500 rows in Tables~\ref{tab:headlinecomparison} and~\ref{tab:headlinelownfe}. SCCFG 2 MATH500 rows correspond to Figure~\ref{fig:headlinestages}.}
 \label{tab:headlineseedsd}
@@ -1078,11 +1166,9 @@ Post-NFT & $16.31\pm1.36$ & $20.09\pm1.23$ & $22.08\pm1.41$ & $23.60\pm1.79$\\
 \bottomrule
 \end{tabular}
 \end{table}
-% END inlined tables/headline_seed_variability.tex
-% Keep the seed-variability table within its appendix, before the next heading.
-\clearpage
 
-\section{LFRM-B inference allocation before and after NFT}
+\clearpage
+\subsection{LFRM-B inference allocation before and after NFT}
 \label{app:elfbbudgets}
 
 Figure~\ref{fig:elfbstages} complements the LFRM-L comparison in Figure~\ref{fig:headlinestages}. It uses the GSM8K supervised epoch-18 and NFT-update-300 checkpoints with async $(2.5,2,1.5)$ and SCCFG 2. Y-axis ranges are matched across training stages separately for oracle accuracy and voting.
@@ -1094,32 +1180,21 @@ Figure~\ref{fig:elfbstages} complements the LFRM-L comparison in Figure~\ref{fig
 \label{fig:elfbstages}
 \end{figure}
 
-\section{Numerical inference-allocation results}
+\subsection{Numerical inference-allocation results}
 \label{app:budgetvalues}
 
-Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb} give every oracle and voting point in Figures~\ref{fig:headlinestages} and~\ref{fig:elfbstages}, at SCCFG 2 throughout. Each table pairs supervised and NFT checkpoints at identical denoising depths, sample counts, and ordered generation seeds. The underlying populations contain all 1,319 GSM8K or 500 MATH500 test problems. With $N$ benchmark problems, $n$ saved draws per problem, and $C_b$ correct draws for problem $b$, the oracle estimator is
-\begin{equation}
- \widehat{\operatorname{pass@}k}
- =\frac{1}{N}\sum_{b=1}^{N}
- \left[1-\frac{\binom{n-C_b}{k}}{\binom{n}{k}}\right],
- \qquad \binom{n-C_b}{k}=0\quad\text{if }n-C_b<k.
-\end{equation}
-Each depth $S\in\{8,16,32,64\}$ has $n=512/S$ saved draws per problem, giving $64,32,16,8$ draws, respectively. Thus every available draw contributes to each supported $k$, rather than selecting one arbitrary group of $k$ seeds. At $k=n$, this becomes the fraction of problems with any correct saved answer.
+Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb} give every oracle and voting point in Figures~\ref{fig:headlinestages} and~\ref{fig:elfbstages}, at SCCFG 2 throughout. Each table pairs supervised and NFT checkpoints at identical denoising depths, sample counts, and ordered generation seeds. The underlying populations contain all 1,319 GSM8K or 500 MATH500 test problems.
 
-\paragraph{Voting and answer equivalence.}
-We use ``majority vote'' for the plurality rule, which does not require more than half the samples to agree. We average voting accuracy over uniformly selected $k$-subsets of the same draws. Numerical normalization groups GSM8K answers; the pinned mutual Math-Verify comparison groups MATH500 answers. Invalid extractions abstain, and an all-invalid subset fails. Ties among the largest answer groups are resolved uniformly, with a uniformly selected representative within the chosen group; the reported accuracy averages over these choices. Gold correctness labels score the selected representative but do not determine the selection. Equivalence partitions permit exact hypergeometric subset averaging. For nontransitive MATH comparisons, we recluster within each subset, enumerating up to 65,536 subsets and otherwise using a fixed 16,384-subset approximation. At $k=1$, voting and oracle accuracy coincide; with two valid answers, uniform tie-breaking also prevents a systematic voting advantage over a single draw.
+Metrics and uncertainty are defined in Appendix~\ref{app:experimentdetails}.
 
-\paragraph{Standard deviations and paired uncertainty.}
-Parentheses in these tables report the standard deviation of the benchmark mean across 4,000 problem-bootstrap replicates, using bootstrap seed 20260918. Each replicate resamples whole problems with replacement while preserving their complete draw sets. These are bootstrap standard errors conditional on the checkpoints and saved generations, not the across-generation-seed SDs in Table~\ref{tab:headlineseedsd}. In particular, the largest-$k$ point uses the entire draw pool and does not provide repeated independent $k$-sample groups from which to estimate a seed-group SD. The bootstrap does not add training-run variability or uncertainty from the fixed voting-subset approximation. All values are rounded independently from full precision.
-
-For pre/post comparisons, we resample the same problem indices in both stages and form the difference within each replicate. The pointwise 95\% percentile intervals below therefore use paired differences. For the 64-step, SCCFG-2 LFRM-L comparisons discussed in Section~\ref{sec:nftresults}, NFT improves pass@1 by $5.07$ points on GSM8K ($[4.26,5.90]$) and $4.75$ on MATH500 ($[3.33,6.15]$). At eight steps and 64 samples, the NFT-minus-supervised oracle differences are $-1.06$ points on GSM8K LFRM-L ($[-2.35,0.23]$) and $-0.60$ on MATH500 ($[-3.80,2.60]$). Both intervals include zero. At 64 steps and eight samples, voting improves by $1.75$ points on GSM8K LFRM-L ($[0.22,3.29]$) and $6.07$ on MATH500 ($[3.04,8.98]$). These intervals are conditional on the evaluated checkpoints and draws and are not adjusted for multiple comparisons.
+\paragraph{Paired NFT improvements.}
+For the 64-step, SCCFG-2 LFRM-L comparisons discussed in Section~\ref{sec:nftresults}, NFT improves pass@1 by $5.07$ points on GSM8K ($[4.26,5.90]$) and $4.75$ on MATH500 ($[3.33,6.15]$). At eight steps and 64 samples, the NFT-minus-supervised oracle differences are $-1.06$ points on GSM8K LFRM-L ($[-2.35,0.23]$) and $-0.60$ on MATH500 ($[-3.80,2.60]$). Both intervals include zero. At 64 steps and eight samples, voting improves by $1.75$ points on GSM8K LFRM-L ($[0.22,3.29]$) and $6.07$ on MATH500 ($[3.04,8.98]$). These intervals are conditional on the evaluated checkpoints and draws and are not adjusted for multiple comparisons.
 
 \paragraph{Interpreting NFT gains across allocations.}
 At eight steps on GSM8K LFRM-L, NFT raises pass@1 from 49.41\% to 54.84\%, while pass@64 changes from 89.84\% to 88.78\%. On MATH500 at the same allocation, voting rises from 24.09\% to 25.79\%; this smaller gain has paired 95\% interval $[-0.45,3.85]$. Thus voting improvements also depend on the allocation. For independent samples with problem-specific success probability $p_i$, oracle success is $1-(1-p_i)^k$: at large $k$, gains saturate on problems already solved frequently. Voting instead depends on the correct answer's frequency relative to competing answer groups. Changes in correctness probability, its distribution across problems, and competing-answer frequencies can therefore affect these metrics differently. The curves motivate this interpretation but do not by themselves establish a loss of reasoning diversity after NFT.
 
-% BEGIN inlined tables/budget_values_gsm_l.tex
-\begin{table}[p]
-\caption{GSM8K, LFRM-L: every point in Figure~\ref{fig:headlinestages}, with SCCFG 2. Entries are accuracy percentages with problem-bootstrap SDs in parentheses, not across-seed SDs (Appendix~\ref{app:budgetvalues}). Each denoising depth uses $n=512/S$ saved draws per problem; $k$-subset averaging uses all $n$.}
+\begin{table}[!htbp]
+\caption{GSM8K, LFRM-L: every point in Figure~\ref{fig:headlinestages}, with SCCFG 2. Entries are accuracy percentages with problem-bootstrap SDs in parentheses, not across-seed SDs (Appendix~\ref{app:uncertainty}). Each denoising depth uses $n=512/S$ saved draws per problem; $k$-subset averaging uses all $n$.}
 \label{tab:budgetvaluesgsml}
 \centering\small
 \setlength{\tabcolsep}{5pt}
@@ -1157,10 +1232,8 @@ NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
 \bottomrule
 \end{tabular}
 \end{table}
-% END inlined tables/budget_values_gsm_l.tex
-% BEGIN inlined tables/budget_values_math_l.tex
-\begin{table}[p]
-\caption{MATH500, LFRM-L: every point in Figure~\ref{fig:headlinestages}, with SCCFG 2. Entries are accuracy percentages with problem-bootstrap SDs in parentheses, not across-seed SDs (Appendix~\ref{app:budgetvalues}). Each denoising depth uses $n=512/S$ saved draws per problem; $k$-subset averaging uses all $n$.}
+\begin{table}[!htbp]
+\caption{MATH500, LFRM-L: every point in Figure~\ref{fig:headlinestages}, with SCCFG 2. Entries are accuracy percentages with problem-bootstrap SDs in parentheses, not across-seed SDs (Appendix~\ref{app:uncertainty}). Each denoising depth uses $n=512/S$ saved draws per problem; $k$-subset averaging uses all $n$.}
 \label{tab:budgetvaluesmathl}
 \centering\small
 \setlength{\tabcolsep}{5pt}
@@ -1198,10 +1271,8 @@ NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
 \bottomrule
 \end{tabular}
 \end{table}
-% END inlined tables/budget_values_math_l.tex
-% BEGIN inlined tables/budget_values_gsm_b.tex
-\begin{table}[p]
-\caption{GSM8K, LFRM-B: every point in Figure~\ref{fig:elfbstages}, with SCCFG 2. Entries are accuracy percentages with problem-bootstrap SDs in parentheses, not across-seed SDs (Appendix~\ref{app:budgetvalues}). Each denoising depth uses $n=512/S$ saved draws per problem; $k$-subset averaging uses all $n$.}
+\begin{table}[!htbp]
+\caption{GSM8K, LFRM-B: every point in Figure~\ref{fig:elfbstages}, with SCCFG 2. Entries are accuracy percentages with problem-bootstrap SDs in parentheses, not across-seed SDs (Appendix~\ref{app:uncertainty}). Each denoising depth uses $n=512/S$ saved draws per problem; $k$-subset averaging uses all $n$.}
 \label{tab:budgetvaluesgsmb}
 \centering\small
 \setlength{\tabcolsep}{5pt}
@@ -1239,15 +1310,12 @@ NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
 \bottomrule
 \end{tabular}
 \end{table}
-% END inlined tables/budget_values_gsm_b.tex
-% END inlined sections/headline_appendix.tex
 
-% BEGIN inlined sections/additional_ablations.tex
 \clearpage
-\section{Additional ablations}
+\section{SCCFG sensitivity}
 \label{app:additionalablations}
 
-\subsection{SCCFG sensitivity}
+\subsection{Epoch-21 guidance sweep}
 \label{app:sccfgsweep}
 We sweep SCCFG coefficients $\{1,2,3,4\}$ at the epoch-21 LFRM-L checkpoints on GSM8K and MATH500. Both use backbone/prompt EMA $.9999/.9999$, async $(2.5,2,1.5)$, 32 denoising steps, CFG 1, and seeds 42/123. The coefficient is applied during both denoising and terminal decoding; SCCFG 1 retains recurrent self-conditioning. Separate seeded invocations match the initial noise across coefficients.
 
@@ -1258,7 +1326,6 @@ We sweep SCCFG coefficients $\{1,2,3,4\}$ at the epoch-21 LFRM-L checkpoints on 
 \label{fig:sccfgsweep}
 \end{figure}
 
-% BEGIN inlined tables/sccfg_sweep_values.tex
 \begin{table}[htbp]
 \caption{Numerical values for Figure~\ref{fig:sccfgsweep}. Pass@1 reports mean accuracy with across-seed SD in parentheses; individual seeds are also shown. Differences from SCCFG 2 have paired 95\% problem-bootstrap intervals. Accuracy and differences are in percentage points.}
 \label{tab:sccfgsweepvalues}
@@ -1280,15 +1347,13 @@ MATH500 / 4 & 16.40 & 16.20 & 16.30 {\scriptsize (0.14)} & 24.80 & $-1.60$ $[-3.
 \bottomrule
 \end{tabular}
 \end{table}
-% END inlined tables/sccfg_sweep_values.tex
 
 In this initial two-seed sweep, SCCFG 3 gives the highest observed mean on both tasks: 59.97\% on GSM8K and 19.70\% on MATH500, compared with 59.25\% and 17.90\% at SCCFG 2. The paired gains over 2 are $+0.72$ points ($[-0.49,1.93]$) and $+1.80$ ($[-0.20,3.80]$), respectively; both intervals include zero. On GSM8K, SCCFG 2 improves over SCCFG 1 by 5.76 points ($[4.36,7.13]$), supporting the value of retaining guidance in this model. MATH500 has a different sensitivity profile: its SCCFG-2-minus-1 difference is only 0.40 points, with an interval including zero. The sweep motivates preserving SCCFG during NFT but does not isolate the benefit of our particular NFT guidance correction.
 
-\subsection{Expanded MATH500 comparison}
+\subsection{MATH500: SCCFG 2 versus 3}
 \label{app:mathsccfg3}
 We subsequently compare SCCFG 3 against 2 on MATH500 at both epoch 21 and NFT update 600, matching checkpoints, prompts, scoring, arithmetic, and ordered seed lists. At 8, 16, 32, and 64 denoising steps, each checkpoint has 64, 32, 16, and 8 draws per problem, respectively. The coefficient changes during both denoising and terminal decoding; all other settings, including backbone/prompt EMA $.9999/.9999$ before NFT and $.99/.99$ afterward, remain fixed. Math-Verify is the primary scorer. This follow-up measures sensitivity on the same test benchmark; it is not an independent validation-set selection of guidance.
 
-% BEGIN inlined tables/math_sccfg3.tex
 \begin{table}[htbp]
 \caption{MATH500 pass@1 sensitivity to SCCFG at matched checkpoints and generation seeds. Entries are mean accuracy percentages with across-seed SDs in parentheses. Differences are SCCFG 3 minus 2 in percentage points, with paired 95\% problem-bootstrap intervals. Each NFE uses the complete draw cohort.}
 \label{tab:mathsccfg3}
@@ -1310,14 +1375,12 @@ NFT 600 & 64 & 8 & 23.60 {\scriptsize (1.79)} & 24.68 {\scriptsize (1.27)} & $+1
 \bottomrule
 \end{tabular}
 \end{table}
-% END inlined tables/math_sccfg3.tex
 
 SCCFG 3 raises mean pass@1 at every tested depth for both checkpoints, with the clearest evidence before NFT. At the retained 64-step headline budget, the supervised model improves by $2.33$ points ($[1.27,3.43]$), and the NFT model by $1.08$ ($[0.00,2.20]$). Holding SCCFG at 3, NFT still improves pass@1 over the supervised model by $3.50$ points ($[2.28,4.75]$). These results motivate the SCCFG 3 MATH500 headline rows in Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe}. GSM8K retains SCCFG 2, as do all curves in Figure~\ref{fig:headlinestages}.
 
 The pass@1 improvement does not imply a uniform improvement in multi-sample coverage. For the NFT checkpoint at 32 steps and 16 draws, changing SCCFG from 2 to 3 reduces oracle accuracy from 60.40\% to 56.80\% ($-3.60$ points; $[-6.41,-0.80]$), while voting changes by only $+0.04$ points ($[-1.93,2.14]$). At 64 steps and eight draws, post-NFT voting increases from 32.42\% to 33.38\%, but the paired gain of $0.96$ points has interval $[-1.60,3.48]$. Like the NFT comparisons, the guidance sweep illustrates why single-sample quality, oracle coverage, and answer selection should be reported separately. All intervals here use 4,000 paired problem-bootstrap replicates with seed 20260918, conditional on the fixed checkpoints and draws, without multiple-comparison adjustment.
-% END inlined sections/additional_ablations.tex
 
-
+\clearpage
 \section{Code generation: protocols and detailed results}
 \label{app:codingdetails}
 
@@ -1467,138 +1530,74 @@ Alias & MBPP+ & $+1.49$ {\scriptsize $[+0.17,+2.88]$} & $+2.12$ {\scriptsize $[-
 \label{tab:codingjointdeltas}
 \end{table}
 
-% BEGIN numerical curve values (generated from saved plotted cohorts)
-\section{Numerical values for plotted curves}
-\label{app:curvevalues}
+\clearpage
+\section{Generation examples and trajectories}
+\label{app:qualitative}
 
-This section tabulates the prompt-learning, representation-ablation, and reconstruction-sensitivity curves. Values come from the saved figure cohorts and are rounded independently from full precision. The oracle and majority-vote curves in Figures~\ref{fig:headlinestages} and~\ref{fig:elfbstages} are tabulated in Appendix~\ref{app:budgetvalues}; Table~\ref{tab:sccfgsweepvalues} gives the SCCFG sensitivity curve. Across-seed SDs describe sampling variability at fixed checkpoints, while problem-bootstrap intervals describe uncertainty across benchmark problems conditional on the saved draws.
+\subsection{Generated solutions}
+\label{app:generations}
 
-\paragraph{Prompt-learning curves.}
-Table~\ref{tab:promptcurvevalues} contains every point in Figure~\ref{fig:promptcurriculum}. Points are means over seeds 42/123, evaluated with async $(2.5,2,1.5)$, 32 denoising steps, SCCFG 2, and backbone EMA $0.9999$. Prompt EMA is $0.999$ at the MSE swap and $0.9999$ during joint training. GSM8K uses canonical scoring and MATH500 uses Math-Verify. Error bars show pointwise 95\% intervals from 4,000 problem-bootstrap replicates; brackets in the table give their bounds. Epoch 12 appears twice because prompt substitution does not advance the flow-training epoch; the two rows have identical backbone weights. The axes start at zero, but no epoch-zero accuracy was measured or plotted.
+Figure~\ref{fig:headlineexamples} presents one correct GSM8K generation and one correct MATH500 generation from the post-NFT LFRM-L models. The solutions combine intermediate calculations into a final answer: successive multiplicative changes in the GSM8K example, and substitution followed by rational arithmetic in the MATH500 example. Both are drawn from saved benchmark generations and retain the original model text.
 
-The curve samples flow epochs 4, 8, and 12 before prompt substitution; epoch 12 immediately after substitution; and epochs 16/18 for LFRM-B or 16/20/21 for LFRM-L. All 20 points retain their saved predictions and canonical scores. The joint-from-start comparison in Figure~\ref{fig:representationcomparison} instead uses the common $t=\tau^2$ clock and backbone EMA $0.999$ for its six-epoch controls; its four-seed endpoint means are not points on these curriculum curves. Training durations are summarized in Table~\ref{tab:trainingstages}.
+\begin{figure}[htbp]
+\centering
+\setlength{\fboxsep}{8pt}
+\fbox{\begin{minipage}{0.94\linewidth}
+\small
+\setlength{\fboxsep}{3pt}
+\textbf{GSM8K: reasoning across successive changes}\par\medskip
+\textbf{Problem.} A new program had 60 downloads in the first month. The number of downloads in the second month was three times as many as the downloads in the first month, but then reduced by 30\% in the third month. How many downloads did the program have total over the three months?
 
-\begin{table}[htbp]
-\centering\small
-\setlength{\tabcolsep}{5pt}
-\caption{Numerical values for Figure~\ref{fig:promptcurriculum}. Correct counts for seeds 42/123 and the benchmark size $N$ specify the exact per-seed accuracies. Mean pass@1 and sample seed SD (parentheses) are percentages; brackets give the plotted 95\% problem-bootstrap intervals.}
-\label{tab:promptcurvevalues}
-\begin{tabular}{@{}rlrrrr@{}}
-\toprule
-Epoch & Prompt & Correct$_{42}$ & Correct$_{123}$ & Mean (SD) & 95\% CI \\
-\midrule
-\multicolumn{6}{@{}l}{\textit{GSM8K, LFRM-B; $N=1319$}}\\
-4 & Qwen & 92 & 86 & 6.75 {\scriptsize (0.32)} & $[5.76, 7.81]$ \\
-8 & Qwen & 401 & 424 & 31.27 {\scriptsize (1.23)} & $[29.11, 33.43]$ \\
-12 & Qwen & 514 & 503 & 38.55 {\scriptsize (0.59)} & $[36.28, 40.83]$ \\
-12 & MSE swap & 398 & 381 & 29.53 {\scriptsize (0.91)} & $[27.29, 31.69]$ \\
-16 & Joint & 482 & 462 & 35.78 {\scriptsize (1.07)} & $[33.55, 38.02]$ \\
-18 & Joint & 495 & 483 & 37.07 {\scriptsize (0.64)} & $[34.76, 39.39]$ \\
-\addlinespace
-\multicolumn{6}{@{}l}{\textit{GSM8K, LFRM-L; $N=1319$}}\\
-4 & Qwen & 212 & 202 & 15.69 {\scriptsize (0.54)} & $[14.22, 17.21]$ \\
-8 & Qwen & 755 & 743 & 56.79 {\scriptsize (0.64)} & $[54.40, 59.14]$ \\
-12 & Qwen & 804 & 820 & 61.56 {\scriptsize (0.86)} & $[59.17, 63.80]$ \\
-12 & MSE swap & 647 & 660 & 49.55 {\scriptsize (0.70)} & $[47.12, 51.90]$ \\
-16 & Joint & 728 & 701 & 54.17 {\scriptsize (1.45)} & $[51.78, 56.52]$ \\
-20 & Joint & 761 & 763 & 57.77 {\scriptsize (0.11)} & $[55.38, 60.12]$ \\
-21 & Joint & 783 & 780 & 59.25 {\scriptsize (0.16)} & $[56.67, 61.68]$ \\
-\addlinespace
-\multicolumn{6}{@{}l}{\textit{MATH500, LFRM-L; $N=500$}}\\
-4 & Qwen & 30 & 38 & 6.80 {\scriptsize (1.13)} & $[5.10, 8.70]$ \\
-8 & Qwen & 61 & 65 & 12.60 {\scriptsize (0.57)} & $[10.30, 15.10]$ \\
-12 & Qwen & 82 & 76 & 15.80 {\scriptsize (0.85)} & $[13.10, 18.50]$ \\
-12 & MSE swap & 64 & 65 & 12.90 {\scriptsize (0.14)} & $[10.50, 15.40]$ \\
-16 & Joint & 84 & 92 & 17.60 {\scriptsize (1.13)} & $[14.90, 20.40]$ \\
-20 & Joint & 98 & 91 & 18.90 {\scriptsize (0.99)} & $[16.00, 21.90]$ \\
-21 & Joint & 85 & 94 & 17.90 {\scriptsize (1.27)} & $[15.10, 20.90]$ \\
-\addlinespace
-\bottomrule
-\end{tabular}
-\end{table}
-\paragraph{Representation-ablation curves.}
-Table~\ref{tab:representationcurvevalues} gives all points and error bars in Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}, followed by the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. The curves use seeds 42/123; the endpoint summary adds 456/789. Error bars and parenthesized values are sample SDs across their respective generation seeds. Both use 32 steps and backbone EMA $0.999$; full controls are described in Appendix~\ref{app:representationclock}.
+\medskip\textbf{Generated solution.}\par\smallskip
+Let's break down the downloads for the program month by month.
 
-\begin{table}[htbp]
-\centering\small
-\setlength{\tabcolsep}{5pt}
-\caption{Numerical learning curves and endpoint summary for Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity}: mean GSM8K accuracy (\%) with sample seed SD in parentheses. Curves use two seeds (42/123); the final block reports the four-seed epoch-six comparison (42/123/456/789). The final column trains the prompt encoder jointly from epoch zero; the other three retain Qwen prompt conditioning.}
-\label{tab:representationcurvevalues}
-\begin{tabular}{@{}rrrrr@{}}
-\toprule
-Epoch & \shortstack{Learned\\16/24/32} & \shortstack{PCA\\16/24/32} & \shortstack{PCA\\layer 32} & \shortstack{Epoch-0 joint\\prompt training} \\
-\midrule
-\multicolumn{5}{@{}l}{$t=\tau^2$}\\
-1 & 3.75 {\scriptsize (0.05)} & 4.85 {\scriptsize (0.75)} & 2.65 {\scriptsize (0.11)} & 2.46 {\scriptsize (0.05)} \\
-2 & 12.40 {\scriptsize (0.27)} & 11.18 {\scriptsize (0.16)} & 5.50 {\scriptsize (0.70)} & 3.98 {\scriptsize (1.02)} \\
-3 & 20.17 {\scriptsize (0.54)} & 16.38 {\scriptsize (0.32)} & 8.64 {\scriptsize (0.43)} & 3.68 {\scriptsize (0.16)} \\
-4 & 26.61 {\scriptsize (0.86)} & 21.49 {\scriptsize (0.80)} & 7.47 {\scriptsize (0.05)} & 7.77 {\scriptsize (1.02)} \\
-5 & 29.95 {\scriptsize (0.21)} & 25.85 {\scriptsize (0.21)} & 9.82 {\scriptsize (0.16)} & 7.54 {\scriptsize (1.45)} \\
-6 & 31.01 {\scriptsize (0.43)} & 28.39 {\scriptsize (0.27)} & 11.68 {\scriptsize (0.21)} & 8.61 {\scriptsize (0.05)} \\
-\addlinespace
-\multicolumn{5}{@{}l}{$t=\tau$}\\
-1 & 4.40 {\scriptsize (0.75)} & 4.66 {\scriptsize (0.48)} & 3.03 {\scriptsize (0.54)} & 3.26 {\scriptsize (0.11)} \\
-2 & 11.03 {\scriptsize (0.38)} & 10.50 {\scriptsize (0.16)} & 5.38 {\scriptsize (0.54)} & 5.76 {\scriptsize (0.00)} \\
-3 & 18.65 {\scriptsize (0.96)} & 15.16 {\scriptsize (0.86)} & 7.96 {\scriptsize (0.54)} & 5.80 {\scriptsize (0.05)} \\
-4 & 22.18 {\scriptsize (1.45)} & 19.18 {\scriptsize (2.36)} & 10.12 {\scriptsize (0.48)} & 8.15 {\scriptsize (1.88)} \\
-5 & 24.68 {\scriptsize (1.23)} & 21.08 {\scriptsize (0.96)} & 11.94 {\scriptsize (1.02)} & 8.45 {\scriptsize (1.23)} \\
-6 & 26.76 {\scriptsize (0.43)} & 24.22 {\scriptsize (2.52)} & 13.38 {\scriptsize (0.16)} & 8.68 {\scriptsize (0.16)} \\
-\addlinespace
-\multicolumn{5}{@{}l}{Epoch-six summary: $t=\tau^2$, four seeds}\\
-6 & 30.76 {\scriptsize (0.39)} & 28.43 {\scriptsize (0.19)} & 11.20 {\scriptsize (0.56)} & 8.70 {\scriptsize (0.33)} \\
-\addlinespace
-\bottomrule
-\end{tabular}
-\end{table}
-\paragraph{Reconstruction-sensitivity curves.}
-Table~\ref{tab:reconstructioncurvevalues} reproduces the means, error bars, and shaded ranges in Figure~\ref{fig:layerreconstruction}. The zero-noise points are identically zero because each condition is compared with its own pass's clean-input baseline. Random-partition ranges describe the eight partition means, not uncertainty intervals.
+In the first month, the program had 60 downloads.
 
-\begin{table}[htbp]
-\centering\small
-\setlength{\tabcolsep}{5pt}
-\caption{Numerical values for Figure~\ref{fig:layerreconstruction}, in nats/token. Actual-group entries give $\Delta$CE and its 95\% problem-bootstrap CI; random-group entries give the mean over eight matched partitions and the minimum/maximum partition means. Noise strength is $\eta$; the layer identifies the matched group width.}
-\label{tab:reconstructioncurvevalues}
-\begin{tabular}{@{}rrcc@{}}
-\toprule
-Layer & $\eta$ & Actual group [95\% CI] & Random mean [min, max] \\
-\midrule
-\multicolumn{4}{@{}l}{\textit{First prediction}}\\
-16 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
-16 & 0.8 & $0.151\ [-0.006, 0.315]$ & $-0.015\ [-0.053, 0.064]$ \\
-16 & 1.6 & $0.327\ [0.045, 0.633]$ & $0.008\ [-0.057, 0.136]$ \\
-16 & 2 & $0.439\ [0.080, 0.848]$ & $0.026\ [-0.075, 0.209]$ \\
-16 & 3 & $0.651\ [0.158, 1.272]$ & $0.071\ [-0.087, 0.340]$ \\
-24 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
-24 & 0.8 & $-0.059\ [-0.201, 0.050]$ & $-0.065\ [-0.154, -0.010]$ \\
-24 & 1.6 & $-0.081\ [-0.314, 0.103]$ & $-0.080\ [-0.231, 0.055]$ \\
-24 & 2 & $-0.085\ [-0.365, 0.131]$ & $-0.084\ [-0.245, 0.075]$ \\
-24 & 3 & $-0.128\ [-0.512, 0.154]$ & $-0.078\ [-0.279, 0.134]$ \\
-32 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
-32 & 0.8 & $-0.188\ [-0.533, 0.087]$ & $-0.136\ [-0.294, -0.050]$ \\
-32 & 1.6 & $-0.342\ [-0.950, 0.140]$ & $-0.208\ [-0.588, 0.028]$ \\
-32 & 2 & $-0.395\ [-1.075, 0.140]$ & $-0.226\ [-0.675, 0.065]$ \\
-32 & 3 & $-0.424\ [-1.189, 0.194]$ & $-0.241\ [-0.757, 0.160]$ \\
-\addlinespace
-\multicolumn{4}{@{}l}{\textit{Self-conditioned refinement}}\\
-16 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
-16 & 0.8 & $0.360\ [0.073, 0.653]$ & $0.142\ [0.060, 0.226]$ \\
-16 & 1.6 & $0.740\ [0.211, 1.330]$ & $0.271\ [0.180, 0.369]$ \\
-16 & 2 & $0.920\ [0.289, 1.637]$ & $0.334\ [0.226, 0.446]$ \\
-16 & 3 & $1.237\ [0.436, 2.179]$ & $0.469\ [0.324, 0.636]$ \\
-24 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
-24 & 0.8 & $0.075\ [0.006, 0.150]$ & $0.117\ [0.052, 0.192]$ \\
-24 & 1.6 & $0.119\ [0.005, 0.237]$ & $0.247\ [0.115, 0.392]$ \\
-24 & 2 & $0.149\ [0.019, 0.285]$ & $0.298\ [0.132, 0.455]$ \\
-24 & 3 & $0.223\ [0.051, 0.406]$ & $0.422\ [0.211, 0.600]$ \\
-32 & 0 & $0.000\ [0.000, 0.000]$ & $0.000\ [0.000, 0.000]$ \\
-32 & 0.8 & $0.007\ [-0.267, 0.295]$ & $0.142\ [0.001, 0.348]$ \\
-32 & 1.6 & $0.036\ [-0.440, 0.508]$ & $0.307\ [-0.031, 0.701]$ \\
-32 & 2 & $0.056\ [-0.509, 0.602]$ & $0.388\ [-0.023, 0.822]$ \\
-32 & 3 & $0.152\ [-0.515, 0.792]$ & $0.533\ [0.030, 1.057]$ \\
-\addlinespace
-\bottomrule
-\end{tabular}
-\end{table}
-% END numerical curve values
+In the second month, the program had three times as many as the downloads in the first month, so it had 60 * 3 = 180 downloads.
 
+In the third month, the downloads were reduced by 30\%, which means it had 180 - (180 * 30 / 100) = 180 - 54 = 126 downloads.
+
+To find the total number of downloads over the three months, we add up the downloads from each month: 60 + 180 + 126 = 240 + 126 = 366
+
+Thus, the program had a total of $\boxed{366}$ downloads over the three months.
+\end{minipage}}
+
+\medskip
+\fbox{\begin{minipage}{0.94\linewidth}
+\small
+\setlength{\fboxsep}{3pt}
+\textbf{MATH500: evaluating a rational function}\par\medskip
+\textbf{Problem.} If $f(x) = \frac{3x-2}{x-2}$, what is the value of $f(-2) +f(-1)+f(0)$? Express your answer as a common fraction.
+
+\medskip\textbf{Generated solution.}\par\smallskip
+To find the value of $f(-2)+f(-1)+f(0)$ we need to substitute $x=-2, x=-1,$ and $x=0$ into the function $f(x)$.
+
+For $f(-2)$: $f(-2) = \frac{3(-2) - 2}{-2 - 2} = \frac{-6 - 2}{-4} = \frac{-8}{-4} = 2$
+
+For $f(-1)$: $f(-1) = \frac{3(-1) - 2}{-1 - 2} = \frac{-3 - 2}{-3} = \frac{-5}{-3} = \frac{5}{3}$
+
+For $f(0)$: $f(0) = \frac{3(0) - 2}{0 - 2} = \frac{-2}{-2} = 1$
+
+Now we can add these together to find the sum: $f(-2) + f(-1) + f(0) = 2 + \frac{5}{3} + 1 = \frac{11}{3} + 1 = \frac{11}{3} + \frac{3}{3} = \frac{14}{3}$ $\boxed{\frac{14}{3}}$
+\end{minipage}}
+\caption{Correct generations from LFRM-L at 64 denoising NFEs, async $(2.5,2,1.5)$, SCCFG 2, and seed 42. GSM8K uses NFT update 500; MATH500 uses NFT update 600. Displayed equations have been moved inline to save space; model wording and calculations are unchanged. Both answers and the intermediate calculations are correct.}
+\label{fig:headlineexamples}
+\end{figure}
+
+\subsection{Intermediate generation trajectory}
+\label{app:trajectories}
+
+Figure~\ref{fig:gsmtrajectory} shows steps 20, 40, 49, 60, 62, and 64 of the GSM8K example in Figure~\ref{fig:headlineexamples}. After sampling, we apply the terminal decoder (time $1$, SCCFG~2, zero decoder self-conditioning) to each saved state. These premature readouts neither feed back into sampling nor represent intermediate clean-latent predictions. The final text exactly reproduces the archived generation.
+
+Light blue marks exact token-ID equality at the same position in the final answer, before its EOS; matches need not persist. Panels label the local clocks $(t_{16},t_{24},t_{32})$: $0$ is noise and $1$ is clean. Each readout retains its native extraction and EOS; only whitespace layout changes.
+
+\clearpage
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/gsm8k_trajectory_steps20_40_49_60_62_64.pdf}
+\caption{\textbf{GSM8K generation trajectory.} Steps 20, 40, 49, 60, 62, and 64, from top to bottom, for the GSM8K example in Figure~\ref{fig:headlineexamples}. LFRM-L NFT update 500; backbone/prompt EMA $.99/.99$; seed 42; async $(2.5,2,1.5)$; 64 denoising steps; CFG~1 and SCCFG~2. Light blue identifies tokens matching the final answer at the same position.}
+\label{fig:gsmtrajectory}
+\end{figure}
+
+\clearpage
 \end{document}
