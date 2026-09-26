@@ -210,31 +210,16 @@ Each layer is intervened on independently. The teacher target is detached; gradi
 
 The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch LFRM-B training and evaluation settings.
 
-\begin{wrapfigure}{R}{.38\textwidth}
-\vspace{-\baselineskip}
-\centering
-\includegraphics[width=\linewidth]{figures/cka.pdf}
-\caption{\textbf{Qwen layer structure.} Linear CKA of teacher-forced activations. White markers select layers 16, 24, and 32. Details in Appendix~\ref{app:representationdiagnostics}.}
-\label{fig:representationcka}
-\vspace{-\baselineskip}
-\end{wrapfigure}
-
 \paragraph{Good decoding does not ensure good generation.}
 Layer-32 activations support \textbf{99.37\%} token-reconstruction accuracy (Appendix~\ref{app:representationdiagnostics}), yet a diffusion model using only their PCA projection achieves \textbf{11.20\%} GSM8K accuracy (Figure~\ref{fig:representationcomparison}). This motivates evaluating representations for generation beyond their clean-token decodability.
 
 \paragraph{Combining representations across depth.}
-The transition in centered kernel alignment (CKA; \citealp{cka}) after layer 16 motivates retaining that layer and adding regularly spaced deeper features at layers 24 and 32 (Figure~\ref{fig:representationcka}). Holding the projection method and total latent width fixed, multilayer PCA raises accuracy from \textbf{11.20\% to 28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
+We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationdiagnostics} gives the plot and detailed motivation. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy from \textbf{11.20\% to 28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
 
 \paragraph{Learning the projection subspace.}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
 % END inlined sections/representation.tex
 
-% Reserve any remaining wrap height before returning to full-width headings.
-\par
-\ifnum\value{WF@wrappedlines}>1
-  \vspace{\dimexpr\value{WF@wrappedlines}\baselineskip\relax}
-\fi
-\WFclear
 \subsection{Learning the conditional encoding in three stages}
 \label{sec:conditionalencoding}
 
@@ -668,6 +653,15 @@ Each probe maps a full 2,560-dimensional post-block activation through a learned
 
 \paragraph{Layer similarity.}
 The CKA study uses disjoint discovery and confirmation panels of 4,096 problems each, totaling 8,192 equally weighted problems. For each problem, teacher-forced assistant activations are mean-pooled into eight relative-position bins and concatenated before computing linear CKA. Figure~\ref{fig:representationcka} shows the combined panel. The layer-16/17 CKA is 0.038; the selected-layer similarities are 0.124 (16/24), 0.543 (16/32), and 0.842 (24/32). We use the transition after layer 16 and regular spacing thereafter to motivate the representation, without claiming that CKA identifies an optimal triplet.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=.55\linewidth]{figures/cka.pdf}
+\caption{\textbf{Qwen layer structure.} Linear CKA of teacher-forced activations on the combined discovery and confirmation panels. White markers select layers 16, 24, and 32. The transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features.}
+\label{fig:representationcka}
+\end{figure}
+% Keep the CKA figure with its diagnostics, before the next appendix heading.
+\clearpage
 
 \section{Representation comparisons under the identity clock}
 \label{app:representationclock}
