@@ -443,7 +443,7 @@ The benefit is less uniform for high-$k$ oracle coverage: at eight steps on MATH
 \subsection{Code generation}
 \label{sec:codingresults}
 
-On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L trains for 12 epochs with frozen Qwen conditioning, then keeps the flow model fixed while fitting the 121M-parameter prompt encoder for ten MSE epochs to replace the 4B teacher. Table~\ref{tab:codingcomparison} reports eight-seed results with async $(2.5,2,1.5)$ and SCCFG 3, before joint refinement or NFT; Appendix~\ref{app:codingdetails} gives protocols and the training trajectory.
+On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L trains for 12 epochs with frozen Qwen conditioning, fits the 121M-parameter prompt encoder for ten MSE epochs with the flow model fixed, then jointly trains both networks for one epoch. Table~\ref{tab:codingcomparison} reports eight-seed results with async $(2.5,2,1.5)$ and SCCFG 3, without NFT; Appendix~\ref{app:codingdetails} details the training setup, including auxiliary prompt-MSE regularization during joint training.
 
 \begin{table}[htbp]
 \centering\small
@@ -455,17 +455,18 @@ Model / prompt conditioner & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstac
 PlaidQ \citep{plaidq} & 128 & 19.02 & 18.05 & 22.18 & ---\\
 PlaidQ+CFG \citep{plaidq} & 256 & 22.04 & 19.70 & 24.58 & ---\\
 LFRM-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 38.72 & 33.99\\
-LFRM-L / learned prompt (ours) & 128 & 27.97 & 25.30 & 19.61 & 16.96\\
+LFRM-L / prompt MSE (ours) & 128 & 27.97 & 25.30 & 19.61 & 16.96\\
+LFRM-L / joint prompt (ours) & 128 & 29.57 & 26.91 & 18.45 & 16.40\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use HumanEval base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's reported ``MBPP+'' uses base tests. Our rows share epoch-12 backbone weights. NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Appendix~\ref{app:codingdetails} details protocol differences; Table~\ref{tab:codingstandarddetail} gives seed SDs.}
+\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use HumanEval base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's reported ``MBPP+'' uses base tests. Frozen/MSE rows share the epoch-12 backbone; joint training yields epoch 13. NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Appendix~\ref{app:codingdetails} details protocols; Table~\ref{tab:codingstandarddetail} gives seed SDs.}
 \label{tab:codingcomparison}
 \end{table}
 
-Both conditioners outperform reported PlaidQ results on HumanEval(+); learned conditioning also exceeds oDLM-0.6B \citep{odlm} and Edit Flow-1.3B \citep{editflow}, but trails guided PlaidQ on MBPP-378 base. Matching ELF-REG-L's function-name aliasing rule, both variants exceed its reported HumanEval(+)/MBPP-378 scores (Appendix~\ref{app:codingdetails}, Table~\ref{tab:codingaliascomparison}).
+All three variants outperform reported PlaidQ results on HumanEval(+); learned conditioning also exceeds oDLM-0.6B \citep{odlm} and Edit Flow-1.3B \citep{editflow}, but trails guided PlaidQ on MBPP-378 base. Matching ELF-REG-L's function-name aliasing rule, all three exceed its reported HumanEval(+)/MBPP-378 scores (Appendix~\ref{app:codingdetails}, Table~\ref{tab:codingaliascomparison}).
 
 \paragraph{Prompt adaptation remains task dependent.}
-At 32 steps, swapping in the encoder after one MSE epoch drops MBPP+ from 32.34\% to 7.61\%, much more than the math prompt swaps (Figure~\ref{fig:promptcurriculum}). Ten MSE epochs recover HumanEval+ to 24.70\%, near Qwen conditioning's 25.61\%, but MBPP+ reaches only 15.15\%. Coding prompts average 233 tokens versus 84/89 for GSM8K/MATH; longer contexts may contribute to this harder compression problem, although length is not isolated. These imitation-only checkpoints do not yet exploit joint compensation by the flow model (Section~\ref{sec:conditionalencoding}).
+At 32 steps, swapping in the encoder after one MSE epoch drops MBPP+ from 32.34\% to 7.61\%, much more than the math prompt swaps (Figure~\ref{fig:promptcurriculum}). Ten MSE epochs recover HumanEval+ to 24.70\%, near Qwen conditioning's 25.61\%, but MBPP+ reaches only 15.15\%. Coding prompts average 233 tokens versus 84/89 for GSM8K/MATH; longer contexts may contribute to this harder compression problem, although length is not isolated. At 128 steps, one epoch of joint adaptation raises HumanEval(+) pass@1 by 1.60 points and HumanEval+ pass@8 from 42.07\% to 47.56\%, while standard MBPP-378 base/MBPP+ pass@1 decreases by 1.16/0.56 points. Joint adaptation therefore gives mixed gains at this early checkpoint.
 
 % END inlined sections/headline_results.tex
 
@@ -1249,7 +1250,12 @@ The pass@1 improvement does not imply a uniform improvement in multi-sample cove
 \paragraph{Training and conditioning.}
 The coding population contains 4,893,784 eligible OpenCodeInstruct answer rows and 4,772,508 unique prompts. Native Qwen chat sequences fit within 1,024 tokens without truncation. We use task-specific learned, covariance-whitened Qwen3-4B-Instruct-2507 features from layers 16/24/32 with widths 256/256/512. LFRM-L starts from random initialization and trains for 12 epochs under synchronous clocks, the mixed flow/decoder-CE objective (decoder probability 0.2), and effective batch 512. The coding time distribution uses logit-normal parameters $-1.5/0.8$ and noise scale two. This is a separate task-specific training lineage.
 
-The standalone prompt encoder uses the frozen Qwen vocabulary lookup, a $2560\to512\to1280$ frontend, six bidirectional width-1280 Transformer blocks with 16 heads, and a 1,024-dimensional output. It has 121M trainable parameters. MSE averages over valid positions and coordinates within each prompt, then weights prompts equally; the flow model and the target representation stay fixed throughout the ten prompt-training epochs. All results select backbone EMA $0.9999$ and, where applicable, prompt EMA $0.999$. The frozen-Qwen condition executes the external teacher to encode the question; the learned condition executes only the compact prompt encoder and inherited vocabulary lookup before latent generation. Results in this subsection do not include later joint-training or NFT branches.
+The standalone prompt encoder uses the frozen Qwen vocabulary lookup, a $2560\to512\to1280$ frontend, six bidirectional width-1280 Transformer blocks with 16 heads, and a 1,024-dimensional output. It has 121M trainable parameters. MSE averages over valid positions and coordinates within each prompt, then weights prompts equally; the flow model and the target representation stay fixed throughout the ten prompt-training epochs. All coding evaluations select backbone EMA $0.9999$. Standalone MSE encoders use prompt EMA $0.999$; the joint epoch-13 checkpoint uses prompt EMA $0.9999$. The frozen-Qwen condition executes the external teacher to encode the question; the learned conditions execute only the compact prompt encoder and inherited vocabulary lookup before latent generation.
+
+\paragraph{Joint training with prompt-MSE regularization.}
+The epoch-13 result follows one additional epoch (9,558 optimizer updates) of joint training, initialized from the epoch-12 flow checkpoint and the standalone prompt-epoch-10 EMA $0.999$ state. Both the flow backbone and prompt encoder receive the downstream mixed flow/decoder-CE gradients. Unlike the math joint stage, coding also retains an auxiliary teacher-prompt MSE to regularize the encoder. Its targets are the fixed, cached Qwen prompt representations; the loss averages over valid prompt positions and latent coordinates within each training row, then weights rows equally. Only the prompt encoder receives this auxiliary gradient; the answer representation and vocabulary lookup remain frozen.
+
+At each optimizer update, let $g_{\mathrm{down}}$ and $g_{\mathrm{MSE}}$ denote the accumulated, data-parallel-mean prompt gradients from the downstream and auxiliary objectives. We combine them as $g_\phi=g_{\mathrm{down}}+\lambda g_{\mathrm{MSE}}$, with $\lambda=2\,\overline{\|g_{\mathrm{down}}\|_2}/\max(\overline{\|g_{\mathrm{MSE}}\|_2},10^{-12})$, where bars denote exponential moving averages with decay $0.99$. Thus the target 2:1 ratio concerns smoothed gradient norms, not scalar loss values. The combined prompt gradient is clipped at norm one. Joint training retains synchronous clocks, effective batch 512, and learning rate $0.002$. The reported epoch-13 model selects EMA $0.9999$ independently for both components; no coding NFT result is included.
 
 \paragraph{Generation and scoring.}
 We use the benchmark task text in the native Qwen chat format, without assistant prefill, with batch size 32, CFG 1, SCCFG 3, and async $(2.5,2,1.5)$ throughout. Answers fill the remaining positions of the 1,024-token canvas and are decoded greedily. Denoising NFE excludes one terminal decoder call. The eight-seed cohort is $\{42,123,456,789,2026,31415,27182,16180\}$. SCCFG 3 and the 128-step budget follow benchmark sensitivity evaluations rather than an independent code-development-set selection. The shorter training curve uses 32 steps and its stated two- or four-seed cohorts.
@@ -1259,10 +1265,10 @@ HumanEval contains 164 tasks; MBPP uses the 378 tasks retained by EvalPlus \cite
 \paragraph{Mapping external reports.}
 PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our comparison values. ELF-REG Table 1 supplies its aliased HumanEval, HumanEval+, and MBPP-378 base results \citep{scalingdlm}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. We retain their reported values without re-evaluating their models.
 
-For additional discrete-model context, oDLM-0.6B reports HumanEval/HumanEval+ pass@1 of 17.87\%/16.40\% at 128 sampling steps with a 128-token response budget \citep[Table 1 and Appendix B.7]{odlm}. Edit Flow-1.3B reports 12.8\%/10.4\%, and its localized variant reports 14.0\%/10.4\% \citep[Table 3]{editflow}. Our learned-conditioning results without name repair are 27.97\%/25.30\%. These comparisons use the authors' reported accuracies; training data, initialization, and sampling protocols differ. We restrict the additional comparison to HumanEval(+) rather than equating differently defined MBPP columns.
+For additional discrete-model context, oDLM-0.6B reports HumanEval/HumanEval+ pass@1 of 17.87\%/16.40\% at 128 sampling steps with a 128-token response budget \citep[Table 1 and Appendix B.7]{odlm}. Edit Flow-1.3B reports 12.8\%/10.4\%, and its localized variant reports 14.0\%/10.4\% \citep[Table 3]{editflow}. Our learned-conditioning results without name repair are 27.97\%/25.30\% before joint training and 29.57\%/26.91\% at epoch 13. These comparisons use the authors' reported accuracies; training data, initialization, and sampling protocols differ. We restrict the additional comparison to HumanEval(+) rather than equating differently defined MBPP columns.
 
 \paragraph{Comparison under function-name aliasing.}
-Table~\ref{tab:codingaliascomparison} separates the ELF-REG-L comparison from standard scoring in Table~\ref{tab:codingcomparison}. Under the same alias rule, both LFRM-L conditioners exceed ELF-REG-L on all three reported metrics. For learned conditioning, aliasing raises MBPP-378 base accuracy from 19.61\% to 30.99\%, exceeding ELF-REG-L's 28.92\%; without repair, it remains below guided PlaidQ's 24.58\%. Mixing repaired and unrepaired scores would therefore obscure a substantial difference in acceptance criteria.
+Table~\ref{tab:codingaliascomparison} separates the ELF-REG-L comparison from standard scoring in Table~\ref{tab:codingcomparison}. Under the same alias rule, all three LFRM-L variants exceed ELF-REG-L on all three reported metrics. For joint epoch 13, aliasing raises MBPP-378 base accuracy from 18.45\% to 32.11\%, exceeding ELF-REG-L's 28.92\%; without repair, it remains below guided PlaidQ's 24.58\%. Mixing repaired and unrepaired scores would therefore obscure a substantial difference in acceptance criteria.
 
 \begin{table}[htbp]
 \centering\small
@@ -1273,10 +1279,11 @@ Model / prompt conditioner & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstac
 \midrule
 ELF-REG-L \citep{scalingdlm} & $^{*}128$ & 22.56 & 21.46 & 28.92 & ---\\
 LFRM-L / frozen Qwen (ours) & 128 & 33.69 & 30.87 & 43.45 & 37.93\\
-LFRM-L / learned prompt (ours) & 128 & 28.05 & 25.38 & 30.99 & 26.32\\
+LFRM-L / prompt MSE (ours) & 128 & 28.05 & 25.38 & 30.99 & 26.32\\
+LFRM-L / joint prompt (ours) & 128 & 29.73 & 27.06 & 32.11 & 27.81\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Code generation with single-function name aliasing.} Mean pass@1 (\%) under the matched repair rule. ELF-REG-L values are author-reported; $^{*}128$ denotes 127 denoising calls plus terminal decoding in its reported budget. Our rows use eight seeds and the same epoch-12 backbone weights. Prompting and execution limits still differ across papers, as detailed above. Table~\ref{tab:codingaliasdetail} gives our seed SDs and higher-pass results.}
+\caption{\textbf{Code generation with single-function name aliasing.} Mean pass@1 (\%) under the matched repair rule. ELF-REG-L values are author-reported; $^{*}128$ denotes 127 denoising calls plus terminal decoding in its reported budget. Our rows use eight seeds: frozen/MSE conditioning at epoch 12, and joint conditioning at epoch 13. Prompting and execution limits still differ across papers, as detailed above. Table~\ref{tab:codingaliasdetail} gives our seed SDs and higher-pass results.}
 \label{tab:codingaliascomparison}
 \end{table}
 
@@ -1307,7 +1314,7 @@ Epoch 12 / prompt MSE 10 & 4 & 26.37 {\scriptsize (1.44)} & 24.70 {\scriptsize (
 \paragraph{Eight-seed variation and multiple attempts.}
 Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1 with its generation-seed SD, alongside oracle pass@2/4/8. For each problem with $c$ successful samples among eight, pass@$k$ uses $1-\binom{8-c}{k}/\binom{8}{k}$, averaged across problems. Eight samples do not support pass@10, so the main cross-paper comparison uses pass@1. These SDs describe sampling variation for fixed checkpoints, not training variability. Paired uncertainty uses 4,000 problem-bootstrap replicates with seed 20260918, retaining all seeds and both compared conditions within each sampled problem.
 
-At 128 steps, aliasing improves learned-prompt MBPP-378 base by $11.38$ points (95\% interval $[9.19,13.69]$), compared with $4.73$ ($[3.41,6.18]$) for frozen Qwen. With the learned encoder, full MBPP+ improves by $9.36$ points under repair, but remains $11.61$ points below repaired frozen-Qwen performance ($[9.13,14.25]$). Thus entry-point naming accounts for part of the measured conditioning gap; correcting it does not recover the teacher-conditioned result. Standard HumanEval+ also retains a $5.56$ point gap at this longer budget ($[1.75,9.38]$), so the near-recovery at 32 steps should not be interpreted as equivalence at every inference budget.
+Before joint training, at 128 steps, aliasing improves MSE-prompt MBPP-378 base by $11.38$ points (95\% interval $[9.19,13.69]$), compared with $4.73$ ($[3.41,6.18]$) for frozen Qwen. With the MSE encoder, full MBPP+ improves by $9.36$ points under repair, but remains $11.61$ points below repaired frozen-Qwen performance ($[9.13,14.25]$). Thus entry-point naming accounts for part of the measured conditioning gap; correcting it does not recover the teacher-conditioned result. Standard HumanEval+ also retains a $5.56$ point gap at this longer budget ($[1.75,9.38]$), so the near-recovery at 32 steps should not be interpreted as equivalence at every inference budget.
 
 \begin{table}[htbp]
 \centering\small
@@ -1321,13 +1328,18 @@ Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.09)} & 41.53 & 50.82 & 59.15\\
 Frozen Qwen & MBPP-378 base & 38.72 {\scriptsize (1.37)} & 49.17 & 58.26 & 66.40\\
 Frozen Qwen & MBPP+ & 33.99 {\scriptsize (1.62)} & 43.26 & 51.46 & 58.73\\
 \midrule
-Learned prompt & HumanEval & 27.97 {\scriptsize (1.44)} & 35.98 & 42.87 & 48.78\\
-Learned prompt & HumanEval+ & 25.30 {\scriptsize (1.84)} & 32.19 & 37.65 & 42.07\\
-Learned prompt & MBPP-378 base & 19.61 {\scriptsize (1.85)} & 27.44 & 35.41 & 43.92\\
-Learned prompt & MBPP+ & 16.96 {\scriptsize (1.11)} & 23.72 & 30.30 & 36.77\\
+Prompt MSE & HumanEval & 27.97 {\scriptsize (1.44)} & 35.98 & 42.87 & 48.78\\
+Prompt MSE & HumanEval+ & 25.30 {\scriptsize (1.84)} & 32.19 & 37.65 & 42.07\\
+Prompt MSE & MBPP-378 base & 19.61 {\scriptsize (1.85)} & 27.44 & 35.41 & 43.92\\
+Prompt MSE & MBPP+ & 16.96 {\scriptsize (1.11)} & 23.72 & 30.30 & 36.77\\
+\midrule
+Joint prompt & HumanEval & 29.57 {\scriptsize (2.33)} & 39.07 & 47.23 & 54.27\\
+Joint prompt & HumanEval+ & 26.91 {\scriptsize (1.99)} & 35.26 & 42.22 & 47.56\\
+Joint prompt & MBPP-378 base & 18.45 {\scriptsize (1.23)} & 25.77 & 32.95 & 39.95\\
+Joint prompt & MBPP+ & 16.40 {\scriptsize (1.30)} & 23.20 & 29.81 & 35.98\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Standard scoring without aliases.} LFRM-L epoch 12, 128 denoising calls, SCCFG 3, eight seeds. All values are percentages; parentheses give the sample SD of per-seed pass@1. Higher-$k$ values average all seed subsets.}
+\caption{\textbf{Standard scoring without aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. All values are percentages; parentheses give the sample SD of per-seed pass@1. Higher-$k$ values average all seed subsets.}
 \label{tab:codingstandarddetail}
 \end{table}
 
@@ -1343,16 +1355,47 @@ Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.09)} & 41.53 & 50.82 & 59.15\\
 Frozen Qwen & MBPP-378 base & 43.45 {\scriptsize (1.21)} & 53.97 & 62.90 & 70.63\\
 Frozen Qwen & MBPP+ & 37.93 {\scriptsize (1.43)} & 47.21 & 55.07 & 61.90\\
 \midrule
-Learned prompt & HumanEval & 28.05 {\scriptsize (1.38)} & 36.11 & 43.05 & 48.78\\
-Learned prompt & HumanEval+ & 25.38 {\scriptsize (1.78)} & 32.32 & 37.82 & 42.07\\
-Learned prompt & MBPP-378 base & 30.99 {\scriptsize (1.48)} & 40.54 & 48.72 & 55.82\\
-Learned prompt & MBPP+ & 26.32 {\scriptsize (1.54)} & 34.45 & 41.41 & 47.09\\
+Prompt MSE & HumanEval & 28.05 {\scriptsize (1.38)} & 36.11 & 43.05 & 48.78\\
+Prompt MSE & HumanEval+ & 25.38 {\scriptsize (1.78)} & 32.32 & 37.82 & 42.07\\
+Prompt MSE & MBPP-378 base & 30.99 {\scriptsize (1.48)} & 40.54 & 48.72 & 55.82\\
+Prompt MSE & MBPP+ & 26.32 {\scriptsize (1.54)} & 34.45 & 41.41 & 47.09\\
+\midrule
+Joint prompt & HumanEval & 29.73 {\scriptsize (2.34)} & 39.16 & 47.24 & 54.27\\
+Joint prompt & HumanEval+ & 27.06 {\scriptsize (2.14)} & 35.39 & 42.31 & 47.56\\
+Joint prompt & MBPP-378 base & 32.11 {\scriptsize (1.72)} & 41.66 & 49.82 & 57.14\\
+Joint prompt & MBPP+ & 27.81 {\scriptsize (1.88)} & 36.19 & 43.16 & 49.21\\
 \bottomrule
 \end{tabular}
-\caption{\textbf{Scoring with single-function aliases.} LFRM-L epoch 12, 128 denoising calls, SCCFG 3, eight seeds. All values are percentages; parentheses give the sample SD of per-seed pass@1. Higher-$k$ values average all seed subsets.}
+\caption{\textbf{Scoring with single-function aliases.} LFRM-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use the epoch-12 backbone; joint prompt uses epoch 13. All values are percentages; parentheses give the sample SD of per-seed pass@1. Higher-$k$ values average all seed subsets.}
 \label{tab:codingaliasdetail}
 \end{table}
 
+
+
+\paragraph{One epoch of joint adaptation.}
+Table~\ref{tab:codingjointdeltas} compares joint epoch 13 with the epoch-12 backbone and prompt-MSE-epoch-10 encoder, matching all eight seeds, 128 denoising steps, guidance, prompts, and scoring. Both learned components change, and the prompt EMA selector changes from $0.999$ to $0.9999$; this compares the reported training stages rather than isolating the MSE regularizer's effect. Standard HumanEval(+) pass@1 rises by 1.60 points, with paired intervals including zero. HumanEval+ pass@8 rises by 5.49 points, while standard MBPP-378 base pass@8 falls by 3.97 points. Under alias scoring, MBPP+ pass@1 rises by 1.49 points; under standard scoring it falls by 0.56 points. These differing outcomes reinforce the need to separate entry-point repair from the full coding task.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Scoring & Benchmark & $\Delta$ pass@1 [95\% CI] & $\Delta$ pass@8 [95\% CI]\\
+\midrule
+Standard & HumanEval & $+1.60$ {\scriptsize $[-0.61,+3.73]$} & $+5.49$ {\scriptsize $[+0.00,+11.59]$}\\
+Standard & HumanEval+ & $+1.60$ {\scriptsize $[-0.53,+3.58]$} & $+5.49$ {\scriptsize $[+0.61,+10.98]$}\\
+Standard & MBPP-378 base & $-1.16$ {\scriptsize $[-2.38,+0.03]$} & $-3.97$ {\scriptsize $[-7.67,-0.53]$}\\
+Standard & MBPP+ & $-0.56$ {\scriptsize $[-1.69,+0.53]$} & $-0.79$ {\scriptsize $[-4.23,+2.38]$}\\
+\midrule
+Alias & HumanEval & $+1.68$ {\scriptsize $[-0.53,+3.81]$} & $+5.49$ {\scriptsize $[+0.00,+11.59]$}\\
+Alias & HumanEval+ & $+1.68$ {\scriptsize $[-0.46,+3.73]$} & $+5.49$ {\scriptsize $[+0.61,+10.98]$}\\
+Alias & MBPP-378 base & $+1.12$ {\scriptsize $[-0.33,+2.65]$} & $+1.32$ {\scriptsize $[-2.38,+4.76]$}\\
+Alias & MBPP+ & $+1.49$ {\scriptsize $[+0.17,+2.88]$} & $+2.12$ {\scriptsize $[-1.06,+5.03]$}\\
+\bottomrule
+\end{tabular}
+\caption{\textbf{Joint epoch 13 minus pre-joint prompt MSE.} Differences in percentage points at 128 denoising calls and SCCFG 3, using the same eight seeds. Brackets give paired 95\% problem-bootstrap intervals from 4,000 replicates. Both models use backbone EMA $0.9999$; prompt EMA is $0.999$ before joint training and $0.9999$ afterward. Differences are computed before rounding the stage accuracies.}
+\label{tab:codingjointdeltas}
+\end{table}
 
 % BEGIN numerical curve values (generated from saved plotted cohorts)
 \section{Numerical values for plotted curves}
