@@ -366,7 +366,7 @@
 <polygon points="524.520,305.280 522.274,300.600 526.766,300.600" fill="#233344"/>
 <polyline id="path_0347" points="582.480,279.360 582.480,290.880 524.520,290.880" fill="none" stroke="#233344" stroke-width="1.2"/>
 <rect id="shared_ELF" x="426.24" y="308.16" width="196.56" height="66.96000000000001" rx="5.040000000000001" fill="#F1F6FA" stroke="#367AB5" stroke-width="1.5"/>
-<text id="text_0349_0" x="524.52" y="334.07578125000003" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#233344" text-anchor="middle">LFRM backbone</text>
+<text id="text_0349_0" x="524.52" y="334.07578125000003" font-family="DejaVu Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#233344" text-anchor="middle">ELF backbone</text>
 <text id="text_0350_0" x="524.52" y="360.136953125" font-family="DejaVu Sans, Arial, sans-serif" font-size="13" font-weight="normal" fill="#63758A" text-anchor="middle">Bidirectional Transformer</text>
 <polygon id="path_0351" points="614.506,289.786 616.234,292.723 616.061,295.315 618.653,293.933 620.381,296.870 621.245,299.981 620.726,303.091 618.826,305.510 615.370,306.547 611.568,306.029 608.630,304.301 607.248,301.190 607.939,297.734 610.186,294.970 609.840,298.598 612.259,296.179 613.296,293.414" fill="#EB8841" stroke="#DC7734" stroke-width="0.65"/>
 <polygon id="path_0352" points="614.851,297.216 617.270,300.154 617.789,302.918 616.752,304.992 614.506,305.856 612.086,304.646 611.395,302.227 612.432,299.808 613.123,302.573" fill="#FFD37A" stroke="#FFD37A" stroke-width="0.2"/>
@@ -417,7 +417,7 @@
 <polyline id="path_0402" points="732.240,320.040 758.160,320.040" fill="none" stroke="#233344" stroke-width="1.3"/>
 <polygon points="758.160,320.040 753.480,322.286 753.480,317.794" fill="#233344"/>
 <rect id="iterative_ELF_module" x="761.04" y="294.48" width="110.16" height="49.67999999999999" rx="3.6" fill="#EFF4F9" stroke="#367AB5" stroke-width="1"/>
-<text id="text_0404_0" x="816.1200000000001" y="313.45554687500004" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" font-weight="bold" fill="#233344" text-anchor="middle">Backbone</text>
+<text id="text_0404_0" x="816.1200000000001" y="313.45554687500004" font-family="DejaVu Sans, Arial, sans-serif" font-size="19" font-weight="bold" fill="#233344" text-anchor="middle">ELF</text>
 <text id="text_0405_0" x="816.1199999999999" y="336.08753906249996" font-family="DejaVu Sans, Arial, sans-serif" font-size="10.5" font-weight="normal" fill="#63758A" text-anchor="middle">flow head + Euler</text>
 <polyline id="path_0406" points="873.360,320.040 894.960,320.040" fill="none" stroke="#233344" stroke-width="1.3"/>
 <polygon points="894.960,320.040 890.280,322.286 890.280,317.794" fill="#233344"/>
@@ -1332,7 +1332,7 @@
 <polyline id="path_1312" points="735.120,521.280 753.120,521.280" fill="none" stroke="#63758A" stroke-width="1.3"/>
 <polygon points="753.120,521.280 748.440,523.526 748.440,519.034" fill="#63758A"/>
 <rect id="terminal_shared_ELF_plus_head" x="756.0" y="503.28000000000003" width="118.08" height="39.6" rx="5.040000000000001" fill="#EEF6F5" stroke="#2C917F" stroke-width="1"/>
-<text id="terminal_shared_ELF_plus_head_label_0" x="815.04" y="518.501484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">Backbone +</text>
+<text id="terminal_shared_ELF_plus_head_label_0" x="815.04" y="518.501484375" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">ELF +</text>
 <text id="terminal_shared_ELF_plus_head_label_1" x="815.04" y="535.4514843750001" font-family="DejaVu Sans, Arial, sans-serif" font-size="15" font-weight="normal" fill="#233344" text-anchor="middle">token head</text>
 <polyline id="path_1315" points="876.240,521.280 894.960,521.280" fill="none" stroke="#63758A" stroke-width="1.3"/>
 <polygon points="894.960,521.280 890.280,523.526 890.280,519.034" fill="#63758A"/>
@@ -1343,7 +1343,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.337010</dc:date>
+    <dc:date>2026-09-25T23:26:50.118682</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1418,7 +1418,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.380042</dc:date>
+    <dc:date>2026-09-25T23:26:50.167792</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1462,7 +1462,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.417590</dc:date>
+    <dc:date>2026-09-25T23:26:50.215587</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1507,7 +1507,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.456353</dc:date>
+    <dc:date>2026-09-25T23:26:50.274117</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1546,7 +1546,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.508200</dc:date>
+    <dc:date>2026-09-25T23:26:50.325686</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1587,7 +1587,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.567989</dc:date>
+    <dc:date>2026-09-25T23:26:50.410286</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1636,7 +1636,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.625973</dc:date>
+    <dc:date>2026-09-25T23:26:50.449682</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1677,7 +1677,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.679102</dc:date>
+    <dc:date>2026-09-25T23:26:50.489050</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1718,7 +1718,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.732945</dc:date>
+    <dc:date>2026-09-25T23:26:50.527585</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1759,7 +1759,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.786609</dc:date>
+    <dc:date>2026-09-25T23:26:50.565618</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1800,7 +1800,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.839843</dc:date>
+    <dc:date>2026-09-25T23:26:50.608535</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1842,7 +1842,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.874572</dc:date>
+    <dc:date>2026-09-25T23:26:50.645215</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1873,7 +1873,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.898270</dc:date>
+    <dc:date>2026-09-25T23:26:50.674819</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1904,7 +1904,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.941413</dc:date>
+    <dc:date>2026-09-25T23:26:50.732460</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1939,7 +1939,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:51.988248</dc:date>
+    <dc:date>2026-09-25T23:26:50.798332</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -1974,7 +1974,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:52.099671</dc:date>
+    <dc:date>2026-09-25T23:26:50.896521</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -2036,7 +2036,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:52.136339</dc:date>
+    <dc:date>2026-09-25T23:26:50.955544</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -2079,7 +2079,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:52.169190</dc:date>
+    <dc:date>2026-09-25T23:26:51.008357</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -2117,7 +2117,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:52.202634</dc:date>
+    <dc:date>2026-09-25T23:26:51.051357</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -2160,7 +2160,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:52.228604</dc:date>
+    <dc:date>2026-09-25T23:26:51.081709</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -2193,7 +2193,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:52.246067</dc:date>
+    <dc:date>2026-09-25T23:26:51.101301</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -2224,7 +2224,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:52.264665</dc:date>
+    <dc:date>2026-09-25T23:26:51.122786</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -2257,7 +2257,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:52.297915</dc:date>
+    <dc:date>2026-09-25T23:26:51.157906</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
@@ -2294,7 +2294,7 @@
   <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
    <cc:Work>
     <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
-    <dc:date>2026-09-25T22:32:52.316379</dc:date>
+    <dc:date>2026-09-25T23:26:51.179639</dc:date>
     <dc:format>image/svg+xml</dc:format>
     <dc:creator>
      <cc:Agent>
