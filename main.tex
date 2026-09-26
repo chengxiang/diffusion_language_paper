@@ -384,8 +384,9 @@ Because the external condition is the question text, NFT jointly updates the pro
 
 We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math500}, and code generation in Section~\ref{sec:codingresults}. Math evaluations use zero-shot prompts, async clocks $(2.5,2,1.5)$, numerical-answer scoring for GSM8K, and Math-Verify for MATH500 \citep{mathverify}. Headline pass@1 averages eight sampling seeds at 64 denoising steps. NFE counts denoising calls, excluding prompt encoding and terminal decoding. Appendices~\ref{app:experimentdetails} and~\ref{app:seedvariability} give checkpoint settings and seed standard deviations.
 
-\subsection{Headline comparison}
+\subsection{Reasoning accuracy across denoising budgets}
 \label{sec:headlinecomparison}
+\label{sec:headlinelownfe}
 % BEGIN inlined tables/headline_comparison.tex
 \begin{table}[t]
 \caption{Mathematical reasoning, mean pass@1 (\%). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
@@ -429,10 +430,6 @@ TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & 68.9$^\ddagger$ & ---\\
 
 At comparable denoising-backbone sizes, supervised LFRM already exceeds the reported continuous-diffusion baselines, and NFT gives our strongest results (Table~\ref{tab:headlinecomparison}). On MATH500, supervised LFRM-L reaches 21.18\%, compared with ELF-REG-L's 13.39\% at 127 denoising calls \citep{scalingdlm}. Our 90.4M/638M denoisers use compact learned prompt encoders, without executing the teacher Transformer during generation. The autoregressive and discrete-diffusion rows provide broader performance context.
 
-The MATH500 headline tables use SCCFG 3, selected through a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); GSM8K and all inference-allocation curves retain SCCFG 2.
-
-\subsection{Reasoning at lower NFE}
-\label{sec:headlinelownfe}
 % BEGIN inlined tables/headline_low_nfe.tex
 \begin{table}[t]
 \caption{Reasoning at lower NFE, mean pass@1 (\%). Table~\ref{tab:headlinecomparison} gives model parameter counts. Bold/underline mark first/second within each benchmark and backbone-scale block; $^{*}$ marks one fewer denoising call than the heading. External results follow \citet{posterior,scalingdlm}; Appendix~\ref{app:experimentdetails} gives source and protocol details.}
@@ -456,7 +453,9 @@ LFRM, post-NFT & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.1
 \end{table}
 % END inlined tables/headline_low_nfe.tex
 
-Our supervised and post-NFT point estimates exceed the reported continuous-diffusion baselines in every corresponding backbone-size group at 8, 16, 32, and 64 NFE (Table~\ref{tab:headlinelownfe}). At eight steps, supervised LFRM-L reaches 15.23\% on MATH500, exceeding ELF-REG-L's 13.39\% at 127 denoising calls. Useful reasoning therefore emerges without training a separate few-step student. These are reported operating points with different training and evaluation protocols; NFE does not equate FLOPs across methods.
+Both supervised and post-NFT LFRM retain this advantage at 8, 16, 32, and 64 NFE within each backbone-size group (Table~\ref{tab:headlinelownfe}). At eight steps, supervised LFRM-L reaches 15.23\% on MATH500, exceeding ELF-REG-L's 13.39\% at 127 denoising calls. Useful reasoning therefore emerges without training a separate few-step student. These are reported operating points with different training and evaluation protocols; NFE does not equate FLOPs across methods.
+
+The MATH500 headline tables use SCCFG 3, selected through a test-set sensitivity analysis (Appendix~\ref{app:sccfgsweep}); GSM8K and all inference-allocation curves retain SCCFG 2.
 
 \subsection{Refining an answer or drawing more answers}
 \label{sec:headlinebudget}
