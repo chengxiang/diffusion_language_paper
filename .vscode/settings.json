@@ -6,10 +6,10 @@
         {
             "name": "paper-build",
             "command": "bash",
-            "args": ["%DIR%/build-paper.sh"]
+            "args": ["%DIR%/build-paper.sh", "%DOC%.tex"]
         }
     ],
     "latex-workshop.latex.outDir": "%DIR%/build",
-    "latex-workshop.latex.search.rootFiles.include": ["main.tex"],
+    "latex-workshop.latex.search.rootFiles.include": ["main.tex", "main_arxiv.tex"],
     "latex-workshop.latex.clean.method": "glob"
 }

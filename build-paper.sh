@@ -3,6 +3,11 @@
 set -euo pipefail
 paper_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 cd -- "$paper_dir"
+paper_source="${1:-main.tex}"
+if [[ $# -gt 1 || "$paper_source" != *.tex || ! -f "$paper_source" ]]; then
+    printf '%s\n' 'Usage: bash build-paper.sh [existing-document.tex]' >&2
+    exit 2
+fi
 mkdir -p build
 
 if [[ -x "$paper_dir/.local/bin/tectonic" ]]; then
@@ -12,10 +17,10 @@ if [[ -x "$paper_dir/.local/bin/tectonic" ]]; then
 elif command -v tectonic >/dev/null 2>&1; then
     paper_compiler="$(command -v tectonic)"
 elif command -v latexmk >/dev/null 2>&1; then
-    exec latexmk -pdf -synctex=1 -interaction=nonstopmode -halt-on-error -outdir=build main.tex
+    exec latexmk -pdf -synctex=1 -interaction=nonstopmode -halt-on-error -outdir=build "$paper_source"
 else
     printf '%s\n' 'No TeX compiler found. Install Tectonic or a TeX distribution with latexmk.' >&2
     exit 127
 fi
 
-exec "$paper_compiler" --synctex --keep-logs --keep-intermediates --outdir build main.tex
+exec "$paper_compiler" --synctex --keep-logs --keep-intermediates --outdir build "$paper_source"
