@@ -40,7 +40,7 @@ Department of Electrical and Computer Engineering\\
 
 \begin{abstract}
 Continuous diffusion generates complete reasoning solutions through iterative refinement in latent space. We introduce Latent Flow Reasoning Models (LFRMs), an ELF-based training and inference recipe. Our experiments show that accurate decoding alone does not ensure strong reasoning performance. We therefore learn compact representations from multiple layers of a strong autoregressive teacher. Their decomposition also enables asynchronous denoising at different rates. We show that prompt encodings need only preserve the information required for the correct text-conditional score, rather than exactly match teacher features, and use a staged curriculum to learn a compact prompt encoder that replaces the teacher Transformer at inference. We adapt DiffusionNFT to learned self-conditioning guidance and incorporate gold-solution endpoints to supplement sparse rewards. With 90M and 638M denoising backbones, our supervised models outperform reported continuous-diffusion baselines at comparable backbone scales on mathematical reasoning and HumanEval code generation. NFT further improves single-sample accuracy on math and code, and majority-vote performance on mathematics.
-Project repository: \url{https://github.com/chengxiang/diffusion_language_paper}.
+Code will be available at: \url{https://github.com/chengxiang/LFRM}.
 \end{abstract}
 
 \section{Introduction}
@@ -417,20 +417,13 @@ For $k$ samples with $S$ denoising steps each, we use $kS$ as the inference budg
 \begin{figure}[!htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/headline_stages_sccfg2.pdf}
-\caption{LFRM-L before and after NFT on GSM8K and MATH500, with SCCFG 2. Top: oracle pass@$k$; bottom: majority-vote accuracy. Colors denote denoising NFE per sample; the budget is $kS$. Numerical values appear in Appendix~\ref{app:budgetvalues}; Figure~\ref{fig:elfbstages} gives the corresponding LFRM-B curves.}
+\caption{LFRM-L before and after NFT on GSM8K and MATH500, with SCCFG 2. Top: oracle pass@$k$; bottom: majority-vote accuracy. Colors denote denoising NFE per sample; the budget is $kS$. Numerical values appear in Appendix~\ref{app:budgetvalues}; Appendix~\ref{app:elfbbudgets} gives the corresponding LFRM-B curves.}
 \label{fig:headlinestages}
 \end{figure}
 
 Figure~\ref{fig:headlinestages} shows that oracle selection generally favors more attempts with fewer steps, whereas voting generally favors higher-NFE samples. On MATH500 after NFT, 64 eight-step samples reach 67.00\% oracle accuracy, versus 52.60\% for eight 64-step samples; voting reverses this preference, at 25.79\% versus 32.42\%. Intermediate depths remain competitive for voting. The voting--oracle gap motivates better answer selection, potentially using latent-space or hidden-state classifiers.
 
-Figure~\ref{fig:elfbstages} extends the same comparison to the smaller LFRM-B backbone on GSM8K. It uses supervised epoch 18 and NFT update 300, with the same asynchronous clocks and SCCFG 2. Across both model sizes, the allocation curves distinguish the coverage of parallel samples from the accuracy attainable by majority voting.
-
-\begin{figure}[!htbp]
-\centering
-\includegraphics[width=.9\linewidth]{figures/appendix_elf_b_stages_sccfg2.pdf}
-\caption{GSM8K LFRM-B before and after NFT. Upper panels show oracle pass@$k$; lower panels show majority-vote accuracy. Colors denote denoising NFE per sample. The same 64/32/16/8 sample cohorts and total budget of 512 denoising calls are used as in Figure~\ref{fig:headlinestages}. Table~\ref{tab:budgetvaluesgsmb} gives every plotted value with problem-bootstrap SDs.}
-\label{fig:elfbstages}
-\end{figure}
+The corresponding GSM8K LFRM-B comparison appears in Appendix~\ref{app:elfbbudgets}.
 
 \textbf{What changes after NFT?}
 \label{sec:nftresults}
@@ -1214,6 +1207,18 @@ Post-NFT & $16.31\pm1.36$ & $20.09\pm1.23$ & $22.08\pm1.41$ & $23.60\pm1.79$\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\subsection{LFRM-B inference allocation before and after NFT}
+\label{app:elfbbudgets}
+
+Figure~\ref{fig:elfbstages} extends the LFRM-L comparison in Figure~\ref{fig:headlinestages} to the smaller LFRM-B backbone on GSM8K. It uses supervised epoch 18 and NFT update 300, with the same asynchronous clocks and SCCFG 2. Across both model sizes, the allocation curves distinguish the coverage of parallel samples from the accuracy attainable by majority voting.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=.9\linewidth]{figures/appendix_elf_b_stages_sccfg2.pdf}
+\caption{GSM8K LFRM-B before and after NFT. Upper panels show oracle pass@$k$; lower panels show majority-vote accuracy. Colors denote denoising NFE per sample. The same 64/32/16/8 sample cohorts and total budget of 512 denoising calls are used as in Figure~\ref{fig:headlinestages}. Table~\ref{tab:budgetvaluesgsmb} gives every plotted value with problem-bootstrap SDs.}
+\label{fig:elfbstages}
+\end{figure}
 
 \subsection{Numerical inference-allocation results}
 \label{app:budgetvalues}

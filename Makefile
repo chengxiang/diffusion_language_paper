@@ -1,10 +1,13 @@
-.PHONY: pdf arxiv tectonic clean
+.PHONY: pdf arxiv arxiv-source tectonic clean
 
 pdf:
 	bash build-paper.sh
 
 arxiv:
 	bash build-paper.sh main_arxiv.tex
+
+arxiv-source: arxiv
+	python3 package-arxiv.py
 
 tectonic:
 	mkdir -p build
