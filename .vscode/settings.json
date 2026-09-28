@@ -6,10 +6,16 @@
         {
             "name": "paper-build",
             "command": "bash",
-            "args": ["%DIR%/build-paper.sh", "%DOC%.tex"]
+            "args": [
+                "-c",
+                "paper_search_dir=$(dirname -- \"$1\"); while [ ! -f \"$paper_search_dir/build-paper.sh\" ]; do if [ \"$paper_search_dir\" = / ]; then printf '%s\\n' 'Cannot find build-paper.sh above the selected document.' >&2; exit 2; fi; paper_search_dir=$(dirname -- \"$paper_search_dir\"); done; exec bash \"$paper_search_dir/build-paper.sh\" \"$1\" \"$2\"",
+                "paper-build",
+                "%DOC%.tex",
+                "%OUTDIR%"
+            ]
         }
     ],
-    "latex-workshop.latex.outDir": "%DIR%/build",
-    "latex-workshop.latex.search.rootFiles.include": ["main.tex", "main_arxiv.tex"],
+    "latex-workshop.latex.outDir": "%WORKSPACE_FOLDER%/build/%RELATIVE_DIR%",
+    "latex-workshop.latex.search.rootFiles.include": ["main.tex", "main_arxiv.tex", "build/arxiv_submission/main_arxiv.tex"],
     "latex-workshop.latex.clean.method": "glob"
 }
