@@ -1374,6 +1374,53 @@ We use the benchmark task text in the native Qwen chat format, without assistant
 
 HumanEval \citep{humaneval} contains 164 tasks; MBPP \citep{mbpp} uses the 378 tasks retained by EvalPlus \citep{evalplus}. We report base and full extended tests on the same generated programs, requiring both suites to pass for a plus score. Standard scoring applies native EvalPlus sanitization without function-name repair. Execution uses a minimum timeout of 4 seconds, reference-runtime multiplier four, and 4 GiB per program; failures and timeouts count as incorrect. Our separate alias condition changes extraction only: if the expected binding is absent and exactly one top-level function is present, append \texttt{expected\_name = generated\_name} and sanitize again. Existing bindings and ambiguous cases are unchanged. This changes which programs the evaluator accepts without changing generation.
 
+\paragraph{Function-name repair implementation.}
+Figure~\ref{fig:functionnamealias} gives the extraction code for the separately labeled alias-scored results, omitting audit logging. It uses the official EvalPlus sanitizer at revision \texttt{26d6d00bb1fd0fa37f39c99d5290da67891d1c5e}. The expected name comes from the benchmark's \texttt{entry\_point}; neither test outcomes nor reference solutions determine the alias. Function bodies and recursive calls retain their original names. The resulting program is evaluated with the same base/plus tests and execution limits as standard scoring. Table~\ref{tab:codingcomparison} uses standard scoring without this repair.
+
+\begin{figure}[!t]
+\centering
+\begin{minipage}{\linewidth}
+\small
+\begin{verbatim}
+import ast
+from evalplus.sanitize import sanitize
+
+def single_function_alias(completion, expected):
+    standard = sanitize(completion, entrypoint=expected)
+    code = sanitize(completion)
+    try:
+        tree = ast.parse(code)
+    except (SyntaxError, ValueError):
+        return standard
+
+    function_types = (ast.FunctionDef, ast.AsyncFunctionDef)
+    functions = [n for n in tree.body
+                 if isinstance(n, function_types)]
+    bindings = set()
+    for node in tree.body:
+        if isinstance(node, function_types + (ast.ClassDef,)):
+            bindings.add(node.name)
+        elif isinstance(node, (ast.Assign, ast.AnnAssign,
+                               ast.AugAssign)):
+            targets = (node.targets if isinstance(node, ast.Assign)
+                       else [node.target])
+            for target in targets:
+                bindings.update(n.id for n in ast.walk(target)
+                                if isinstance(n, ast.Name))
+        elif isinstance(node, (ast.Import, ast.ImportFrom)):
+            bindings.update(n.asname or n.name.split(".")[0]
+                            for n in node.names)
+
+    if expected in bindings or len(functions) != 1:
+        return standard
+    code += f"\n{expected} = {functions[0].name}\n"
+    return sanitize(code, entrypoint=expected)
+\end{verbatim}
+\end{minipage}
+\caption{\textbf{Single-function alias extraction.} Used only for alias-scored results. Parse failures, an existing expected-name binding, and zero or multiple top-level functions fall back to standard sanitization.}
+\label{fig:functionnamealias}
+\end{figure}
+
 \paragraph{Mapping external reports.}
 Our PlaidQ comparison uses the author-reported results from arXiv version 1, subsequently withdrawn by the authors to address institutional resource-disclosure requirements \citep{plaidq}. PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our comparison values. ELF-REG Table 1 supplies its aliased HumanEval, HumanEval+, and MBPP-378 base results \citep{scalingdlm}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. We retain their reported values without re-evaluating their models.
 
