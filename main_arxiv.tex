@@ -39,8 +39,8 @@ Department of Electrical and Computer Engineering\\
 \maketitle
 
 \begin{abstract}
-Continuous diffusion generates complete reasoning solutions through iterative refinement in latent space. We introduce the Continuous Embedding Diffusion Reasoner (CEDR), an ELF-based training and inference recipe. Our experiments show that accurate decoding alone does not ensure strong reasoning performance. We therefore learn compact representations from multiple layers of a strong autoregressive teacher. Their decomposition also enables asynchronous denoising at different rates. We show that prompt encodings need only preserve the information required for the correct text-conditional score, rather than exactly match teacher features, and use a staged curriculum to learn a compact prompt encoder that replaces the teacher Transformer at inference. We adapt DiffusionNFT to learned self-conditioning guidance and incorporate gold-solution endpoints to supplement sparse rewards. With 90M and 638M denoising backbones, our supervised models outperform reported continuous-diffusion baselines at comparable backbone scales on mathematical reasoning and HumanEval code generation. With learned prompt conditioning, post-NFT CEDR-L achieves 63.74\% pass@1 on GSM8K and 24.68\% on MATH500 at 64 denoising steps; at 128 steps, it reaches 32.85\% on HumanEval and 30.18\% on HumanEval+ without function-name repair. NFT also improves majority-vote performance on mathematics.
-Code will be available at: \url{https://github.com/chengxiang/LFRM}.
+Continuous diffusion generates complete reasoning solutions through iterative refinement in latent space. We introduce the Continuous Embedding Diffusion Reasoner (CEDR), an ELF-based training and inference recipe. Our experiments show that accurate decoding alone does not ensure strong reasoning performance. We therefore learn compact representations from multiple layers of a strong autoregressive teacher. Their decomposition also enables asynchronous denoising at different rates. We show that prompt encodings need only preserve the information required for the correct text-conditional score, rather than exactly match teacher features, and use a staged curriculum to learn a compact prompt encoder that replaces the teacher Transformer at inference. We adapt DiffusionNFT to learned self-conditioning guidance and incorporate gold-solution endpoints to supplement sparse rewards. Our supervised models outperform reported results from recent continuous-diffusion baselines at comparable backbone scales on mathematical reasoning and HumanEval code generation. With a 638M-parameter denoising backbone and learned prompt conditioning, post-NFT CEDR-L achieves 65.03\% pass@1 on GSM8K and 24.6\% on MATH500 at 64 denoising steps, and 32.85\% on HumanEval and 30.18\% on HumanEval+ at 128 denoising steps.
+Code will be available at: \url{https://github.com/chengxiang/CEDR}.
 \end{abstract}
 
 \section{Introduction}
@@ -62,7 +62,7 @@ Our complete reasoning pipeline comprises the following key contributions:
     We develop a CEDR pipeline spanning representation learning, conditional flow training, and inference (Figure~\ref{fig:pipelineoverview}). Our models demonstrate strong performance on math and coding tasks. Our supervised models outperform reported continuous-diffusion baselines at comparable backbone scales on mathematical reasoning across the evaluated denoising budgets (Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe}); our supervised and post-NFT models also outperform reported PlaidQ results on HumanEval(+) (Table~\ref{tab:codingcomparison}).
 
     \item \textbf{Representation design shapes both reasoning accuracy and denoising dynamics.}
-    We analyze representations for both ease of decoding (Appendix~\ref{app:representationdiagnostics}) and ease of generation, motivating a learned multilayer representation that improves reasoning accuracy (Figure~\ref{fig:representationcomparison}). Its layer decomposition enables asynchronous denoising across components, improving accuracy over synchronous denoising in our matched schedule comparison (Section~\ref{sec:clocks} and Table~\ref{tab:inferenceclocks}). Thus the latent space shapes both what the model learns and how it generates.
+    We analyze representations for both ease of decoding (Appendix~\ref{app:representationdiagnostics}) and ease of generation, motivating a learned multilayer representation that improves reasoning accuracy (Figure~\ref{fig:representationcomparison}). Its layer decomposition enables asynchronous denoising across components, improving GSM8K accuracy over synchronous denoising at 16 steps while remaining competitive at 32 steps (Section~\ref{sec:clocks}; Appendix~\ref{app:inferenceclocks}). Thus the latent space shapes both what the model learns and how it generates.
 
     \item \textbf{Learning compact prompt encoders through staged adaptation.}
     We show that \emph{information preservation} for denoising is sufficient for an ideal downstream score network to recover the correct text-conditional score, without exact MSE matching to teacher prompt features (Lemma~\ref{lem:conditionalrepresentation}). This permits a compact prompt encoder to replace the large teacher. Our staged curriculum first learns the flow under fixed teacher conditioning, then fits the encoder and jointly adapts both networks (Figure~\ref{fig:promptcurriculum}), addressing the difficulty of learning them together from initialization (Figure~\ref{fig:representationcomparison}).
@@ -209,7 +209,7 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 
 \begin{figure}[tbp]
 \centering
-\includegraphics[width=.56\linewidth]{figures/prompt_curriculum_training_cedr.pdf}
+\includegraphics[width=.56\linewidth]{figures/prompt_curriculum_training_cedr_rerun.pdf}
 \caption{\textbf{From teacher conditioning to learned prompts.} Top: GSM8K; bottom: MATH500. Circles/squares denote CEDR-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Values and settings: Appendix~\ref{app:promptcurves}.}
 \label{fig:promptcurriculum}
 \end{figure}
@@ -236,7 +236,7 @@ Table~\ref{tab:trainingstages} summarizes the curriculum and reported NFT endpoi
 Task / model & \shortstack{Frozen-Qwen\\flow epochs} & \shortstack{Prompt-MSE\\epochs} & \shortstack{Joint epochs\\(flow endpoint)} & \shortstack{Reported\\NFT update}\\
 \midrule
 GSM8K / CEDR-B & 12 & 60 & 6 (18) & 300\\
-GSM8K / CEDR-L & 12 & 30 & 9 (21) & 500\\
+GSM8K / CEDR-L & 12 & 30 & 9 (21) & 600\\
 MATH / CEDR-L & 12 & 10 & 9 (21) & 600\\
 OpenCodeInstruct / CEDR-L & 12 & 10 & 1 (13) & 100\\
 \bottomrule
@@ -271,16 +271,16 @@ with $\Delta_t$ defined in Section~\ref{sec:methodflow}. All groups update from 
 \toprule
 $(\gamma_{16},\gamma_{24},\gamma_{32})$ & GSM8K & MATH500 \\
 \midrule
-$(1,1,1)$ & 52.96 {\scriptsize($\pm 1.13$)} & 15.50 {\scriptsize($\pm 1.27$)} \\
-$(2,2,2)$ & 57.51 {\scriptsize($\pm 0.80$)} & 17.40 {\scriptsize($\pm 1.41$)} \\
-$(1.5,2,2.5)$ & 58.07 {\scriptsize($\pm 0.64$)} & 17.60 {\scriptsize($\pm 1.98$)} \\
-$(2.5,2,1.5)$ & \textbf{59.25} {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scriptsize($\pm 1.27$)} \\
+$(1,1,1)$ & 52.62 {\scriptsize($\pm 0.75$)} & 15.50 {\scriptsize($\pm 1.27$)} \\
+$(2,2,2)$ & 59.97 {\scriptsize($\pm 0.64$)} & 17.40 {\scriptsize($\pm 1.41$)} \\
+$(1.5,2,2.5)$ & \textbf{60.08} {\scriptsize($\pm 0.38$)} & 17.60 {\scriptsize($\pm 1.98$)} \\
+$(2.5,2,1.5)$ & 59.78 {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scriptsize($\pm 1.27$)} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \textbf{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, chosen based on the highest observed accuracy in the reported MATH validation comparison (Appendix~\ref{app:inferenceclocks}). The shared-square clock improves on the identity clock, and $(2.5,2,1.5)$ achieves the highest mean among the four schedules in Table~\ref{tab:inferenceclocks} on both benchmarks. The validation and lower-NFE comparisons show that the ordering depends on the evaluation setting (Appendix~\ref{app:inferenceclocks}).
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, originally chosen based on the highest observed MATH validation accuracy; it also has the highest mean in the GSM8K validation comparison (Appendix~\ref{app:inferenceclocks}). The shared-square clock improves on the identity clock. At 32 steps, the two asynchronous schedules and $(2,2,2)$ give similar GSM8K test accuracy, while $(2.5,2,1.5)$ has the highest MATH500 mean (Table~\ref{tab:inferenceclocks}). At 16 steps on GSM8K, it improves over $(2,2,2)$ by 1.40 percentage points. These comparisons support flexible denoising clocks without identifying a universally optimal schedule.
 
 Reconstruction probes reveal distinct sensitivities across layer groups, with weaker contrasts under random coordinate grouping (Figure~\ref{fig:layerreconstruction}). These findings motivate studying coordinated denoising across representations, but do not establish the mechanism behind the sampling gains.
 
@@ -370,8 +370,8 @@ ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone 200M--1B}}\\
 ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96 & 13.39\\
-\textbf{CEDR-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{58.67} & \underline{21.18}\\
-\textbf{CEDR-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{63.74} & \textbf{24.68}\\
+\textbf{CEDR-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{60.81} & \underline{21.18}\\
+\textbf{CEDR-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{65.03} & \textbf{24.68}\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: larger backbones (reference)}}\\
 MLFM \citep{mlfm} & 123 & 1,220 & NR$^\S$ & 31.24 & ---\\
@@ -400,8 +400,8 @@ Method / NFE & 8 & 16 & 32 & 64 & 8 & 16 & 32 & 64 & 8 & 16 & 32 & 64\\
 \midrule
 FMLM+ Init & 15.10 & 26.10 & 31.80 & 33.60 & --- & --- & --- & --- & --- & --- & --- & ---\\
 ELF-REG & $^{*}$26.20 & $^{*}$34.42 & $^{*}$37.15 & $^{*}$38.11 & $^{*}$47.34 & $^{*}$52.89 & $^{*}$55.04 & $^{*}$55.96 & $^{*}$9.76 & $^{*}$11.53 & $^{*}$12.40 & $^{*}$13.31\\
-CEDR, pre-NFT & \underline{26.40} & \underline{34.48} & \underline{37.80} & \underline{39.17} & \underline{49.41} & \underline{55.33} & \underline{57.88} & \underline{58.67} & \underline{15.23} & \underline{17.93} & \underline{19.65} & \underline{21.18}\\
-CEDR, post-NFT & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.16} & \textbf{54.84} & \textbf{60.55} & \textbf{62.47} & \textbf{63.74} & \textbf{17.45} & \textbf{20.93} & \textbf{22.60} & \textbf{24.68}\\
+CEDR, pre-NFT & \underline{26.40} & \underline{34.48} & \underline{37.80} & \underline{39.17} & \underline{52.69} & \underline{57.80} & \underline{59.55} & \underline{60.81} & \underline{15.23} & \underline{17.93} & \underline{19.65} & \underline{21.18}\\
+CEDR, post-NFT & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.16} & \textbf{57.06} & \textbf{62.64} & \textbf{64.33} & \textbf{65.03} & \textbf{17.45} & \textbf{20.93} & \textbf{22.60} & \textbf{24.68}\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
@@ -416,7 +416,7 @@ For $k$ samples with $S$ denoising steps each, we use $kS$ as the inference budg
 
 \begin{figure}[!htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/headline_stages_sccfg2.pdf}
+\includegraphics[width=\linewidth]{figures/headline_stages_sccfg2_rerun.pdf}
 \caption{CEDR-L before and after NFT on GSM8K and MATH500, with SCCFG 2. Top: oracle pass@$k$; bottom: majority-vote accuracy. Colors denote denoising NFE per sample; the budget is $kS$. Numerical values appear in Appendix~\ref{app:budgetvalues}; Appendix~\ref{app:elfbbudgets} gives the corresponding CEDR-B curves.}
 \label{fig:headlinestages}
 \end{figure}
@@ -427,7 +427,7 @@ The corresponding GSM8K CEDR-B comparison appears in Appendix~\ref{app:elfbbudge
 
 \textbf{What changes after NFT?}
 \label{sec:nftresults}
-NFT improves single-sample accuracy at every reported denoising depth (Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe}). At 64 steps with SCCFG 2, the paired CEDR-L gains are $+5.07$ percentage points on GSM8K and $+4.75$ on MATH500. These results support the promise of diffusion RL for continuous reasoning models. The benefit is less uniform for high-$k$ oracle coverage: at eight steps on MATH500, NFT raises pass@1 from 13.88\% to 16.31\%, while pass@64 changes from 67.60\% to 67.00\%. Voting shows clearer gains: with eight 64-step samples, MATH500 accuracy rises from 26.34\% to 32.42\% ($+6.07$ points). Voting benefits from the correct answer's frequency relative to competing answers, whereas oracle selection needs only one successful draw. These patterns do not establish reduced reasoning diversity after NFT; Appendix~\ref{app:budgetvalues} gives further comparisons and interpretation. Appendices~\ref{app:generations}--\ref{app:trajectories} illustrate complete solutions and intermediate generations.
+NFT improves single-sample accuracy at every reported denoising depth (Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe}). At 64 steps with SCCFG 2, the paired CEDR-L gains are $+4.22$ percentage points on GSM8K and $+4.75$ on MATH500. These results support the promise of diffusion RL for continuous reasoning models. The benefit is less uniform for high-$k$ oracle coverage: at eight steps on GSM8K, NFT raises pass@1 from 52.69\% to 57.06\%, while pass@64 decreases from 90.22\% to 88.40\%. On MATH500, pass@64 changes little, from 67.60\% to 67.00\%. Voting gains are clearer on MATH500: with eight 64-step samples, MATH500 accuracy rises from 26.34\% to 32.42\% ($+6.07$ points). Voting benefits from the correct answer's frequency relative to competing answers, whereas oracle selection needs only one successful draw. These patterns do not establish reduced reasoning diversity after NFT; Appendix~\ref{app:budgetvalues} gives further comparisons and interpretation. Appendices~\ref{app:generations}--\ref{app:trajectories} illustrate complete solutions and intermediate generations.
 
 \paragraph{Higher-pass comparison with continuous-diffusion baselines.}
 At 64 denoising calls, supervised and post-NFT CEDR-L reach MATH500 pass@8 of 47.20\% and 52.60\%, respectively. Both exceed ELF-REG-L's reported pass@10 of 44.04\% at 63 denoising calls (Table~\ref{tab:mathhigherpass}; \citealp[Table 18]{scalingdlm}). This compares explicitly different attempt counts, not equal compute or an estimate of our pass@10. These CEDR results use SCCFG 2, matching Figure~\ref{fig:headlinestages}; the headline pass@1 tables use SCCFG 3.
@@ -647,7 +647,7 @@ Both trainable components use constant learning rate $10^{-4}$, zero weight deca
 Coding NFT starts from joint epoch 13 with flow/prompt EMA $0.9999/0.9999$ and fresh optimizers, retaining the objective and optimization settings above. We select 4,096 unique OpenCodeInstruct training prompts and reserve 256 disjoint validation prompts, with selection seed 20260926. Eligible rows explicitly specify the tested interface, have unchanged native assertion tests and successful reference metadata, and pass reference execution in the reward harness. Prompt deduplication and exact held-out benchmark prompt exclusion precede selection. The training tests supply binary execution rewards; HumanEval/MBPP evaluation tests are never used for training. Gold endpoints receive reward one, generated programs receive $0.75$ if all retained assertions pass and zero otherwise. Synthetic training tests remain imperfect measures of correctness. Execution is isolated, network-disabled, and resource-limited, with a five-second timeout per assertion. Both flow and prompt models train jointly, without the supervised stage's prompt-MSE regularizer. We report successful NFT update 100.
 
 \paragraph{NFT checkpoint selection.}
-We compare updates 100/200/300/400 for GSM8K CEDR-B, 100/300/500 for GSM8K CEDR-L, and 200/400/600 for MATH CEDR-L. Selection uses mean validation accuracy over seeds 42/123 on fixed validation sets of 1,000 GSM8K and 500 MATH problems (Appendix~\ref{app:inferenceclocks}), with async $(2.5,2,1.5)$, 32 steps, and SCCFG two. Update 300 for GSM8K CEDR-B and 500 for GSM8K CEDR-L were selected based on validation accuracy; Math-Verify selects update 600 for MATH CEDR-L. For coding, update 100 with flow/prompt EMA $0.9/0.9$ was selected under computation resource constraints.
+We compare updates 100/200/300/400 for GSM8K CEDR-B, 100/200/300/400/500/600 for GSM8K CEDR-L, and 200/400/600 for MATH CEDR-L. Selection uses mean validation accuracy over seeds 42/123 on fixed validation sets of 1,000 GSM8K and 500 MATH problems (Appendix~\ref{app:inferenceclocks}), with async $(2.5,2,1.5)$, 32 steps, and SCCFG two. Update 300 for GSM8K CEDR-B and 600 for GSM8K CEDR-L were selected based on validation accuracy; Math-Verify selects update 600 for MATH CEDR-L. For coding, update 100 with flow/prompt EMA $0.9/0.9$ was selected under computation resource constraints.
 
 \section{CEDR objective and conditional encoding}
 \label{app:methodobjective}
@@ -786,13 +786,13 @@ Epoch & Prompt & Correct$_{42}$ & Correct$_{123}$ & Mean (SD) & 95\% CI \\
 18 & Joint & 495 & 483 & 37.07 {\scriptsize (0.64)} & $[34.76, 39.39]$ \\
 \addlinespace
 \multicolumn{6}{@{}l}{\textit{GSM8K, CEDR-L; $N=1319$}}\\
-4 & Qwen & 212 & 202 & 15.69 {\scriptsize (0.54)} & $[14.22, 17.21]$ \\
-8 & Qwen & 755 & 743 & 56.79 {\scriptsize (0.64)} & $[54.40, 59.14]$ \\
-12 & Qwen & 804 & 820 & 61.56 {\scriptsize (0.86)} & $[59.17, 63.80]$ \\
-12 & MSE swap & 647 & 660 & 49.55 {\scriptsize (0.70)} & $[47.12, 51.90]$ \\
-16 & Joint & 728 & 701 & 54.17 {\scriptsize (1.45)} & $[51.78, 56.52]$ \\
-20 & Joint & 761 & 763 & 57.77 {\scriptsize (0.11)} & $[55.38, 60.12]$ \\
-21 & Joint & 783 & 780 & 59.25 {\scriptsize (0.16)} & $[56.67, 61.68]$ \\
+4 & Qwen & 304 & 281 & 22.18 {\scriptsize (1.23)} & $[20.43, 24.00]$ \\
+8 & Qwen & 749 & 724 & 55.84 {\scriptsize (1.34)} & $[53.53, 58.11]$ \\
+12 & Qwen & 824 & 788 & 61.11 {\scriptsize (1.93)} & $[58.76, 63.38]$ \\
+12 & MSE swap & 683 & 669 & 51.25 {\scriptsize (0.75)} & $[48.79, 53.68]$ \\
+16 & Joint & 760 & 754 & 57.39 {\scriptsize (0.32)} & $[55.00, 59.74]$ \\
+20 & Joint & 794 & 773 & 59.40 {\scriptsize (1.13)} & $[57.01, 61.83]$ \\
+21 & Joint & 790 & 787 & 59.78 {\scriptsize (0.16)} & $[57.43, 62.24]$ \\
 \addlinespace
 \multicolumn{6}{@{}l}{\textit{MATH500, CEDR-L; $N=500$}}\\
 4 & Qwen & 30 & 38 & 6.80 {\scriptsize (1.13)} & $[5.10, 8.70]$ \\
@@ -952,7 +952,7 @@ The base $\tau$ grid is fixed across schedule comparisons. We retain the full de
 \subsection{Schedule comparisons}
 Tables~\ref{tab:inferenceclocks} and~\ref{tab:inferenceclockfull} use CEDR-L epoch 21, 32 denoising steps, SCCFG 2, backbone/prompt EMA $0.9999/0.9999$, and seeds 42/123. Scores use numerical-answer accuracy for GSM8K and Math-Verify for MATH500 (Appendix~\ref{app:experimentdetails}). Entries in Table~\ref{tab:inferenceclocks} give mean pass@1 with sample SD across the two seeds; bold marks the highest mean among its four schedules.
 
-Table~\ref{tab:inferenceclockfull} compares the four schedules from the main table on both validation and test sets. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution; the two validation sets need not favor the same schedule. The highest GSM8K validation mean instead uses $(1.5,2,2.5)$. Thus the main comparison supports the usefulness of time reparameterization and the chosen operating point, without identifying a universally optimal exponent vector.
+Table~\ref{tab:inferenceclockfull} compares the four schedules from the main table on both validation and test sets. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution. Both validation sets give their highest observed mean to $(2.5,2,1.5)$. On GSM8K validation, its advantages over $(2,2,2)$ and $(1.5,2,2.5)$ are 0.75 and 0.50 percentage points, respectively, with paired 95\% intervals $[-0.30,1.85]$ and $[-0.60,1.55]$. The small differences among these nonidentity clocks do not establish a unique best schedule.
 
 \begin{table}[htbp]
 \centering\small
@@ -964,15 +964,15 @@ Table~\ref{tab:inferenceclockfull} compares the four schedules from the main tab
 \cmidrule(lr){2-3}\cmidrule(lr){4-5}
 Clock powers & GSM8K & MATH & GSM8K & MATH500 \\
 \midrule
-$(1,1,1)$ & 65.00 {\scriptsize (0.99)} & 15.40 {\scriptsize (0.28)} & 52.96 {\scriptsize (1.13)} & 15.50 {\scriptsize (1.27)} \\
-$(2,2,2)$ & 72.70 {\scriptsize (0.85)} & 17.80 {\scriptsize (0.57)} & 57.51 {\scriptsize (0.80)} & 17.40 {\scriptsize (1.41)} \\
-$(1.5,2,2.5)$ & \textbf{72.80} {\scriptsize (1.13)} & 18.30 {\scriptsize (0.14)} & 58.07 {\scriptsize (0.64)} & 17.60 {\scriptsize (1.98)} \\
-$(2.5,2,1.5)$ & 72.15 {\scriptsize (0.35)} & \textbf{18.70} {\scriptsize (0.14)} & \textbf{59.25} {\scriptsize (0.16)} & \textbf{17.90} {\scriptsize (1.27)} \\
+$(1,1,1)$ & 64.60 {\scriptsize (0.57)} & 15.40 {\scriptsize (0.28)} & 52.62 {\scriptsize (0.75)} & 15.50 {\scriptsize (1.27)} \\
+$(2,2,2)$ & 72.85 {\scriptsize (0.21)} & 17.80 {\scriptsize (0.57)} & 59.97 {\scriptsize (0.64)} & 17.40 {\scriptsize (1.41)} \\
+$(1.5,2,2.5)$ & 73.10 {\scriptsize (0.85)} & 18.30 {\scriptsize (0.14)} & \textbf{60.08} {\scriptsize (0.38)} & 17.60 {\scriptsize (1.98)} \\
+$(2.5,2,1.5)$ & \textbf{73.60} {\scriptsize (0.28)} & \textbf{18.70} {\scriptsize (0.14)} & 59.78 {\scriptsize (0.16)} & \textbf{17.90} {\scriptsize (1.27)} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-For the 32-step test comparison, async $(2.5,2,1.5)$ minus sync $(2,2,2)$ gives +1.74 percentage points on GSM8K (paired 95\% CI $[+0.72,+2.73]$) and +0.50 on MATH500 ($[-0.90,+1.90]$). Repeating the same two-seed comparison at 16 steps gives 55.57\% versus 54.74\% on GSM8K, a difference of +0.83 points ($[-0.15,+1.82]$), and 16.60\% versus 16.90\% on MATH500, a difference of $-0.30$ points ($[-2.00,+1.40]$). All use SCCFG 2. These are pointwise paired problem-bootstrap intervals with 4,000 replicates, conditional on the fixed checkpoints and generation seeds; the standard deviations in the main table instead describe dispersion across full-benchmark seed accuracies.
+For the 32-step test comparison, async $(2.5,2,1.5)$ minus sync $(2,2,2)$ gives $-0.19$ percentage points on GSM8K (paired 95\% CI $[-1.06,+0.68]$) and +0.50 on MATH500 ($[-0.90,+1.90]$). Its GSM8K difference from $(1.5,2,2.5)$ is $-0.30$ points ($[-1.18,+0.57]$), leaving the three nonidentity schedules close at this budget. Repeating the async-versus-sync comparison at 16 steps gives 58.68\% versus 57.28\% on GSM8K, a difference of +1.40 points ($[+0.34,+2.54]$), and 16.60\% versus 16.90\% on MATH500, a difference of $-0.30$ points ($[-2.00,+1.40]$). All use SCCFG 2. These are pointwise paired problem-bootstrap intervals with 4,000 replicates, conditional on the fixed checkpoints and generation seeds; the standard deviations in the main table instead describe dispersion across full-benchmark seed accuracies.
 
 \subsection{Layer decomposition and reconstruction sensitivity}
 We probe a trained CEDR-B model by corrupting one group of clean gold-solution latents, predicting the clean representation, and decoding it to tokens. A matched control replaces the layer groups by eight random partitions of the same 256/256/512 widths, keeping the assigned times and injected Gaussian energy fixed. Figure~\ref{fig:layerreconstruction} shows that the actual groups have different reconstruction sensitivities: perturbing layer-16 features is more damaging than perturbing deeper features, with the clearest contrast against layer 24. Random grouping attenuates these contrasts. The layer decomposition thus exposes structure that is obscured when coordinates are grouped arbitrarily.
@@ -1199,8 +1199,8 @@ Pre-NFT & $26.40\pm0.87$ & $34.48\pm0.94$ & $37.80\pm1.20$ & $39.17\pm0.63$\\
 Post-NFT & $30.08\pm0.87$ & $37.77\pm0.84$ & $41.13\pm0.94$ & $42.16\pm0.88$\\
 \addlinespace
 \multicolumn{5}{@{}l}{\textit{GSM8K, CEDR-L, SCCFG 2}}\\
-Pre-NFT & $49.41\pm0.86$ & $55.33\pm0.91$ & $57.88\pm1.03$ & $58.67\pm0.69$\\
-Post-NFT & $54.84\pm0.92$ & $60.55\pm0.69$ & $62.47\pm0.82$ & $63.74\pm0.83$\\
+Pre-NFT & $52.69\pm0.88$ & $57.80\pm1.00$ & $59.55\pm0.77$ & $60.81\pm0.67$\\
+Post-NFT & $57.06\pm0.82$ & $62.64\pm0.86$ & $64.33\pm0.75$ & $65.03\pm0.57$\\
 \addlinespace
 \multicolumn{5}{@{}l}{\textit{MATH500, CEDR-L, SCCFG 3}}\\
 Pre-NFT & $15.23\pm1.16$ & $17.93\pm1.30$ & $19.65\pm1.37$ & $21.18\pm0.70$\\
@@ -1234,10 +1234,10 @@ Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb} give every oracle 
 Metrics and uncertainty are defined in Appendix~\ref{app:experimentdetails}.
 
 \paragraph{Paired NFT improvements.}
-For the 64-step, SCCFG-2 CEDR-L comparisons discussed in Section~\ref{sec:nftresults}, NFT improves pass@1 by $5.07$ points on GSM8K ($[4.26,5.90]$) and $4.75$ on MATH500 ($[3.33,6.15]$). At eight steps and 64 samples, the NFT-minus-supervised oracle differences are $-1.06$ points on GSM8K CEDR-L ($[-2.35,0.23]$) and $-0.60$ on MATH500 ($[-3.80,2.60]$). Both intervals include zero. At 64 steps and eight samples, voting improves by $1.75$ points on GSM8K CEDR-L ($[0.22,3.29]$) and $6.07$ on MATH500 ($[3.04,8.98]$). These intervals are conditional on the evaluated checkpoints and draws and are not adjusted for multiple comparisons.
+For the 64-step, SCCFG-2 CEDR-L comparisons discussed in Section~\ref{sec:nftresults}, NFT improves pass@1 by $4.22$ points on GSM8K ($[3.43,4.98]$) and $4.75$ on MATH500 ($[3.33,6.15]$). At eight steps and 64 samples, the NFT-minus-supervised oracle differences are $-1.82$ points on GSM8K CEDR-L ($[-3.11,-0.61]$) and $-0.60$ on MATH500 ($[-3.80,2.60]$). The GSM8K interval excludes zero, whereas the MATH500 interval does not. At 64 steps and eight samples, voting changes by $+1.02$ points on GSM8K CEDR-L ($[-0.30,2.31]$) and $+6.07$ on MATH500 ($[3.04,8.98]$); the GSM8K gain is uncertain at this allocation. These intervals are conditional on the evaluated checkpoints and draws and are not adjusted for multiple comparisons.
 
 \paragraph{Interpreting NFT gains across allocations.}
-At eight steps on GSM8K CEDR-L, NFT raises pass@1 from 49.41\% to 54.84\%, while pass@64 changes from 89.84\% to 88.78\%. On MATH500 at the same allocation, voting rises from 24.09\% to 25.79\%; this smaller gain has paired 95\% interval $[-0.45,3.85]$. Thus voting improvements also depend on the allocation. For independent samples with problem-specific success probability $p_i$, oracle success is $1-(1-p_i)^k$: at large $k$, gains saturate on problems already solved frequently. Voting instead depends on the correct answer's frequency relative to competing answer groups. Changes in correctness probability, its distribution across problems, and competing-answer frequencies can therefore affect these metrics differently. The curves motivate this interpretation but do not by themselves establish a loss of reasoning diversity after NFT.
+At eight steps on GSM8K CEDR-L, NFT raises pass@1 from 52.69\% to 57.06\%, while pass@64 decreases from 90.22\% to 88.40\%. On MATH500 at the same allocation, voting rises from 24.09\% to 25.79\%; this smaller gain has paired 95\% interval $[-0.45,3.85]$. Thus voting improvements also depend on the allocation. For independent samples with problem-specific success probability $p_i$, oracle success is $1-(1-p_i)^k$: at large $k$, gains saturate on problems already solved frequently. Voting instead depends on the correct answer's frequency relative to competing answer groups. Changes in correctness probability, its distribution across problems, and competing-answer frequencies can therefore affect these metrics differently. The curves motivate this interpretation but do not by themselves establish a loss of reasoning diversity after NFT.
 
 \begin{table}[!htbp]
 \caption{GSM8K, CEDR-L: every point in Figure~\ref{fig:headlinestages}, with SCCFG 2. Entries are accuracy percentages with problem-bootstrap SDs in parentheses, not across-seed SDs (Appendix~\ref{app:uncertainty}). Each denoising depth uses $n=512/S$ saved draws per problem; $k$-subset averaging uses all $n$.}
@@ -1250,31 +1250,31 @@ At eight steps on GSM8K CEDR-L, NFT raises pass@1 from 49.41\% to 54.84\%, while
 \cmidrule(lr){4-5}\cmidrule(l){6-7}
 NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
 \midrule
-8 & 1 & 8 & 49.41 {\scriptsize (1.04)} & 54.84 {\scriptsize (1.09)} & 49.41 {\scriptsize (1.04)} & 54.84 {\scriptsize (1.09)} \\
-8 & 2 & 16 & 60.21 {\scriptsize (1.08)} & 63.89 {\scriptsize (1.11)} & 49.41 {\scriptsize (1.04)} & 54.84 {\scriptsize (1.09)} \\
-8 & 4 & 32 & 68.84 {\scriptsize (1.05)} & 70.85 {\scriptsize (1.08)} & 56.11 {\scriptsize (1.15)} & 60.04 {\scriptsize (1.17)} \\
-8 & 8 & 64 & 76.01 {\scriptsize (0.99)} & 76.53 {\scriptsize (1.02)} & 59.92 {\scriptsize (1.18)} & 62.69 {\scriptsize (1.20)} \\
-8 & 16 & 128 & 81.85 {\scriptsize (0.92)} & 81.34 {\scriptsize (0.95)} & 62.05 {\scriptsize (1.21)} & 64.07 {\scriptsize (1.24)} \\
-8 & 32 & 256 & 86.41 {\scriptsize (0.85)} & 85.39 {\scriptsize (0.90)} & 63.31 {\scriptsize (1.25)} & 64.76 {\scriptsize (1.27)} \\
-8 & 64 & 512 & 89.84 {\scriptsize (0.83)} & 88.78 {\scriptsize (0.88)} & 64.21 {\scriptsize (1.31)} & 64.84 {\scriptsize (1.31)} \\
+8 & 1 & 8 & 52.69 {\scriptsize (1.04)} & 57.06 {\scriptsize (1.09)} & 52.69 {\scriptsize (1.04)} & 57.06 {\scriptsize (1.09)} \\
+8 & 2 & 16 & 63.43 {\scriptsize (1.07)} & 65.89 {\scriptsize (1.09)} & 52.69 {\scriptsize (1.04)} & 57.06 {\scriptsize (1.09)} \\
+8 & 4 & 32 & 71.64 {\scriptsize (1.03)} & 72.71 {\scriptsize (1.05)} & 59.57 {\scriptsize (1.14)} & 62.02 {\scriptsize (1.16)} \\
+8 & 8 & 64 & 78.18 {\scriptsize (0.96)} & 78.11 {\scriptsize (1.00)} & 63.32 {\scriptsize (1.17)} & 64.61 {\scriptsize (1.19)} \\
+8 & 16 & 128 & 83.35 {\scriptsize (0.90)} & 82.37 {\scriptsize (0.94)} & 65.32 {\scriptsize (1.20)} & 66.01 {\scriptsize (1.21)} \\
+8 & 32 & 256 & 87.28 {\scriptsize (0.83)} & 85.75 {\scriptsize (0.89)} & 66.40 {\scriptsize (1.23)} & 66.78 {\scriptsize (1.24)} \\
+8 & 64 & 512 & 90.22 {\scriptsize (0.81)} & 88.40 {\scriptsize (0.88)} & 67.06 {\scriptsize (1.28)} & 67.13 {\scriptsize (1.30)} \\
 \midrule
-16 & 1 & 16 & 55.33 {\scriptsize (1.06)} & 60.55 {\scriptsize (1.11)} & 55.33 {\scriptsize (1.06)} & 60.55 {\scriptsize (1.11)} \\
-16 & 2 & 32 & 65.34 {\scriptsize (1.08)} & 68.39 {\scriptsize (1.10)} & 55.33 {\scriptsize (1.06)} & 60.55 {\scriptsize (1.11)} \\
-16 & 4 & 64 & 73.08 {\scriptsize (1.04)} & 74.39 {\scriptsize (1.05)} & 61.38 {\scriptsize (1.15)} & 64.67 {\scriptsize (1.17)} \\
-16 & 8 & 128 & 79.17 {\scriptsize (0.98)} & 79.34 {\scriptsize (1.00)} & 64.51 {\scriptsize (1.18)} & 66.55 {\scriptsize (1.20)} \\
-16 & 16 & 256 & 84.02 {\scriptsize (0.92)} & 83.42 {\scriptsize (0.95)} & 66.09 {\scriptsize (1.22)} & 67.42 {\scriptsize (1.23)} \\
-16 & 32 & 512 & 87.95 {\scriptsize (0.89)} & 86.58 {\scriptsize (0.94)} & 66.98 {\scriptsize (1.29)} & 67.92 {\scriptsize (1.27)} \\
+16 & 1 & 16 & 57.80 {\scriptsize (1.07)} & 62.64 {\scriptsize (1.10)} & 57.80 {\scriptsize (1.07)} & 62.64 {\scriptsize (1.10)} \\
+16 & 2 & 32 & 67.50 {\scriptsize (1.07)} & 70.46 {\scriptsize (1.08)} & 57.80 {\scriptsize (1.07)} & 62.64 {\scriptsize (1.10)} \\
+16 & 4 & 64 & 74.73 {\scriptsize (1.02)} & 76.40 {\scriptsize (1.02)} & 63.83 {\scriptsize (1.14)} & 66.82 {\scriptsize (1.15)} \\
+16 & 8 & 128 & 80.37 {\scriptsize (0.96)} & 81.07 {\scriptsize (0.97)} & 66.97 {\scriptsize (1.17)} & 68.98 {\scriptsize (1.17)} \\
+16 & 16 & 256 & 84.78 {\scriptsize (0.91)} & 84.78 {\scriptsize (0.92)} & 68.62 {\scriptsize (1.19)} & 70.11 {\scriptsize (1.20)} \\
+16 & 32 & 512 & 88.32 {\scriptsize (0.89)} & 87.79 {\scriptsize (0.91)} & 69.34 {\scriptsize (1.25)} & 70.79 {\scriptsize (1.24)} \\
 \midrule
-32 & 1 & 32 & 57.88 {\scriptsize (1.08)} & 62.47 {\scriptsize (1.10)} & 57.88 {\scriptsize (1.08)} & 62.47 {\scriptsize (1.10)} \\
-32 & 2 & 64 & 67.45 {\scriptsize (1.08)} & 70.38 {\scriptsize (1.08)} & 57.88 {\scriptsize (1.08)} & 62.47 {\scriptsize (1.10)} \\
-32 & 4 & 128 & 74.83 {\scriptsize (1.03)} & 76.49 {\scriptsize (1.03)} & 63.54 {\scriptsize (1.16)} & 66.45 {\scriptsize (1.16)} \\
-32 & 8 & 256 & 80.73 {\scriptsize (0.99)} & 81.65 {\scriptsize (0.97)} & 66.26 {\scriptsize (1.19)} & 68.31 {\scriptsize (1.20)} \\
-32 & 16 & 512 & 85.37 {\scriptsize (0.97)} & 85.90 {\scriptsize (0.96)} & 67.17 {\scriptsize (1.28)} & 69.47 {\scriptsize (1.26)} \\
+32 & 1 & 32 & 59.55 {\scriptsize (1.08)} & 64.33 {\scriptsize (1.10)} & 59.55 {\scriptsize (1.08)} & 64.33 {\scriptsize (1.10)} \\
+32 & 2 & 64 & 69.14 {\scriptsize (1.07)} & 71.93 {\scriptsize (1.08)} & 59.55 {\scriptsize (1.08)} & 64.33 {\scriptsize (1.10)} \\
+32 & 4 & 128 & 76.16 {\scriptsize (1.02)} & 77.67 {\scriptsize (1.03)} & 65.57 {\scriptsize (1.15)} & 68.18 {\scriptsize (1.15)} \\
+32 & 8 & 256 & 81.61 {\scriptsize (0.97)} & 82.19 {\scriptsize (0.98)} & 68.62 {\scriptsize (1.18)} & 70.18 {\scriptsize (1.18)} \\
+32 & 16 & 512 & 85.97 {\scriptsize (0.95)} & 85.82 {\scriptsize (0.97)} & 70.21 {\scriptsize (1.24)} & 71.18 {\scriptsize (1.25)} \\
 \midrule
-64 & 1 & 64 & 58.67 {\scriptsize (1.10)} & 63.74 {\scriptsize (1.12)} & 58.67 {\scriptsize (1.10)} & 63.74 {\scriptsize (1.12)} \\
-64 & 2 & 128 & 68.17 {\scriptsize (1.11)} & 71.48 {\scriptsize (1.09)} & 58.67 {\scriptsize (1.10)} & 63.74 {\scriptsize (1.12)} \\
-64 & 4 & 256 & 75.13 {\scriptsize (1.10)} & 77.34 {\scriptsize (1.06)} & 64.43 {\scriptsize (1.18)} & 67.59 {\scriptsize (1.17)} \\
-64 & 8 & 512 & 80.21 {\scriptsize (1.11)} & 81.96 {\scriptsize (1.06)} & 67.09 {\scriptsize (1.26)} & 68.84 {\scriptsize (1.24)} \\
+64 & 1 & 64 & 60.81 {\scriptsize (1.10)} & 65.03 {\scriptsize (1.12)} & 60.81 {\scriptsize (1.10)} & 65.03 {\scriptsize (1.12)} \\
+64 & 2 & 128 & 69.99 {\scriptsize (1.09)} & 72.50 {\scriptsize (1.08)} & 60.81 {\scriptsize (1.10)} & 65.03 {\scriptsize (1.12)} \\
+64 & 4 & 256 & 76.77 {\scriptsize (1.06)} & 78.27 {\scriptsize (1.04)} & 66.40 {\scriptsize (1.17)} & 68.69 {\scriptsize (1.17)} \\
+64 & 8 & 512 & 81.80 {\scriptsize (1.06)} & 83.02 {\scriptsize (1.04)} & 69.56 {\scriptsize (1.24)} & 70.58 {\scriptsize (1.23)} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1378,7 +1378,7 @@ The lower block of Table~\ref{tab:codingcomparison} separates the ELF-REG-L comp
 
 
 \paragraph{Prompt lengths and encoder size.}
-The recorded mean prefix lengths over unique training prompts are 84.17 tokens for the GSM8K pipeline (275,661 prompts), 89.15 for MATH (508,953), and 233.44 for OpenCodeInstruct (4,772,508). These are native formatted training prefixes, including the assistant header, rather than benchmark question lengths. Code prefixes average 2.77 and 2.62 times the GSM8K and MATH lengths; their median is 216 and 99th percentile 506. The length difference motivates the conditioning hypothesis but is not a controlled length ablation. Likewise, the cross-task prompt-swap comparison uses each task's selected MSE checkpoint (GSM8K CEDR-L epoch 30, MATH epoch 10, code epoch 1) and the stated seed cohorts. At 32 steps, the code MBPP+ swap loss is 24.74 percentage points, compared with 12.02 points on GSM8K CEDR-L and 2.90 on MATH500. The 121,333,180 parameters of our CEDR-L contextual encoder exclude the frozen $151{,}936\times2{,}560$ vocabulary lookup. ELF-REG's Qwen3-0.6B-Base contextual body has approximately 440M parameters, excluding its approximately 156M lookup; its additional Qwen3-1.7B-Base alignment teacher is used only during training. Our frozen-Qwen reference instead uses a larger 4B teacher, so the cross-paper comparison does not isolate encoder size.
+The recorded mean prefix lengths over unique training prompts are 84.17 tokens for the GSM8K pipeline (275,661 prompts), 89.15 for MATH (508,953), and 233.44 for OpenCodeInstruct (4,772,508). These are native formatted training prefixes, including the assistant header, rather than benchmark question lengths. Code prefixes average 2.77 and 2.62 times the GSM8K and MATH lengths; their median is 216 and 99th percentile 506. The length difference motivates the conditioning hypothesis but is not a controlled length ablation. Likewise, the cross-task prompt-swap comparison uses each task's selected MSE checkpoint (GSM8K CEDR-L epoch 30, MATH epoch 10, code epoch 1) and the stated seed cohorts. At 32 steps, the code MBPP+ swap loss is 24.74 percentage points, compared with 9.86 points on GSM8K CEDR-L and 2.90 on MATH500. The 121,333,180 parameters of our CEDR-L contextual encoder exclude the frozen $151{,}936\times2{,}560$ vocabulary lookup. ELF-REG's Qwen3-0.6B-Base contextual body has approximately 440M parameters, excluding its approximately 156M lookup; its additional Qwen3-1.7B-Base alignment teacher is used only during training. Our frozen-Qwen reference instead uses a larger 4B teacher, so the cross-paper comparison does not isolate encoder size.
 
 \paragraph{Training trajectory and prompt substitution.}
 Table~\ref{tab:codingstages} keeps NFE and guidance fixed across flow-training epochs 4/8/12 and the prompt-MSE substitution at the fixed epoch-12 backbone checkpoint. The prompt epoch counter starts afresh; prompt epoch 1 is already MSE-trained, not a random encoder. At 32 steps, the four-seed HumanEval+ gap between prompt epoch 10 and original Qwen is $-0.91$ points (paired 95\% problem-bootstrap interval $[-5.03,3.20]$); MBPP+ retains a $-17.20$ point gap ($[-20.24,-14.22]$). These comparisons isolate the conditioner because the backbone weights are identical.
@@ -1541,15 +1541,15 @@ Figure~\ref{fig:headlineexamples} presents one correct GSM8K generation and one 
 \textbf{Problem.} A new program had 60 downloads in the first month. The number of downloads in the second month was three times as many as the downloads in the first month, but then reduced by 30\% in the third month. How many downloads did the program have total over the three months?
 
 \medskip\textbf{Generated solution.}\par\smallskip
-Let's break down the downloads for the program month by month.
+Let's break down the downloads for each month:
 
-In the first month, the program had 60 downloads.
+First month: The program had 60 downloads.
 
-In the second month, the program had three times as many as the downloads in the first month, so it had 60 * 3 = 180 downloads.
+Second month: The number of downloads three times as many as the downloads in the first month, so 3 * 60 = 180 downloads.
 
-In the third month, the downloads were reduced by 30\%, which means it had 180 - (180 * 30 / 100) = 180 - 54 = 126 downloads.
+Third month: The number of downloads reduced by 30\%, which is 180 - (30\% of 180) = 180 - 0.3 * 180 = 180 - 54 = 126 downloads.
 
-To find the total number of downloads over the three months, we add up the downloads from each month: 60 + 180 + 126 = 240 + 126 = 366
+To get the total number of downloads over the three months, we add up the downloads for each month: 60 + 180 + 126 = 240 + 126 = 366
 
 Thus, the program had a total of $\boxed{366}$ downloads over the three months.
 \end{minipage}}
@@ -1572,22 +1572,43 @@ For $f(0)$: $f(0) = \frac{3(0) - 2}{0 - 2} = \frac{-2}{-2} = 1$
 
 Now we can add these together to find the sum: $f(-2) + f(-1) + f(0) = 2 + \frac{5}{3} + 1 = \frac{11}{3} + 1 = \frac{11}{3} + \frac{3}{3} = \frac{14}{3}$ $\boxed{\frac{14}{3}}$
 \end{minipage}}
-\caption{Correct generations from CEDR-L at 64 denoising NFEs, async $(2.5,2,1.5)$, SCCFG 2, and seed 42. GSM8K uses NFT update 500; MATH500 uses NFT update 600. Displayed equations have been moved inline to save space; model wording and calculations are unchanged. Both answers and the intermediate calculations are correct.}
+\caption{Correct generations from CEDR-L at 64 denoising NFEs, async $(2.5,2,1.5)$, SCCFG 2, and seed 42. Both examples use NFT update 600. Displayed equations have been moved inline to save space; model wording and calculations are unchanged. Both answers and the intermediate calculations are correct.}
 \label{fig:headlineexamples}
 \end{figure}
 
 \subsection{Intermediate generation trajectory}
 \label{app:trajectories}
 
-Figure~\ref{fig:gsmtrajectory} shows steps 20, 40, 49, 60, 62, and 64 of the GSM8K example in Figure~\ref{fig:headlineexamples}. After sampling, we apply the terminal decoder (time $1$, SCCFG~2, zero decoder self-conditioning) to each saved state. These premature readouts neither feed back into sampling nor represent intermediate clean-latent predictions. The final text exactly reproduces the archived generation.
+Figures~\ref{fig:gsmtrajectory}--\ref{fig:gsmtrajectoryfinal} show steps 20, 40, 49, 60, 62, and 64 of the GSM8K example in Figure~\ref{fig:headlineexamples}. After sampling, we apply the terminal decoder (time $1$, SCCFG~2, zero decoder self-conditioning) to each saved state. These premature readouts neither feed back into sampling nor represent intermediate clean-latent predictions. The final text exactly reproduces the archived generation.
 
 Light blue marks exact token-ID equality at the same position in the final answer, before its EOS; matches need not persist. Panels label the local clocks $(t_{16},t_{24},t_{32})$: $0$ is noise and $1$ is clean. Each readout retains its native extraction and EOS; only whitespace layout changes.
 
 \begin{figure}[p]
 \centering
-\includegraphics[width=\linewidth,height=0.86\textheight,keepaspectratio]{figures/gsm8k_trajectory_steps20_40_49_60_62_64.pdf}
-\caption{\textbf{GSM8K generation trajectory.} Steps 20, 40, 49, 60, 62, and 64, from top to bottom, for the GSM8K example in Figure~\ref{fig:headlineexamples}. CEDR-L NFT update 500; backbone/prompt EMA $.99/.99$; seed 42; async $(2.5,2,1.5)$; 64 denoising steps; CFG~1 and SCCFG~2. Light blue identifies tokens matching the final answer at the same position.}
+\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{figures/gsm8k_trajectory_rerun_steps20.pdf}
+\caption{\textbf{GSM8K generation trajectory: step 20.} Early decoder readout for the example in Figure~\ref{fig:headlineexamples}. CEDR-L NFT update 600; backbone/prompt EMA $.99/.99$; seed 42; async $(2.5,2,1.5)$; 64 denoising steps; CFG~1 and SCCFG~2. Light blue identifies tokens matching the final answer at the same position.}
 \label{fig:gsmtrajectory}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{figures/gsm8k_trajectory_rerun_steps40.pdf}
+\caption{\textbf{GSM8K generation trajectory: step 40.} The same example and settings as Figure~\ref{fig:gsmtrajectory}, with positional final-token matches highlighted in light blue.}
+\label{fig:gsmtrajectory40}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{figures/gsm8k_trajectory_rerun_steps49.pdf}
+\caption{\textbf{GSM8K generation trajectory: step 49.} The same example and settings as Figure~\ref{fig:gsmtrajectory}, with positional final-token matches highlighted in light blue.}
+\label{fig:gsmtrajectory49}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{figures/gsm8k_trajectory_rerun_steps60_62_64.pdf}
+\caption{\textbf{GSM8K generation trajectory: steps 60, 62, and 64.} Later readouts for the same example and settings as Figure~\ref{fig:gsmtrajectory}, with the final solution in the bottom panel.}
+\label{fig:gsmtrajectoryfinal}
 \end{figure}
 
 \end{document}
