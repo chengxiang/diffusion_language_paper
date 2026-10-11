@@ -75,7 +75,7 @@ Our complete reasoning pipeline comprises the following key contributions:
 \label{sec:relatedwork}
 
 \textbf{Diffusion language models.} Language diffusion operates in continuous representations \citep{plaid,tess2,hyperspherical} or discrete token spaces \citep{mdlm,llada,dbtm}, with recent continuous models targeting reasoning, coding, and few-step generation \citep{posterior,mlfm,plaidq}. We build on ELF \citep{elf}, which denoises contextual representations and shares a backbone between denoising and token decoding. Concurrent to our paper, ELF-REG \citep{scalingdlm} augments ELF with teacher-feature alignment and a jointly denoised global representation. CEDR learns its answer representation and replaces external prompt encoders with a compact trainable network.
-\textbf{Representation design and denoising order.} Related work learns or aligns diffusion representations in vision and language \citep{repa,textldm,ldlm}, and explores separate denoising clocks for representation components in vision \citep{sfd,latentforcing}. We study learned multilayer language representations for both decoding and generation, and use their structure for asynchronous inference.
+\textbf{Representation design and denoising order.} Related work learns or aligns diffusion representations in vision and language \citep{repa,textldm,ldlm}, and explores separate denoising clocks for representation components in vision \citep{sfd,latentforcing}. We study learned multilayer language representations for both decoding and generation, and use their structure for asynchronous inference. Our stochastic samplers apply established denoise-and-re-noise updates from consistency models and DMD2 \citep{consistencymodels,dmd2}, also evaluated in ELF-REG \citep{scalingdlm}, and the noise-churn principle of EDM \citep{edm} to these local clocks.
 \textbf{Diffusion reinforcement learning.} Reward-based post-training has also been explored for diffusion reasoning \citep{d1,llada15,ladirl}. We adapt DiffusionNFT \citep{diffusionnft}, which optimizes rewarded endpoints through forward-process regression. Our adaptation accommodates ELF's learned self-conditioning guidance, adds gold-solution anchoring, and jointly updates the flow model and prompt encoder.
 
 \section{Preliminaries}
@@ -252,7 +252,11 @@ Our multilayer representation allows different feature groups to become clean at
 Although training uses a shared time, inference applies the same learned time-embedding function to each local time and averages its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. This needs no retraining and recovers the original embedding when local times agree.
 
 
-For solver state $z_r=\bar z_{\tau_r}$, predicted clean endpoint $\widehat z_{\mathrm{clean},r}$, and local times $t_{\ell,r}=f_\ell(\tau_r)$, the groupwise Euler update is
+\textbf{Sampling with local clocks.}
+Let $z_r$ be the answer state at solver time $\tau_r$, with local times $t_{\ell,r}=f_\ell(\tau_r)$, and let $\widehat z_{\mathrm{clean},r}$ denote the guided clean prediction. We use three sampling rules with the same trained denoiser and local clocks; the stochastic rules adapt established sampling procedures to the groupwise corruption in Eq.~\eqref{eq:methodinterpolant}.
+
+\textbf{ODE.}
+The Euler baseline advances the predicted velocity in the shared solver clock:
 \begin{equation}
  z_{r+1}^{(\ell)}=z_r^{(\ell)}+
  (\tau_{r+1}-\tau_r)\,f'_\ell(\tau_r)
@@ -260,12 +264,44 @@ For solver state $z_r=\bar z_{\tau_r}$, predicted clean endpoint $\widehat z_{\m
  {\Delta_{t_{\ell,r}}},
  \label{eq:asyncsampler}
 \end{equation}
-with $\Delta_t$ defined in Section~\ref{sec:methodflow}. All groups update from the same denoiser call, so asynchrony does not increase NFE. Unlike shared-clock reparameterization, this adapts the model to unequal group times absent from synchronous training; implementation details appear in Appendix~\ref{app:inferenceclocks}.
+where $\Delta_t=\max(1-t,0.05)$ is the stabilized denominator from Section~\ref{sec:methodflow}. No new noise is added after initialization.
+
+\textbf{Stochastic (DMD2).}
+Following the multistep sampling construction used in consistency models and DMD2 \citep{consistencymodels,dmd2}, predict the clean endpoint and apply fresh Gaussian corruption at the next local times:
+\begin{equation}
+ z_{r+1}^{(\ell)}
+ =t_{\ell,r+1}\widehat z_{\mathrm{clean},r}^{(\ell)}
+ +\sigma(1-t_{\ell,r+1})\xi_r^{(\ell)},
+ \qquad \xi_r\sim\mathcal N(0,I).
+ \label{eq:asyncdmd2}
+\end{equation}
+Noise is independent across steps and coordinates. We use this sampling construction without DMD2 distillation; ELF-REG also evaluates clean-prediction re-noising for continuous language generation \citep{scalingdlm}.
+
+\textbf{Stochastic (EDM).}
+Following EDM's noise-churn principle \citep{edm}, first move the current state to noisier local times $\bar t_{\ell,r}\leq t_{\ell,r}$. For an interior step, define $\alpha_{\ell,r}=\bar t_{\ell,r}/t_{\ell,r}$ and sample
+\begin{equation}
+ \bar z_r^{(\ell)}
+ =\alpha_{\ell,r}z_r^{(\ell)}
+ +\sigma\sqrt{(1-\bar t_{\ell,r})^2
+ -\alpha_{\ell,r}^2(1-t_{\ell,r})^2}\,\xi_r^{(\ell)}.
+ \label{eq:asyncchurnback}
+\end{equation}
+Evaluate the denoiser on $\bar z_r$ at $\bar{\bm t}_r$, giving a new clean prediction $\widehat z_{\mathrm{clean},r}$, then take an Euler step in each local time:
+\begin{equation}
+ z_{r+1}^{(\ell)}
+ =\bar z_r^{(\ell)}
+ +\frac{t_{\ell,r+1}-\bar t_{\ell,r}}{1-\bar t_{\ell,r}}
+ \bigl(\widehat z_{\mathrm{clean},r}^{(\ell)}-\bar z_r^{(\ell)}\bigr).
+ \label{eq:asyncchurnforward}
+\end{equation}
+This variant uses finite local-time increments and an Euler update, rather than EDM's original second-order solver. Appendix~\ref{app:samplerimplementation} specifies the churn times and endpoint rules.
+
+All three samplers restore clean prompt positions and carry the guided clean prediction as recurrent self-conditioning. Each step uses one shared denoiser call for all groups, so asynchrony does not increase NFE; token decoding requires one additional call. Unlike shared-clock reparameterization, these local clocks expose the synchronously trained model to unequal group noise levels. The stochastic rules are discrete sampling procedures, without a claim that they integrate a particular continuous-time SDE.
 
 \begin{table}[!htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Inference clocks change accuracy without retraining.} CEDR-L epoch 21, 32 steps; mean pass@1 (\%). Protocol and full sweep: Appendix~\ref{app:inferenceclocks}.}
+\caption{\textbf{Inference clocks change accuracy without retraining.} CEDR-L epoch 21, ODE sampling at 32 denoising steps; mean pass@1 (\%). Protocol and full sweep: Appendix~\ref{app:inferenceclocks}.}
 \label{tab:inferenceclocks}
 \begin{tabular}{@{}lrr@{}}
 \toprule
@@ -280,7 +316,7 @@ $(2.5,2,1.5)$ & 59.78 {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scriptsize($\
 \end{table}
 
 \textbf{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, originally chosen based on the highest observed MATH validation accuracy; it also has the highest mean in the GSM8K validation comparison (Appendix~\ref{app:inferenceclocks}). The shared-square clock improves on the identity clock. At 32 steps, the two asynchronous schedules and $(2,2,2)$ give similar GSM8K test accuracy, while $(2.5,2,1.5)$ has the highest MATH500 mean (Table~\ref{tab:inferenceclocks}). These comparisons support flexible denoising clocks without identifying a universally optimal schedule.
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, originally chosen based on the highest observed MATH validation accuracy; it also has the highest mean in the GSM8K validation comparison (Appendix~\ref{app:inferenceclocks}). Under ODE sampling, the shared-square clock improves on the identity clock. At 32 steps, the two asynchronous schedules and $(2,2,2)$ give similar GSM8K test accuracy, while $(2.5,2,1.5)$ has the highest MATH500 mean (Table~\ref{tab:inferenceclocks}). These ODE comparisons support flexible denoising clocks without identifying a universally optimal schedule or establishing the same ordering under stochastic sampling.
 
 Reconstruction probes reveal distinct sensitivities across layer groups, with weaker contrasts under random coordinate grouping (Figure~\ref{fig:layerreconstruction}). These findings motivate studying coordinated denoising across representations, but do not establish the mechanism behind the sampling gains.
 
@@ -929,7 +965,7 @@ Epoch & \shortstack{Learned\\16/24/32} & \shortstack{PCA\\16/24/32} & \shortstac
 \section{Inference clocks and reconstruction diagnostics}
 \label{app:inferenceclocks}
 
-\subsection{Local clocks, time embeddings, and sampling grid}
+\subsection{Local clocks, time embeddings, and samplers}
 
 \paragraph{Local corruption and time embeddings.}
 The local clocks in Section~\ref{sec:clocks} assign each group its own Gaussian corruption, $z_{\bm t}^{(\ell)}=t_\ell z_{\mathrm{clean}}^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}$. The three time embedders are identical copies of the selected scalar-time checkpoint weights:
@@ -947,16 +983,37 @@ For $S$ denoising steps, we set $\tau_0=0$, $\tau_S=1$, and use the same logit-n
  \tau_r=\operatorname{sigmoid}\!\left[-1.5+0.8\Phi^{-1}(r/S)\right],
  \qquad 0<r<S.
 \end{equation}
-The base $\tau$ grid is fixed across schedule comparisons. We retain the full derivative $f'_\ell(\tau)=\gamma_\ell\tau^{\gamma_\ell-1}$ in Eq.~\eqref{eq:asyncsampler}, with the endpoint denominator $\Delta_{t_{\ell,r}}=\max(1-\tau_r^{\gamma_\ell},0.05)$. Question states remain clean, and recurrent self-conditioning carries the previous endpoint prediction to the next call. Changing the clock therefore alters both the integration grid in local time and the prediction history. One shared denoiser call updates all groups; the terminal token-decoding call remains separate.
+The base $\tau$ grid is fixed across schedule and sampler comparisons. For the ODE baseline, we retain the full derivative $f'_\ell(\tau)=\gamma_\ell\tau^{\gamma_\ell-1}$ in Eq.~\eqref{eq:asyncsampler}, with the endpoint denominator $\Delta_{t_{\ell,r}}=\max(1-\tau_r^{\gamma_\ell},0.05)$. Question states remain clean, and recurrent self-conditioning carries the previous endpoint prediction to the next call. Changing the clock therefore alters both the integration grid in local time and the prediction history. One shared denoiser call updates all groups; the terminal token-decoding call remains separate.
+
+\paragraph{Stochastic-sampler implementation.}
+\label{app:samplerimplementation}
+The labels \emph{Stochastic (DMD2)} and \emph{Stochastic (EDM)} identify the update families in Eqs.~\eqref{eq:asyncdmd2}--\eqref{eq:asyncchurnforward}. Both use the same destination grid as ODE, $\sigma=2$, and local-clock exponents $(2.5,2,1.5)$ in the stochastic evaluations. They operate on the fixed supervised and NFT endpoints without retraining or checkpoint reselection.
+
+For DMD2-style sampling, the fresh-noise multiplier is one ($\eta=1$): the injected standard deviation in group $\ell$ is exactly $\sigma(1-t_{\ell,r+1})$. Each nonterminal step draws fresh Gaussian noise after predicting the clean endpoint, including the first step. At $r=S-1$, Eq.~\eqref{eq:asyncdmd2} gives $z_S=\widehat z_{\mathrm{clean},S-1}$, and no noise is drawn.
+
+For EDM-style sampling, let $G(u)=\operatorname{sigmoid}[-1.5+0.8\Phi^{-1}(u)]$ for $0<u<1$, with $G(0)=0$ and $G(1)=1$. On interior transitions $1\leq r\leq S-2$, contract the \emph{uniform quantile index} by a factor of $0.7$:
+\begin{equation}
+ \bar\tau_r=G(0.7r/S),\qquad
+ \bar t_{\ell,r}=f_\ell(\bar\tau_r),\qquad
+ \tau_r=G(r/S).
+ \label{eq:indexchurnclock}
+\end{equation}
+Thus $\bar\tau_r$ is generally not $0.7\tau_r$. The variance in Eq.~\eqref{eq:asyncchurnback} follows by matching the forward Gaussian corruption: scaling $z_r^{(\ell)}$ by $\alpha_{\ell,r}$ gives signal coefficient $\bar t_{\ell,r}$, and independent noise supplies the remaining variance. This is nonnegative for $0\leq\bar t_{\ell,r}\leq t_{\ell,r}<1$. The denoiser is evaluated at these noisier times, using the same averaged time embeddings as above. Eq.~\eqref{eq:asyncchurnforward} uses the finite increment $t_{\ell,r+1}-\bar t_{\ell,r}$ and denominator $1-\bar t_{\ell,r}$, without the derivative factor or denominator clamp of Eq.~\eqref{eq:asyncsampler}.
+
+At the initial transition, churn is bypassed: $\bar z_0=z_0$ and $\bar t_{\ell,0}=0$, followed by Eq.~\eqref{eq:asyncchurnforward}. At the terminal transition, churn is again bypassed; the denoiser is evaluated at the current state and times, and its clean prediction is used directly as $z_S$. We restore prompt positions after noise injection and every state update, and retain the previous guided clean prediction for self-conditioning. The noise-injection and local Euler rules adapt EDM's churn principle; the quantile-index contraction and first-order update differ from its original sampler.
+
+Both stochastic samplers initialize from the same seeded Gaussian distribution as ODE, use $S$ denoiser calls and one separate terminal decoder call, and add no terminal noise. Fresh noise comes from a separate per-batch CUDA generator, seeded by $(s+1{,}000{,}003+b\cdot1{,}000{,}003)\bmod(2^{63}-1)$, where $s$ is the evaluation seed and $b$ the first benchmark-row index in the batch. DMD2-style sampling applies $S-1$ fresh draws. EDM-style sampling consumes the first draw without applying it and applies the $S-2$ interior draws. The network runs in BF16, latent updates in FP32, and the time-embedding mean in FP64 before casting back.
+
+The stochastic samplers decode their final predicted-clean state, while the ODE baseline decodes its final Euler-updated state. Comparisons with ODE therefore include this terminal-rule difference, as well as the distinct update formulas, and do not isolate the effect of fresh noise alone.
 
 \subsection{Schedule comparisons}
-Tables~\ref{tab:inferenceclocks} and~\ref{tab:inferenceclockfull} use CEDR-L epoch 21, 32 denoising steps, SCCFG 2, backbone/prompt EMA $0.9999/0.9999$, and seeds 42/123. Scores use numerical-answer accuracy for GSM8K and Math-Verify for MATH500 (Appendix~\ref{app:experimentdetails}). Entries in Table~\ref{tab:inferenceclocks} give mean pass@1 with sample SD across the two seeds; bold marks the highest mean among its four schedules.
+Tables~\ref{tab:inferenceclocks} and~\ref{tab:inferenceclockfull} use CEDR-L epoch 21, ODE sampling at 32 denoising steps, SCCFG 2, backbone/prompt EMA $0.9999/0.9999$, and seeds 42/123. Scores use numerical-answer accuracy for GSM8K and Math-Verify for MATH500 (Appendix~\ref{app:experimentdetails}). Entries in Table~\ref{tab:inferenceclocks} give mean pass@1 with sample SD across the two seeds; bold marks the highest mean among its four schedules.
 
 Table~\ref{tab:inferenceclockfull} compares the four schedules from the main table on both validation and test sets. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution. Both validation sets give their highest observed mean to $(2.5,2,1.5)$. On GSM8K validation, its advantages over $(2,2,2)$ and $(1.5,2,2.5)$ are 0.75 and 0.50 percentage points, respectively, with paired 95\% intervals $[-0.30,1.85]$ and $[-0.60,1.55]$. The small differences among these nonidentity clocks do not establish a unique best schedule.
 
 \begin{table}[htbp]
 \centering\small
-\caption{Four-schedule CEDR-L epoch-21 comparison: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns include all entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
+\caption{Four-schedule CEDR-L epoch-21 comparison: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 with ODE sampling at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns include all entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
 \label{tab:inferenceclockfull}
 \begin{tabular}{lrrrr}
 \toprule
