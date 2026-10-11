@@ -301,22 +301,24 @@ All three samplers restore clean prompt positions and carry the guided clean pre
 \begin{table}[!htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Inference clocks change accuracy without retraining.} CEDR-L epoch 21, ODE sampling at 32 denoising steps; mean pass@1 (\%). Protocol and full sweep: Appendix~\ref{app:inferenceclocks}.}
+\caption{\textbf{Inference clocks across deterministic and stochastic samplers.} CEDR-L epoch 21, 32 denoising steps, SCCFG 2; mean pass@1 (\%) with seed SD in parentheses over seeds 42/123. Bold marks the best clock within each dataset/sampler. The MATH headline uses SCCFG 3. Protocol and paired comparisons: Appendix~\ref{app:schedulecomparisons}.}
 \label{tab:inferenceclocks}
-\begin{tabular}{@{}lrr@{}}
+\begin{tabular}{@{}lrrrrrr@{}}
 \toprule
-$(\gamma_{16},\gamma_{24},\gamma_{32})$ & GSM8K & MATH500 \\
+& \multicolumn{2}{c}{ODE} & \multicolumn{2}{c}{Stochastic (EDM)} & \multicolumn{2}{c}{Stochastic (DMD2)} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+Clock powers & GSM8K & MATH500 & GSM8K & MATH500 & GSM8K & MATH500 \\
 \midrule
-$(1,1,1)$ & 52.62 {\scriptsize($\pm 0.75$)} & 15.50 {\scriptsize($\pm 1.27$)} \\
-$(2,2,2)$ & 59.97 {\scriptsize($\pm 0.64$)} & 17.40 {\scriptsize($\pm 1.41$)} \\
-$(1.5,2,2.5)$ & \textbf{60.08} {\scriptsize($\pm 0.38$)} & 17.60 {\scriptsize($\pm 1.98$)} \\
-$(2.5,2,1.5)$ & 59.78 {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scriptsize($\pm 1.27$)} \\
+$(1,1,1)$ & 52.62 {\scriptsize($\pm 0.75$)} & 15.50 {\scriptsize($\pm 1.27$)} & 59.78 {\scriptsize($\pm 0.05$)} & 19.90 {\scriptsize($\pm 1.84$)} & 60.50 {\scriptsize($\pm 0.43$)} & 21.90 {\scriptsize($\pm 0.14$)} \\
+$(2,2,2)$ & 59.97 {\scriptsize($\pm 0.64$)} & 17.40 {\scriptsize($\pm 1.41$)} & 61.83 {\scriptsize($\pm 0.91$)} & 16.20 {\scriptsize($\pm 0.57$)} & 64.86 {\scriptsize($\pm 0.16$)} & 24.30 {\scriptsize($\pm 2.12$)} \\
+$(1.5,2,2.5)$ & \textbf{60.08} {\scriptsize($\pm 0.38$)} & 17.60 {\scriptsize($\pm 1.98$)} & 63.42 {\scriptsize($\pm 0.59$)} & 18.20 {\scriptsize($\pm 0.57$)} & 66.49 {\scriptsize($\pm 0.86$)} & 23.80 {\scriptsize($\pm 3.68$)} \\
+$(2.5,2,1.5)$ & 59.78 {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scriptsize($\pm 1.27$)} & \textbf{64.44} {\scriptsize($\pm 0.32$)} & \textbf{22.00} {\scriptsize($\pm 0.28$)} & \textbf{66.68} {\scriptsize($\pm 0.05$)} & \textbf{24.80} {\scriptsize($\pm 1.41$)} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \textbf{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, originally chosen based on the highest observed MATH validation accuracy; it also has the highest mean in the GSM8K validation comparison (Appendix~\ref{app:inferenceclocks}). Under ODE sampling, the shared-square clock improves on the identity clock. At 32 steps, the two asynchronous schedules and $(2,2,2)$ give similar GSM8K test accuracy, while $(2.5,2,1.5)$ has the highest MATH500 mean (Table~\ref{tab:inferenceclocks}). These ODE comparisons support flexible denoising clocks without identifying a universally optimal schedule or establishing the same ordering under stochastic sampling.
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, originally chosen based on the highest observed MATH validation accuracy under ODE sampling; it also has the highest mean in the GSM8K ODE validation comparison (Appendix~\ref{app:schedulecomparisons}). Table~\ref{tab:inferenceclocks} extends the four-clock test comparison to both stochastic samplers. The chosen asynchronous clock gives the highest two-seed mean on both datasets with each stochastic sampler. Relative to $(2,2,2)$, its gains are 2.62 and 1.82 percentage points on GSM8K for EDM- and DMD2-style sampling, respectively, and 5.80 and 0.50 points on MATH500. The ordering nevertheless depends on the sampler: the three nonidentity clocks remain close on GSM8K with ODE, and the shared-square clock underperforms the identity clock on MATH500 with EDM-style sampling. These results support asynchronous inference across sampling procedures without establishing a unique best clock; Appendix~\ref{app:schedulecomparisons} quantifies the paired differences.
 
 Reconstruction probes reveal distinct sensitivities across layer groups, with weaker contrasts under random coordinate grouping (Figure~\ref{fig:layerreconstruction}). These findings motivate studying coordinated denoising across representations, but do not establish the mechanism behind the sampling gains.
 
@@ -987,7 +989,7 @@ The base $\tau$ grid is fixed across schedule and sampler comparisons. For the O
 
 \paragraph{Stochastic-sampler implementation.}
 \label{app:samplerimplementation}
-The labels \emph{Stochastic (DMD2)} and \emph{Stochastic (EDM)} identify the update families in Eqs.~\eqref{eq:asyncdmd2}--\eqref{eq:asyncchurnforward}. Both use the same destination grid as ODE, $\sigma=2$, and local-clock exponents $(2.5,2,1.5)$ in the stochastic evaluations. They operate on the fixed supervised and NFT endpoints without retraining or checkpoint reselection.
+The labels \emph{Stochastic (DMD2)} and \emph{Stochastic (EDM)} identify the update families in Eqs.~\eqref{eq:asyncdmd2}--\eqref{eq:asyncchurnforward}. Both use the same destination grid as ODE, $\sigma=2$, and default local-clock exponents $(2.5,2,1.5)$; the schedule comparison varies these powers. They operate on the fixed supervised and NFT endpoints without retraining or checkpoint reselection.
 
 For DMD2-style sampling, the fresh-noise multiplier is one ($\eta=1$): the injected standard deviation in group $\ell$ is exactly $\sigma(1-t_{\ell,r+1})$. Each nonterminal step draws fresh Gaussian noise after predicting the clean endpoint, including the first step. At $r=S-1$, Eq.~\eqref{eq:asyncdmd2} gives $z_S=\widehat z_{\mathrm{clean},S-1}$, and no noise is drawn.
 
@@ -1007,13 +1009,14 @@ Both stochastic samplers initialize from the same seeded Gaussian distribution a
 The stochastic samplers decode their final predicted-clean state, while the ODE baseline decodes its final Euler-updated state. Comparisons with ODE therefore include this terminal-rule difference, as well as the distinct update formulas, and do not isolate the effect of fresh noise alone.
 
 \subsection{Schedule comparisons}
-Tables~\ref{tab:inferenceclocks} and~\ref{tab:inferenceclockfull} use CEDR-L epoch 21, ODE sampling at 32 denoising steps, SCCFG 2, backbone/prompt EMA $0.9999/0.9999$, and seeds 42/123. Scores use numerical-answer accuracy for GSM8K and Math-Verify for MATH500 (Appendix~\ref{app:experimentdetails}). Entries in Table~\ref{tab:inferenceclocks} give mean pass@1 with sample SD across the two seeds; bold marks the highest mean among its four schedules.
+\label{app:schedulecomparisons}
+All schedule comparisons use CEDR-L epoch 21, 32 denoising steps, CFG 1, SCCFG 2, backbone/prompt EMA $0.9999/0.9999$, batch size 32, and seeds 42/123. GSM8K CEDR-L uses the same learned projectors as CEDR-B. Scores use numerical-answer accuracy for all 1,319 GSM8K test problems and Math-Verify for all 500 MATH500 problems (Appendix~\ref{app:experimentdetails}); PRM800K remains a secondary scorer. Table~\ref{tab:inferenceclocks} gives mean pass@1 and sample SD across the two full-benchmark seed accuracies for each of three samplers. Bold marks the highest mean among the four schedules within each dataset/sampler. The stochastic comparison uses the same checkpoints and seeds as the ODE references and covers test sets at epoch 21; it does not add validation-set or NFT schedule evaluations. Its MATH results use SCCFG 2 throughout, rather than the headline SCCFG 3.
 
-Table~\ref{tab:inferenceclockfull} compares the four schedules from the main table on both validation and test sets. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution. Both validation sets give their highest observed mean to $(2.5,2,1.5)$. On GSM8K validation, its advantages over $(2,2,2)$ and $(1.5,2,2.5)$ are 0.75 and 0.50 percentage points, respectively, with paired 95\% intervals $[-0.30,1.85]$ and $[-0.60,1.55]$. The small differences among these nonidentity clocks do not establish a unique best schedule.
+Table~\ref{tab:inferenceclockfull} retains the ODE comparison on validation and test sets. The 500-problem MATH validation set comes from the same original MATH test pool as MATH500, excluding its questions, whereas our GSM8K validation set comprises held-out original training questions. We therefore regard the MATH validation comparison as more directly matched to its benchmark's source distribution. Both validation sets give their highest observed mean to $(2.5,2,1.5)$. On GSM8K validation, its advantages over $(2,2,2)$ and $(1.5,2,2.5)$ are 0.75 and 0.50 percentage points, respectively, with paired 95\% intervals $[-0.30,1.85]$ and $[-0.60,1.55]$. The small differences among these nonidentity clocks do not establish a unique best schedule.
 
 \begin{table}[htbp]
 \centering\small
-\caption{Four-schedule CEDR-L epoch-21 comparison: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 with ODE sampling at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns include all entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
+\caption{Four-schedule CEDR-L epoch-21 comparison: mean pass@1 (\%) with sample seed SD in parentheses, over seeds 42/123 with ODE sampling at 32 denoising steps and SCCFG 2. Validation sets contain 1,000 GSM8K and 500 MATH problems. Test columns reproduce the ODE entries and SDs from Table~\ref{tab:inferenceclocks}. Bold marks each column maximum, including ties.}
 \label{tab:inferenceclockfull}
 \begin{tabular}{lrrrr}
 \toprule
@@ -1029,7 +1032,68 @@ $(2.5,2,1.5)$ & \textbf{73.60} {\scriptsize (0.28)} & \textbf{18.70} {\scriptsiz
 \end{tabular}
 \end{table}
 
-For the 32-step test comparison, async $(2.5,2,1.5)$ minus sync $(2,2,2)$ gives $-0.19$ percentage points on GSM8K (paired 95\% CI $[-1.06,+0.68]$) and +0.50 on MATH500 ($[-0.90,+1.90]$). Its GSM8K difference from $(1.5,2,2.5)$ is $-0.30$ points ($[-1.18,+0.57]$), leaving the three nonidentity schedules close at this budget. All use SCCFG 2. These are pointwise paired problem-bootstrap intervals with 4,000 replicates, conditional on the fixed checkpoints and generation seeds; the standard deviations in the main table instead describe dispersion across full-benchmark seed accuracies.
+\paragraph{Stochastic schedule comparisons.}
+Table~\ref{tab:stochasticclockdetail} gives individual seed results and pass@2 for both stochastic samplers. Pass@1 averages the two draws within each problem and then averages problems equally; pass@2 is the fraction of problems solved by either draw. Sample SD describes variation between the two full-benchmark seed accuracies, rather than problem-bootstrap uncertainty.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{4pt}
+\caption{Stochastic-sampler schedule results underlying Table~\ref{tab:inferenceclocks}: individual seed accuracies, mean pass@1 with sample seed SD, and oracle pass@2, all in percent. Settings match the 32-step, SCCFG 2 ODE comparison; each problem has two generated solutions.}
+\label{tab:stochasticclockdetail}
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Sampler & Clock powers & Seed 42 & Seed 123 & Mean pass@1 & pass@2 \\
+\midrule
+\multicolumn{6}{l}{\textbf{GSM8K}} \\
+\multirow{4}{*}{Stochastic (EDM)} & $(1,1,1)$ & 59.82 & 59.74 & 59.78 {\scriptsize($\pm 0.05$)} & 69.60 \\
+ & $(2,2,2)$ & 61.18 & 62.47 & 61.83 {\scriptsize($\pm 0.91$)} & 69.83 \\
+ & $(1.5,2,2.5)$ & 63.00 & 63.84 & 63.42 {\scriptsize($\pm 0.59$)} & 70.81 \\
+ & $(2.5,2,1.5)$ & 64.67 & 64.22 & 64.44 {\scriptsize($\pm 0.32$)} & 71.87 \\
+\addlinespace[3pt]
+\multirow{4}{*}{Stochastic (DMD2)} & $(1,1,1)$ & 60.80 & 60.20 & 60.50 {\scriptsize($\pm 0.43$)} & 69.75 \\
+ & $(2,2,2)$ & 64.75 & 64.97 & 64.86 {\scriptsize($\pm 0.16$)} & 71.04 \\
+ & $(1.5,2,2.5)$ & 67.10 & 65.88 & 66.49 {\scriptsize($\pm 0.86$)} & 72.10 \\
+ & $(2.5,2,1.5)$ & 66.72 & 66.64 & 66.68 {\scriptsize($\pm 0.05$)} & 72.40 \\
+\midrule
+\multicolumn{6}{l}{\textbf{MATH500 (Math-Verify)}} \\
+\multirow{4}{*}{Stochastic (EDM)} & $(1,1,1)$ & 21.20 & 18.60 & 19.90 {\scriptsize($\pm 1.84$)} & 29.60 \\
+ & $(2,2,2)$ & 15.80 & 16.60 & 16.20 {\scriptsize($\pm 0.57$)} & 23.40 \\
+ & $(1.5,2,2.5)$ & 18.60 & 17.80 & 18.20 {\scriptsize($\pm 0.57$)} & 26.60 \\
+ & $(2.5,2,1.5)$ & 21.80 & 22.20 & 22.00 {\scriptsize($\pm 0.28$)} & 30.00 \\
+\addlinespace[3pt]
+\multirow{4}{*}{Stochastic (DMD2)} & $(1,1,1)$ & 21.80 & 22.00 & 21.90 {\scriptsize($\pm 0.14$)} & 29.80 \\
+ & $(2,2,2)$ & 22.80 & 25.80 & 24.30 {\scriptsize($\pm 2.12$)} & 32.00 \\
+ & $(1.5,2,2.5)$ & 21.20 & 26.40 & 23.80 {\scriptsize($\pm 3.68$)} & 32.60 \\
+ & $(2.5,2,1.5)$ & 25.80 & 23.80 & 24.80 {\scriptsize($\pm 1.41$)} & 33.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Paired schedule differences.}
+Table~\ref{tab:clockpaireddifferences} compares $(2.5,2,1.5)$ against $(2,2,2)$ and $(1.5,2,2.5)$ within each sampler. Its GSM8K advantage over $(2,2,2)$ has a positive paired interval for both stochastic samplers, while the corresponding ODE interval includes zero. On MATH500, the EDM-style gains over both listed comparators have positive intervals; the smaller DMD2-style gains remain uncertain. Neither stochastic sampler separates the two asynchronous clocks on GSM8K with these two seeds. The shared-square clock is also not uniformly preferable: under EDM-style sampling, MATH500 accuracy falls from 19.90\% with identity clocks to 16.20\% with shared-square clocks.
+
+\begin{table}[htbp]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{Paired pass@1 differences, in percentage points, for $(2.5,2,1.5)$ minus the listed comparator clock within each sampler. Brackets give 95\% problem-bootstrap intervals. All comparisons use CEDR-L epoch 21, 32 steps, SCCFG 2, and seeds 42/123.}
+\label{tab:clockpaireddifferences}
+\begin{tabular}{@{}llrr@{}}
+\toprule
+Sampler & Comparator & GSM8K & MATH500 \\
+\midrule
+\multirow{2}{*}{ODE} & $(2,2,2)$ & $-0.19\;[-1.06,+0.68]$ & $+0.50\;[-0.90,+1.90]$ \\
+ & $(1.5,2,2.5)$ & $-0.30\;[-1.18,+0.57]$ & $+0.30\;[-1.30,+1.90]$ \\
+\addlinespace[3pt]
+\multirow{2}{*}{Stochastic (EDM)} & $(2,2,2)$ & $+2.62\;[+1.25,+4.02]$ & $+5.80\;[+3.20,+8.30]$ \\
+ & $(1.5,2,2.5)$ & $+1.02\;[-0.23,+2.27]$ & $+3.80\;[+1.50,+6.10]$ \\
+\addlinespace[3pt]
+\multirow{2}{*}{Stochastic (DMD2)} & $(2,2,2)$ & $+1.82\;[+0.53,+3.07]$ & $+0.50\;[-2.00,+2.90]$ \\
+ & $(1.5,2,2.5)$ & $+0.19\;[-1.02,+1.40]$ & $+1.00\;[-1.50,+3.50]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Intervals use 4,000 paired problem-bootstrap replicates with bootstrap seed 20260918, resampling the same problem indices across compared settings and retaining both draws per problem. They quantify uncertainty across problems for the fixed checkpoints and draws, do not estimate training variance, and do not account for testing multiple schedules. Within each sampler, only the clocks change. Across samplers, comparisons include the distinct integration and terminal-decoding rules described in Appendix~\ref{app:samplerimplementation}.
 
 \subsection{Layer decomposition and reconstruction sensitivity}
 We probe a trained CEDR-B model by corrupting one group of clean gold-solution latents, predicting the clean representation, and decoding it to tokens. A matched control replaces the layer groups by eight random partitions of the same 256/256/512 widths, keeping the assigned times and injected Gaussian energy fixed. Figure~\ref{fig:layerreconstruction} shows that the actual groups have different reconstruction sensitivities: perturbing layer-16 features is more damaging than perturbing deeper features, with the clearest contrast against layer 24. Random grouping attenuates these contrasts. The layer decomposition thus exposes structure that is obscured when coordinates are grouped arbitrarily.
@@ -1239,7 +1303,7 @@ This section collects sampling-seed variation and numerical inference-allocation
 
 Table~\ref{tab:headlineseedsd} reports standard deviations across independent sampling seeds for all our settings in Tables~\ref{tab:headlinecomparison} and~\ref{tab:headlinelownfe}, together with the SCCFG 2 MATH500 settings used in Figure~\ref{fig:headlinestages}. Each seed generates one solution per problem across the full fixed test set. We use every completed sampling seed at each denoising budget: $n=64,32,16,8$ for NFE $8,16,32,64$, respectively. Checkpoints, guidance, scorers, and benchmark populations match the main tables.
 
-For the other main-body comparisons, Table~\ref{tab:inferenceclockfull} in Appendix~\ref{app:inferenceclocks} repeats Table~\ref{tab:inferenceclocks}'s two-seed schedule results with SDs; Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} in Appendix~\ref{app:codingdetails} give pass@1 seed SDs in their final columns for the standard and alias-scored blocks of Table~\ref{tab:codingcomparison}, respectively. Their pass@$k$ columns additionally report problem-bootstrap SEs. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:representationclock} also includes the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
+For the other main-body comparisons, Tables~\ref{tab:inferenceclockfull} and~\ref{tab:stochasticclockdetail} in Appendix~\ref{app:schedulecomparisons} give the ODE and stochastic schedule results, respectively, with seed SDs matching Table~\ref{tab:inferenceclocks}; Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} in Appendix~\ref{app:codingdetails} give pass@1 seed SDs in their final columns for the standard and alias-scored blocks of Table~\ref{tab:codingcomparison}, respectively. Their pass@$k$ columns additionally report problem-bootstrap SEs. Table~\ref{tab:representationcurvevalues} in Appendix~\ref{app:representationclock} also includes the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. These seed statistics cover our evaluations; external baselines retain the authors' reported accuracies, without imputing missing SDs.
 
 \begin{table}[htbp]
 \caption{Mean accuracy $\pm$ standard deviation across sampling seeds, in percentage points. Each seed evaluates the complete benchmark at the same fixed checkpoint. Columns use 64, 32, 16, and 8 seeds, respectively. The 64-NFE column supplies the results in Table~\ref{tab:headlinecomparison}; SCCFG 3 supplies the MATH500 rows in Tables~\ref{tab:headlinecomparison} and~\ref{tab:headlinelownfe}. SCCFG 2 MATH500 rows correspond to Figure~\ref{fig:headlinestages}.}
