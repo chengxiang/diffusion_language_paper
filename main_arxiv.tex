@@ -461,7 +461,7 @@ For $k$ samples with $S$ denoising steps each, we use $kS$ as the inference budg
 
 Figure~\ref{fig:headlinestages} shows that oracle selection generally favors more attempts with fewer steps, whereas voting generally favors higher-NFE samples. On MATH500 after NFT, 64 eight-step samples reach 68.40\% oracle accuracy, versus 53.80\% for eight 64-step samples; voting reverses this preference, at 27.80\% versus 38.80\%. Intermediate depths remain competitive for voting. The voting--oracle gap motivates better answer selection, potentially using latent-space or hidden-state classifiers.
 
-The corresponding GSM8K CEDR-B comparison appears in Appendix~\ref{app:elfbbudgets}.
+The corresponding GSM8K CEDR-B comparison appears in Appendix~\ref{app:elfbbudgets}. Appendix~\ref{app:samplerallocations} compares these allocations across ODE and both stochastic samplers.
 
 \textbf{What changes after NFT?}
 \label{sec:nftresults}
@@ -1325,7 +1325,7 @@ These values describe generation randomness at a fixed checkpoint and test set. 
 Bars in the representation learning curves are $\pm1$ seed SD; small parenthesized values in the corresponding tables report the same statistic. External baselines retain author-reported accuracies; we do not impute missing SDs.
 
 \paragraph{Problem-bootstrap uncertainty.}
-Parentheses in Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb} and~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} report the standard deviation of the benchmark mean across 4,000 problem-bootstrap replicates, using bootstrap seed 20260918. Each replicate resamples whole problems with replacement while preserving their complete draw sets. These are bootstrap standard errors conditional on the checkpoints and saved generations, not the across-generation-seed SDs in Table~\ref{tab:headlineseedsd}. In particular, the largest-$k$ point uses the entire draw pool and does not provide repeated independent $k$-sample groups from which to estimate a seed-group SD. The bootstrap does not add training-run variability or uncertainty from the fixed voting-subset approximation. All values are rounded independently from full precision.
+Parentheses in Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb}, Tables~\ref{tab:samplerbudgetgsmlode}--\ref{tab:samplerbudgetgsmbedm}, and Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} report the standard deviation of the benchmark mean across 4,000 problem-bootstrap replicates, using bootstrap seed 20260918. Each replicate resamples whole problems with replacement while preserving their complete draw sets. These are bootstrap standard errors conditional on the checkpoints and saved generations, not the across-generation-seed SDs in Table~\ref{tab:headlineseedsd}. In particular, the largest-$k$ point uses the entire draw pool and does not provide repeated independent $k$-sample groups from which to estimate a seed-group SD. The bootstrap does not add training-run variability or uncertainty from the fixed voting-subset approximation. All values are rounded independently from full precision.
 
 \paragraph{Confidence intervals and paired comparisons.}
 A 95\% CI is a pointwise percentile interval from 4,000 problem-bootstrap replicates. This convention applies to the prompt-curriculum and reconstruction-probe figures. For pre/post comparisons, we resample the same problem indices in both stages and form the difference within each replicate. Pointwise 95\% percentile intervals for changes therefore use paired differences. None of these measures estimates variation across independent training runs.
@@ -1382,6 +1382,36 @@ Figure~\ref{fig:elfbstages} extends the CEDR-L comparison in Figure~\ref{fig:hea
 \label{fig:elfbstages}
 \end{figure}
 
+\FloatBarrier
+\subsection{Inference allocation across sampling algorithms}
+\label{app:samplerallocations}
+
+Figures~\ref{fig:samplerallocationgsml}--\ref{fig:samplerallocationgsmb} compare ODE, EDM-style index churn ($0.7$), and DMD2-style sampling ($\eta=1$) at the fixed supervised and NFT endpoints. Columns fix denoising NFE per sample; rows separate oracle pass@$k$ and majority voting before and after NFT. The horizontal axis is the total denoising budget $kS$. We use all 64/32/16/8 saved draws at 8/16/32/64 NFE, respectively, up to 512 total calls, with identical ordered seed cohorts across samplers. Clocks remain $(2.5,2,1.5)$; GSM8K uses SCCFG 2 and MATH500 SCCFG 3. Checkpoints, EMA selectors, prompts, scorers, and voting rules match the headline comparisons in Appendix~\ref{app:experimentdetails}. These comparisons include each sampler's integration and terminal-state convention (Appendix~\ref{app:samplerimplementation}).
+
+At 64 NFE, both stochastic samplers improve pass@1 over ODE at all six endpoints, but the ranking can change with the sample count and selection rule. For GSM8K CEDR-L after NFT, eight 64-step draws give ODE pass@8 of 83.02\%, compared with 80.21\% for EDM-style and 80.82\% for DMD2-style sampling. Yet DMD2-style majority voting reaches 71.81\%, versus ODE's 70.58\%. For MATH500 after NFT, the same allocation yields DMD2-style voting accuracy of 38.80\%, versus ODE's 33.38\%; at eight steps and 64 draws, ODE voting instead reaches 28.63\%, versus 27.80\% for DMD2-style sampling. Thus improvements in single-sample accuracy do not imply uniform improvements in oracle coverage or voting at every allocation. Our headline sampler remains fixed across all budgets.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{figures/appendix_sampler_allocation_gsm_l.pdf}
+\caption{\textbf{GSM8K, CEDR-L: inference allocation across samplers.} Pre-NFT is epoch 21; post-NFT is NFT update 600. Columns fix NFE per sample; rows show pre-/post-NFT oracle and majority-vote accuracy. Colors and markers distinguish samplers; axes match across samplers and training stages within each metric. Numerical values and uncertainty: Tables~\ref{tab:samplerbudgetgsmlode}--\ref{tab:samplerbudgetgsmledm} for ODE/EDM, and Table~\ref{tab:budgetvaluesgsml} for DMD2.}
+\label{fig:samplerallocationgsml}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{figures/appendix_sampler_allocation_math_l.pdf}
+\caption{\textbf{MATH500, CEDR-L: inference allocation across samplers.} Pre-NFT is epoch 21; post-NFT is NFT update 600. Columns fix NFE per sample; rows show pre-/post-NFT oracle and majority-vote accuracy. Colors and markers distinguish samplers; axes match across samplers and training stages within each metric. Numerical values and uncertainty: Tables~\ref{tab:samplerbudgetmathlode}--\ref{tab:samplerbudgetmathledm} for ODE/EDM, and Table~\ref{tab:budgetvaluesmathl} for DMD2.}
+\label{fig:samplerallocationmathl}
+\end{figure}
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{figures/appendix_sampler_allocation_gsm_b.pdf}
+\caption{\textbf{GSM8K, CEDR-B: inference allocation across samplers.} Pre-NFT is epoch 18; post-NFT is NFT update 300. Columns fix NFE per sample; rows show pre-/post-NFT oracle and majority-vote accuracy. Colors and markers distinguish samplers; axes match across samplers and training stages within each metric. Numerical values and uncertainty: Tables~\ref{tab:samplerbudgetgsmbode}--\ref{tab:samplerbudgetgsmbedm} for ODE/EDM, and Table~\ref{tab:budgetvaluesgsmb} for DMD2.}
+\label{fig:samplerallocationgsmb}
+\end{figure}
+
+\FloatBarrier
 \subsection{Numerical inference-allocation results}
 \label{app:budgetvalues}
 
@@ -1512,6 +1542,253 @@ NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\FloatBarrier
+\subsubsection{Numerical values for the other samplers}
+\label{app:samplerbudgetvalues}
+Tables~\ref{tab:samplerbudgetgsmlode}--\ref{tab:samplerbudgetgsmbedm} give every ODE and EDM-style point in Figures~\ref{fig:samplerallocationgsml}--\ref{fig:samplerallocationgsmb}. The DMD2-style values are already listed in Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb}. Parentheses report problem-bootstrap standard errors, with the same 4,000-replicate procedure and seed as the headline tables (Appendix~\ref{app:uncertainty}). All comparisons use the full benchmark and every saved draw at each NFE.
+
+\begin{table}[p]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{GSM8K, CEDR-L: ODE values in Figure~\ref{fig:samplerallocationgsml}. Entries are accuracy percentages, with problem-bootstrap standard errors in parentheses (Appendix~\ref{app:uncertainty}). SCCFG 2; asynchronous clocks $(2.5,2,1.5)$.}
+\label{tab:samplerbudgetgsmlode}
+\begin{tabular}{@{}rrr rrrr@{}}
+\toprule
+& & & \multicolumn{2}{c}{Oracle pass@$k$} & \multicolumn{2}{c}{Majority vote} \\
+\cmidrule(lr){4-5}\cmidrule(l){6-7}
+NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
+\midrule
+8 & 1 & 8 & 52.69 {\scriptsize (1.04)} & 57.06 {\scriptsize (1.09)} & 52.69 {\scriptsize (1.04)} & 57.06 {\scriptsize (1.09)} \\
+8 & 2 & 16 & 63.43 {\scriptsize (1.07)} & 65.89 {\scriptsize (1.09)} & 52.69 {\scriptsize (1.04)} & 57.06 {\scriptsize (1.09)} \\
+8 & 4 & 32 & 71.64 {\scriptsize (1.03)} & 72.71 {\scriptsize (1.05)} & 59.57 {\scriptsize (1.14)} & 62.02 {\scriptsize (1.16)} \\
+8 & 8 & 64 & 78.18 {\scriptsize (0.96)} & 78.11 {\scriptsize (1.00)} & 63.32 {\scriptsize (1.17)} & 64.61 {\scriptsize (1.19)} \\
+8 & 16 & 128 & 83.35 {\scriptsize (0.90)} & 82.37 {\scriptsize (0.94)} & 65.32 {\scriptsize (1.20)} & 66.01 {\scriptsize (1.21)} \\
+8 & 32 & 256 & 87.28 {\scriptsize (0.83)} & 85.75 {\scriptsize (0.89)} & 66.40 {\scriptsize (1.23)} & 66.78 {\scriptsize (1.24)} \\
+8 & 64 & 512 & 90.22 {\scriptsize (0.81)} & 88.40 {\scriptsize (0.88)} & 67.06 {\scriptsize (1.28)} & 67.13 {\scriptsize (1.30)} \\
+\midrule
+16 & 1 & 16 & 57.80 {\scriptsize (1.07)} & 62.64 {\scriptsize (1.10)} & 57.80 {\scriptsize (1.07)} & 62.64 {\scriptsize (1.10)} \\
+16 & 2 & 32 & 67.50 {\scriptsize (1.07)} & 70.46 {\scriptsize (1.08)} & 57.80 {\scriptsize (1.07)} & 62.64 {\scriptsize (1.10)} \\
+16 & 4 & 64 & 74.73 {\scriptsize (1.02)} & 76.40 {\scriptsize (1.02)} & 63.83 {\scriptsize (1.14)} & 66.82 {\scriptsize (1.15)} \\
+16 & 8 & 128 & 80.37 {\scriptsize (0.96)} & 81.07 {\scriptsize (0.97)} & 66.97 {\scriptsize (1.17)} & 68.98 {\scriptsize (1.17)} \\
+16 & 16 & 256 & 84.78 {\scriptsize (0.91)} & 84.78 {\scriptsize (0.92)} & 68.62 {\scriptsize (1.19)} & 70.11 {\scriptsize (1.20)} \\
+16 & 32 & 512 & 88.32 {\scriptsize (0.89)} & 87.79 {\scriptsize (0.91)} & 69.34 {\scriptsize (1.25)} & 70.79 {\scriptsize (1.24)} \\
+\midrule
+32 & 1 & 32 & 59.55 {\scriptsize (1.08)} & 64.33 {\scriptsize (1.10)} & 59.55 {\scriptsize (1.08)} & 64.33 {\scriptsize (1.10)} \\
+32 & 2 & 64 & 69.14 {\scriptsize (1.07)} & 71.93 {\scriptsize (1.08)} & 59.55 {\scriptsize (1.08)} & 64.33 {\scriptsize (1.10)} \\
+32 & 4 & 128 & 76.16 {\scriptsize (1.02)} & 77.67 {\scriptsize (1.03)} & 65.57 {\scriptsize (1.15)} & 68.18 {\scriptsize (1.15)} \\
+32 & 8 & 256 & 81.61 {\scriptsize (0.97)} & 82.19 {\scriptsize (0.98)} & 68.62 {\scriptsize (1.18)} & 70.18 {\scriptsize (1.18)} \\
+32 & 16 & 512 & 85.97 {\scriptsize (0.95)} & 85.82 {\scriptsize (0.97)} & 70.21 {\scriptsize (1.24)} & 71.18 {\scriptsize (1.25)} \\
+\midrule
+64 & 1 & 64 & 60.81 {\scriptsize (1.10)} & 65.03 {\scriptsize (1.12)} & 60.81 {\scriptsize (1.10)} & 65.03 {\scriptsize (1.12)} \\
+64 & 2 & 128 & 69.99 {\scriptsize (1.09)} & 72.50 {\scriptsize (1.08)} & 60.81 {\scriptsize (1.10)} & 65.03 {\scriptsize (1.12)} \\
+64 & 4 & 256 & 76.77 {\scriptsize (1.06)} & 78.27 {\scriptsize (1.04)} & 66.40 {\scriptsize (1.17)} & 68.69 {\scriptsize (1.17)} \\
+64 & 8 & 512 & 81.80 {\scriptsize (1.06)} & 83.02 {\scriptsize (1.04)} & 69.56 {\scriptsize (1.24)} & 70.58 {\scriptsize (1.23)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[p]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{GSM8K, CEDR-L: Stochastic (EDM) values in Figure~\ref{fig:samplerallocationgsml}. Entries are accuracy percentages, with problem-bootstrap standard errors in parentheses (Appendix~\ref{app:uncertainty}). SCCFG 2; asynchronous clocks $(2.5,2,1.5)$.}
+\label{tab:samplerbudgetgsmledm}
+\begin{tabular}{@{}rrr rrrr@{}}
+\toprule
+& & & \multicolumn{2}{c}{Oracle pass@$k$} & \multicolumn{2}{c}{Majority vote} \\
+\cmidrule(lr){4-5}\cmidrule(l){6-7}
+NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
+\midrule
+8 & 1 & 8 & 48.95 {\scriptsize (1.04)} & 53.22 {\scriptsize (1.09)} & 48.95 {\scriptsize (1.04)} & 53.22 {\scriptsize (1.09)} \\
+8 & 2 & 16 & 59.77 {\scriptsize (1.09)} & 62.39 {\scriptsize (1.12)} & 48.96 {\scriptsize (1.04)} & 53.22 {\scriptsize (1.09)} \\
+8 & 4 & 32 & 68.15 {\scriptsize (1.07)} & 69.39 {\scriptsize (1.10)} & 56.01 {\scriptsize (1.15)} & 58.69 {\scriptsize (1.18)} \\
+8 & 8 & 64 & 74.88 {\scriptsize (1.02)} & 74.98 {\scriptsize (1.05)} & 60.02 {\scriptsize (1.19)} & 61.48 {\scriptsize (1.21)} \\
+8 & 16 & 128 & 80.44 {\scriptsize (0.95)} & 79.60 {\scriptsize (0.99)} & 62.26 {\scriptsize (1.23)} & 62.99 {\scriptsize (1.24)} \\
+8 & 32 & 256 & 85.14 {\scriptsize (0.89)} & 83.50 {\scriptsize (0.94)} & 63.50 {\scriptsize (1.26)} & 63.82 {\scriptsize (1.27)} \\
+8 & 64 & 512 & 89.01 {\scriptsize (0.86)} & 86.88 {\scriptsize (0.92)} & 64.16 {\scriptsize (1.31)} & 64.06 {\scriptsize (1.32)} \\
+\midrule
+16 & 1 & 16 & 58.93 {\scriptsize (1.10)} & 62.51 {\scriptsize (1.14)} & 58.93 {\scriptsize (1.10)} & 62.51 {\scriptsize (1.14)} \\
+16 & 2 & 32 & 67.52 {\scriptsize (1.10)} & 69.22 {\scriptsize (1.12)} & 58.93 {\scriptsize (1.10)} & 62.51 {\scriptsize (1.14)} \\
+16 & 4 & 64 & 73.81 {\scriptsize (1.05)} & 74.34 {\scriptsize (1.08)} & 64.14 {\scriptsize (1.17)} & 65.90 {\scriptsize (1.18)} \\
+16 & 8 & 128 & 78.97 {\scriptsize (0.99)} & 78.67 {\scriptsize (1.02)} & 66.51 {\scriptsize (1.19)} & 67.44 {\scriptsize (1.21)} \\
+16 & 16 & 256 & 83.38 {\scriptsize (0.94)} & 82.49 {\scriptsize (0.98)} & 67.64 {\scriptsize (1.21)} & 68.16 {\scriptsize (1.24)} \\
+16 & 32 & 512 & 87.04 {\scriptsize (0.92)} & 85.67 {\scriptsize (0.97)} & 68.49 {\scriptsize (1.26)} & 68.43 {\scriptsize (1.28)} \\
+\midrule
+32 & 1 & 32 & 64.27 {\scriptsize (1.12)} & 66.83 {\scriptsize (1.14)} & 64.27 {\scriptsize (1.12)} & 66.83 {\scriptsize (1.14)} \\
+32 & 2 & 64 & 71.16 {\scriptsize (1.10)} & 72.49 {\scriptsize (1.11)} & 64.27 {\scriptsize (1.12)} & 66.84 {\scriptsize (1.14)} \\
+32 & 4 & 128 & 76.39 {\scriptsize (1.05)} & 76.83 {\scriptsize (1.07)} & 67.80 {\scriptsize (1.17)} & 69.27 {\scriptsize (1.18)} \\
+32 & 8 & 256 & 80.97 {\scriptsize (1.00)} & 80.44 {\scriptsize (1.04)} & 69.34 {\scriptsize (1.20)} & 70.37 {\scriptsize (1.20)} \\
+32 & 16 & 512 & 85.29 {\scriptsize (0.98)} & 83.55 {\scriptsize (1.03)} & 69.91 {\scriptsize (1.25)} & 70.88 {\scriptsize (1.25)} \\
+\midrule
+64 & 1 & 64 & 66.20 {\scriptsize (1.14)} & 67.93 {\scriptsize (1.16)} & 66.20 {\scriptsize (1.14)} & 67.93 {\scriptsize (1.16)} \\
+64 & 2 & 128 & 72.25 {\scriptsize (1.11)} & 72.87 {\scriptsize (1.14)} & 66.20 {\scriptsize (1.14)} & 67.93 {\scriptsize (1.16)} \\
+64 & 4 & 256 & 77.25 {\scriptsize (1.08)} & 76.72 {\scriptsize (1.10)} & 68.56 {\scriptsize (1.18)} & 69.84 {\scriptsize (1.20)} \\
+64 & 8 & 512 & 81.35 {\scriptsize (1.08)} & 80.21 {\scriptsize (1.11)} & 69.77 {\scriptsize (1.24)} & 70.18 {\scriptsize (1.25)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[p]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{MATH500, CEDR-L: ODE values in Figure~\ref{fig:samplerallocationmathl}. Entries are accuracy percentages, with problem-bootstrap standard errors in parentheses (Appendix~\ref{app:uncertainty}). SCCFG 3; asynchronous clocks $(2.5,2,1.5)$.}
+\label{tab:samplerbudgetmathlode}
+\begin{tabular}{@{}rrr rrrr@{}}
+\toprule
+& & & \multicolumn{2}{c}{Oracle pass@$k$} & \multicolumn{2}{c}{Majority vote} \\
+\cmidrule(lr){4-5}\cmidrule(l){6-7}
+NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
+\midrule
+8 & 1 & 8 & 15.23 {\scriptsize (1.06)} & 17.45 {\scriptsize (1.17)} & 15.23 {\scriptsize (1.06)} & 17.45 {\scriptsize (1.17)} \\
+8 & 2 & 16 & 22.75 {\scriptsize (1.35)} & 25.22 {\scriptsize (1.45)} & 15.24 {\scriptsize (1.06)} & 17.46 {\scriptsize (1.17)} \\
+8 & 4 & 32 & 31.59 {\scriptsize (1.59)} & 33.93 {\scriptsize (1.67)} & 18.37 {\scriptsize (1.30)} & 20.86 {\scriptsize (1.42)} \\
+8 & 8 & 64 & 41.11 {\scriptsize (1.77)} & 43.01 {\scriptsize (1.81)} & 21.58 {\scriptsize (1.49)} & 24.06 {\scriptsize (1.60)} \\
+8 & 16 & 128 & 50.60 {\scriptsize (1.90)} & 51.99 {\scriptsize (1.90)} & 23.90 {\scriptsize (1.63)} & 26.30 {\scriptsize (1.73)} \\
+8 & 32 & 256 & 59.35 {\scriptsize (1.98)} & 60.44 {\scriptsize (1.98)} & 25.26 {\scriptsize (1.76)} & 27.70 {\scriptsize (1.86)} \\
+8 & 64 & 512 & 66.80 {\scriptsize (2.10)} & 67.60 {\scriptsize (2.11)} & 25.30 {\scriptsize (1.92)} & 28.63 {\scriptsize (1.99)} \\
+\midrule
+16 & 1 & 16 & 17.93 {\scriptsize (1.17)} & 20.93 {\scriptsize (1.31)} & 17.93 {\scriptsize (1.17)} & 20.93 {\scriptsize (1.31)} \\
+16 & 2 & 32 & 26.24 {\scriptsize (1.46)} & 29.47 {\scriptsize (1.59)} & 17.93 {\scriptsize (1.17)} & 20.93 {\scriptsize (1.31)} \\
+16 & 4 & 64 & 35.64 {\scriptsize (1.69)} & 38.51 {\scriptsize (1.77)} & 21.58 {\scriptsize (1.42)} & 24.77 {\scriptsize (1.57)} \\
+16 & 8 & 128 & 45.51 {\scriptsize (1.86)} & 47.61 {\scriptsize (1.88)} & 25.24 {\scriptsize (1.61)} & 28.03 {\scriptsize (1.75)} \\
+16 & 16 & 256 & 55.10 {\scriptsize (2.00)} & 56.56 {\scriptsize (1.96)} & 28.26 {\scriptsize (1.78)} & 30.24 {\scriptsize (1.89)} \\
+16 & 32 & 512 & 63.40 {\scriptsize (2.17)} & 65.20 {\scriptsize (2.11)} & 31.72 {\scriptsize (2.06)} & 31.30 {\scriptsize (2.07)} \\
+\midrule
+32 & 1 & 32 & 19.65 {\scriptsize (1.27)} & 22.60 {\scriptsize (1.39)} & 19.65 {\scriptsize (1.27)} & 22.60 {\scriptsize (1.39)} \\
+32 & 2 & 64 & 28.09 {\scriptsize (1.57)} & 31.33 {\scriptsize (1.66)} & 19.65 {\scriptsize (1.27)} & 22.61 {\scriptsize (1.39)} \\
+32 & 4 & 128 & 37.36 {\scriptsize (1.80)} & 40.33 {\scriptsize (1.87)} & 23.53 {\scriptsize (1.54)} & 26.71 {\scriptsize (1.63)} \\
+32 & 8 & 256 & 46.98 {\scriptsize (1.99)} & 48.77 {\scriptsize (2.01)} & 27.18 {\scriptsize (1.76)} & 30.33 {\scriptsize (1.83)} \\
+32 & 16 & 512 & 56.80 {\scriptsize (2.24)} & 56.80 {\scriptsize (2.20)} & 30.11 {\scriptsize (2.03)} & 32.45 {\scriptsize (2.06)} \\
+\midrule
+64 & 1 & 64 & 21.18 {\scriptsize (1.37)} & 24.68 {\scriptsize (1.48)} & 21.18 {\scriptsize (1.37)} & 24.68 {\scriptsize (1.48)} \\
+64 & 2 & 128 & 29.99 {\scriptsize (1.68)} & 33.67 {\scriptsize (1.75)} & 21.18 {\scriptsize (1.37)} & 24.69 {\scriptsize (1.48)} \\
+64 & 4 & 256 & 39.35 {\scriptsize (1.96)} & 42.73 {\scriptsize (1.97)} & 25.29 {\scriptsize (1.66)} & 29.19 {\scriptsize (1.75)} \\
+64 & 8 & 512 & 48.60 {\scriptsize (2.27)} & 51.20 {\scriptsize (2.23)} & 29.28 {\scriptsize (2.00)} & 33.38 {\scriptsize (2.04)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[p]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{MATH500, CEDR-L: Stochastic (EDM) values in Figure~\ref{fig:samplerallocationmathl}. Entries are accuracy percentages, with problem-bootstrap standard errors in parentheses (Appendix~\ref{app:uncertainty}). SCCFG 3; asynchronous clocks $(2.5,2,1.5)$.}
+\label{tab:samplerbudgetmathledm}
+\begin{tabular}{@{}rrr rrrr@{}}
+\toprule
+& & & \multicolumn{2}{c}{Oracle pass@$k$} & \multicolumn{2}{c}{Majority vote} \\
+\cmidrule(lr){4-5}\cmidrule(l){6-7}
+NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
+\midrule
+8 & 1 & 8 & 13.38 {\scriptsize (0.97)} & 15.55 {\scriptsize (1.12)} & 13.38 {\scriptsize (0.97)} & 15.55 {\scriptsize (1.12)} \\
+8 & 2 & 16 & 20.37 {\scriptsize (1.28)} & 22.61 {\scriptsize (1.42)} & 13.39 {\scriptsize (0.97)} & 15.56 {\scriptsize (1.12)} \\
+8 & 4 & 32 & 28.66 {\scriptsize (1.55)} & 30.32 {\scriptsize (1.64)} & 16.37 {\scriptsize (1.22)} & 18.75 {\scriptsize (1.38)} \\
+8 & 8 & 64 & 37.58 {\scriptsize (1.76)} & 38.40 {\scriptsize (1.81)} & 19.58 {\scriptsize (1.42)} & 21.49 {\scriptsize (1.56)} \\
+8 & 16 & 128 & 46.43 {\scriptsize (1.90)} & 46.60 {\scriptsize (1.93)} & 21.92 {\scriptsize (1.57)} & 23.15 {\scriptsize (1.69)} \\
+8 & 32 & 256 & 54.95 {\scriptsize (2.00)} & 54.65 {\scriptsize (2.03)} & 23.57 {\scriptsize (1.71)} & 24.04 {\scriptsize (1.79)} \\
+8 & 64 & 512 & 63.40 {\scriptsize (2.16)} & 62.40 {\scriptsize (2.19)} & 24.72 {\scriptsize (1.88)} & 24.20 {\scriptsize (1.91)} \\
+\midrule
+16 & 1 & 16 & 18.11 {\scriptsize (1.22)} & 20.73 {\scriptsize (1.34)} & 18.11 {\scriptsize (1.22)} & 20.73 {\scriptsize (1.34)} \\
+16 & 2 & 32 & 25.88 {\scriptsize (1.52)} & 28.48 {\scriptsize (1.61)} & 18.11 {\scriptsize (1.22)} & 20.73 {\scriptsize (1.34)} \\
+16 & 4 & 64 & 34.25 {\scriptsize (1.75)} & 36.51 {\scriptsize (1.79)} & 21.77 {\scriptsize (1.49)} & 24.35 {\scriptsize (1.59)} \\
+16 & 8 & 128 & 42.84 {\scriptsize (1.91)} & 44.59 {\scriptsize (1.91)} & 24.94 {\scriptsize (1.67)} & 27.08 {\scriptsize (1.74)} \\
+16 & 16 & 256 & 51.38 {\scriptsize (2.03)} & 52.65 {\scriptsize (2.02)} & 27.24 {\scriptsize (1.82)} & 28.71 {\scriptsize (1.85)} \\
+16 & 32 & 512 & 60.20 {\scriptsize (2.21)} & 60.80 {\scriptsize (2.20)} & 28.89 {\scriptsize (2.02)} & 29.66 {\scriptsize (2.01)} \\
+\midrule
+32 & 1 & 32 & 22.60 {\scriptsize (1.39)} & 26.08 {\scriptsize (1.54)} & 22.60 {\scriptsize (1.39)} & 26.08 {\scriptsize (1.54)} \\
+32 & 2 & 64 & 31.14 {\scriptsize (1.65)} & 34.29 {\scriptsize (1.78)} & 22.60 {\scriptsize (1.39)} & 26.08 {\scriptsize (1.54)} \\
+32 & 4 & 128 & 40.10 {\scriptsize (1.84)} & 41.99 {\scriptsize (1.93)} & 26.84 {\scriptsize (1.65)} & 30.56 {\scriptsize (1.79)} \\
+32 & 8 & 256 & 49.05 {\scriptsize (2.00)} & 49.18 {\scriptsize (2.03)} & 30.66 {\scriptsize (1.84)} & 33.99 {\scriptsize (1.95)} \\
+32 & 16 & 512 & 57.40 {\scriptsize (2.20)} & 56.20 {\scriptsize (2.20)} & 32.89 {\scriptsize (2.04)} & 36.40 {\scriptsize (2.14)} \\
+\midrule
+64 & 1 & 64 & 27.00 {\scriptsize (1.57)} & 30.80 {\scriptsize (1.70)} & 27.00 {\scriptsize (1.57)} & 30.80 {\scriptsize (1.70)} \\
+64 & 2 & 128 & 35.56 {\scriptsize (1.82)} & 39.12 {\scriptsize (1.89)} & 27.00 {\scriptsize (1.57)} & 30.80 {\scriptsize (1.70)} \\
+64 & 4 & 256 & 43.69 {\scriptsize (2.01)} & 47.03 {\scriptsize (2.03)} & 31.53 {\scriptsize (1.84)} & 35.05 {\scriptsize (1.91)} \\
+64 & 8 & 512 & 51.40 {\scriptsize (2.22)} & 54.20 {\scriptsize (2.23)} & 34.56 {\scriptsize (2.07)} & 38.13 {\scriptsize (2.12)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[p]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{GSM8K, CEDR-B: ODE values in Figure~\ref{fig:samplerallocationgsmb}. Entries are accuracy percentages, with problem-bootstrap standard errors in parentheses (Appendix~\ref{app:uncertainty}). SCCFG 2; asynchronous clocks $(2.5,2,1.5)$.}
+\label{tab:samplerbudgetgsmbode}
+\begin{tabular}{@{}rrr rrrr@{}}
+\toprule
+& & & \multicolumn{2}{c}{Oracle pass@$k$} & \multicolumn{2}{c}{Majority vote} \\
+\cmidrule(lr){4-5}\cmidrule(l){6-7}
+NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
+\midrule
+8 & 1 & 8 & 26.40 {\scriptsize (0.86)} & 30.08 {\scriptsize (0.95)} & 26.40 {\scriptsize (0.86)} & 30.08 {\scriptsize (0.95)} \\
+8 & 2 & 16 & 36.10 {\scriptsize (1.02)} & 39.21 {\scriptsize (1.08)} & 26.40 {\scriptsize (0.86)} & 30.08 {\scriptsize (0.95)} \\
+8 & 4 & 32 & 45.58 {\scriptsize (1.11)} & 47.77 {\scriptsize (1.14)} & 31.20 {\scriptsize (1.02)} & 34.14 {\scriptsize (1.09)} \\
+8 & 8 & 64 & 54.40 {\scriptsize (1.15)} & 55.75 {\scriptsize (1.16)} & 34.55 {\scriptsize (1.11)} & 36.50 {\scriptsize (1.16)} \\
+8 & 16 & 128 & 62.54 {\scriptsize (1.15)} & 63.20 {\scriptsize (1.15)} & 36.49 {\scriptsize (1.18)} & 37.77 {\scriptsize (1.22)} \\
+8 & 32 & 256 & 69.86 {\scriptsize (1.15)} & 70.07 {\scriptsize (1.14)} & 37.57 {\scriptsize (1.24)} & 38.43 {\scriptsize (1.27)} \\
+8 & 64 & 512 & 75.82 {\scriptsize (1.17)} & 76.04 {\scriptsize (1.16)} & 37.99 {\scriptsize (1.32)} & 38.47 {\scriptsize (1.33)} \\
+\midrule
+16 & 1 & 16 & 34.48 {\scriptsize (0.98)} & 37.77 {\scriptsize (1.05)} & 34.48 {\scriptsize (0.98)} & 37.77 {\scriptsize (1.05)} \\
+16 & 2 & 32 & 44.71 {\scriptsize (1.09)} & 46.80 {\scriptsize (1.14)} & 34.48 {\scriptsize (0.98)} & 37.77 {\scriptsize (1.05)} \\
+16 & 4 & 64 & 54.08 {\scriptsize (1.13)} & 54.86 {\scriptsize (1.17)} & 39.81 {\scriptsize (1.12)} & 42.03 {\scriptsize (1.17)} \\
+16 & 8 & 128 & 62.46 {\scriptsize (1.14)} & 62.17 {\scriptsize (1.17)} & 43.28 {\scriptsize (1.19)} & 44.41 {\scriptsize (1.23)} \\
+16 & 16 & 256 & 69.71 {\scriptsize (1.13)} & 68.79 {\scriptsize (1.16)} & 45.29 {\scriptsize (1.26)} & 45.61 {\scriptsize (1.29)} \\
+16 & 32 & 512 & 75.89 {\scriptsize (1.16)} & 74.68 {\scriptsize (1.19)} & 46.42 {\scriptsize (1.36)} & 45.83 {\scriptsize (1.36)} \\
+\midrule
+32 & 1 & 32 & 37.80 {\scriptsize (1.01)} & 41.13 {\scriptsize (1.09)} & 37.80 {\scriptsize (1.01)} & 41.13 {\scriptsize (1.09)} \\
+32 & 2 & 64 & 48.13 {\scriptsize (1.11)} & 50.16 {\scriptsize (1.16)} & 37.80 {\scriptsize (1.01)} & 41.13 {\scriptsize (1.09)} \\
+32 & 4 & 128 & 57.46 {\scriptsize (1.14)} & 58.15 {\scriptsize (1.19)} & 43.14 {\scriptsize (1.14)} & 45.32 {\scriptsize (1.19)} \\
+32 & 8 & 256 & 65.84 {\scriptsize (1.15)} & 65.17 {\scriptsize (1.20)} & 46.60 {\scriptsize (1.23)} & 47.79 {\scriptsize (1.26)} \\
+32 & 16 & 512 & 73.62 {\scriptsize (1.20)} & 71.42 {\scriptsize (1.24)} & 48.24 {\scriptsize (1.33)} & 49.17 {\scriptsize (1.35)} \\
+\midrule
+64 & 1 & 64 & 39.17 {\scriptsize (1.04)} & 42.16 {\scriptsize (1.11)} & 39.17 {\scriptsize (1.04)} & 42.16 {\scriptsize (1.11)} \\
+64 & 2 & 128 & 49.82 {\scriptsize (1.15)} & 51.36 {\scriptsize (1.19)} & 39.17 {\scriptsize (1.04)} & 42.16 {\scriptsize (1.11)} \\
+64 & 4 & 256 & 59.20 {\scriptsize (1.21)} & 59.40 {\scriptsize (1.24)} & 45.04 {\scriptsize (1.19)} & 46.56 {\scriptsize (1.22)} \\
+64 & 8 & 512 & 67.32 {\scriptsize (1.29)} & 66.26 {\scriptsize (1.32)} & 48.44 {\scriptsize (1.32)} & 49.07 {\scriptsize (1.34)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[p]
+\centering\small
+\setlength{\tabcolsep}{5pt}
+\caption{GSM8K, CEDR-B: Stochastic (EDM) values in Figure~\ref{fig:samplerallocationgsmb}. Entries are accuracy percentages, with problem-bootstrap standard errors in parentheses (Appendix~\ref{app:uncertainty}). SCCFG 2; asynchronous clocks $(2.5,2,1.5)$.}
+\label{tab:samplerbudgetgsmbedm}
+\begin{tabular}{@{}rrr rrrr@{}}
+\toprule
+& & & \multicolumn{2}{c}{Oracle pass@$k$} & \multicolumn{2}{c}{Majority vote} \\
+\cmidrule(lr){4-5}\cmidrule(l){6-7}
+NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
+\midrule
+8 & 1 & 8 & 20.26 {\scriptsize (0.77)} & 24.31 {\scriptsize (0.88)} & 20.26 {\scriptsize (0.77)} & 24.31 {\scriptsize (0.88)} \\
+8 & 2 & 16 & 28.80 {\scriptsize (0.94)} & 32.65 {\scriptsize (1.03)} & 20.26 {\scriptsize (0.77)} & 24.31 {\scriptsize (0.88)} \\
+8 & 4 & 32 & 37.79 {\scriptsize (1.07)} & 40.79 {\scriptsize (1.13)} & 24.16 {\scriptsize (0.93)} & 27.91 {\scriptsize (1.02)} \\
+8 & 8 & 64 & 46.71 {\scriptsize (1.15)} & 48.52 {\scriptsize (1.20)} & 27.05 {\scriptsize (1.04)} & 29.96 {\scriptsize (1.10)} \\
+8 & 16 & 128 & 55.16 {\scriptsize (1.19)} & 55.52 {\scriptsize (1.23)} & 28.66 {\scriptsize (1.11)} & 30.96 {\scriptsize (1.16)} \\
+8 & 32 & 256 & 62.86 {\scriptsize (1.22)} & 61.83 {\scriptsize (1.24)} & 29.57 {\scriptsize (1.17)} & 31.54 {\scriptsize (1.21)} \\
+8 & 64 & 512 & 69.60 {\scriptsize (1.28)} & 67.93 {\scriptsize (1.28)} & 29.88 {\scriptsize (1.25)} & 32.16 {\scriptsize (1.28)} \\
+\midrule
+16 & 1 & 16 & 31.79 {\scriptsize (0.97)} & 35.67 {\scriptsize (1.06)} & 31.79 {\scriptsize (0.97)} & 35.67 {\scriptsize (1.06)} \\
+16 & 2 & 32 & 41.08 {\scriptsize (1.10)} & 43.86 {\scriptsize (1.15)} & 31.79 {\scriptsize (0.97)} & 35.68 {\scriptsize (1.06)} \\
+16 & 4 & 64 & 49.57 {\scriptsize (1.16)} & 51.14 {\scriptsize (1.19)} & 36.56 {\scriptsize (1.11)} & 39.35 {\scriptsize (1.17)} \\
+16 & 8 & 128 & 57.48 {\scriptsize (1.18)} & 58.01 {\scriptsize (1.21)} & 39.36 {\scriptsize (1.19)} & 41.16 {\scriptsize (1.24)} \\
+16 & 16 & 256 & 65.10 {\scriptsize (1.19)} & 64.43 {\scriptsize (1.22)} & 40.67 {\scriptsize (1.25)} & 41.87 {\scriptsize (1.28)} \\
+16 & 32 & 512 & 72.25 {\scriptsize (1.24)} & 69.98 {\scriptsize (1.26)} & 41.17 {\scriptsize (1.33)} & 41.88 {\scriptsize (1.34)} \\
+\midrule
+32 & 1 & 32 & 41.11 {\scriptsize (1.10)} & 43.06 {\scriptsize (1.14)} & 41.11 {\scriptsize (1.10)} & 43.06 {\scriptsize (1.14)} \\
+32 & 2 & 64 & 49.76 {\scriptsize (1.16)} & 50.48 {\scriptsize (1.21)} & 41.11 {\scriptsize (1.10)} & 43.06 {\scriptsize (1.14)} \\
+32 & 4 & 128 & 57.44 {\scriptsize (1.19)} & 56.76 {\scriptsize (1.23)} & 45.17 {\scriptsize (1.20)} & 46.19 {\scriptsize (1.24)} \\
+32 & 8 & 256 & 64.49 {\scriptsize (1.20)} & 62.37 {\scriptsize (1.24)} & 47.56 {\scriptsize (1.27)} & 47.79 {\scriptsize (1.29)} \\
+32 & 16 & 512 & 71.19 {\scriptsize (1.24)} & 67.55 {\scriptsize (1.29)} & 49.09 {\scriptsize (1.37)} & 49.03 {\scriptsize (1.36)} \\
+\midrule
+64 & 1 & 64 & 44.99 {\scriptsize (1.16)} & 46.49 {\scriptsize (1.18)} & 44.99 {\scriptsize (1.16)} & 46.49 {\scriptsize (1.18)} \\
+64 & 2 & 128 & 52.98 {\scriptsize (1.21)} & 53.80 {\scriptsize (1.21)} & 44.99 {\scriptsize (1.16)} & 46.49 {\scriptsize (1.18)} \\
+64 & 4 & 256 & 60.14 {\scriptsize (1.24)} & 60.38 {\scriptsize (1.24)} & 48.40 {\scriptsize (1.25)} & 49.06 {\scriptsize (1.26)} \\
+64 & 8 & 512 & 66.94 {\scriptsize (1.32)} & 66.11 {\scriptsize (1.30)} & 50.44 {\scriptsize (1.34)} & 50.67 {\scriptsize (1.35)} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\FloatBarrier
 
 \section{Code generation: protocols and detailed results}
 \label{app:codingdetails}
