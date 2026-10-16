@@ -59,16 +59,16 @@ Our complete reasoning pipeline comprises the following key contributions:
 
 \begin{enumerate}
     \item \textbf{Strong reasoning with continuous latent diffusion.}
-    CEDR outperforms recent comparable-sized continuous-diffusion baselines on math and code (Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} and~\ref{tab:codingcomparison}).
+    CEDR shows strong performance on math and coding tasks, outperforming recent comparable-sized continuous-diffusion baselines on GSM8K, MATH500, HumanEval and MBPP (Tables~\ref{tab:headlinecomparison}--\ref{tab:headlinelownfe} and~\ref{tab:codingcomparison}).
 
     \item \textbf{Representation design using multilayer hidden activations of an autoregressive reasoning model.}
-    We empirically investigate the tradeoff between preserving reasoning information and ease of generation (Figure~\ref{fig:representationcomparison}). Guided by these findings, we learn compact projections of Qwen's multilayer hidden activations using a decoding cross-entropy loss (Figure~\ref{fig:pipelineoverview}). Our decomposable representation enables asynchronous inference, with separate denoising clocks for different layer components (Section~\ref{sec:clocks}; Table~\ref{tab:inferenceclocks}).
+    We empirically investigate the tradeoff between preserving reasoning information and ease of generation (Figure~\ref{fig:representationcomparison}). Guided by these findings, we learn compact projections of Qwen's multilayer hidden activations using a decoding cross-entropy loss through the frozen teacher (Figure~\ref{fig:pipelineoverview}). Our decomposable representation enables asynchronous inference, with separate denoising clocks for different layer components (Section~\ref{sec:clocks}; Table~\ref{tab:inferenceclocks}).
 
     \item \textbf{Replacing external prompt encoders with a lightweight Transformer.}
-    We train a lightweight Transformer to replace Qwen for prompt encoding, removing dependence on an external contextual encoder while retaining Qwen's frozen token-embedding table. Our analysis shows that an ideal denoiser does not require exact Qwen feature matching: its prompt encoder need only preserve the information required to denoise the answer (Lemma~\ref{lem:conditionalrepresentation}). This motivates jointly adapting the prompt encoder and diffusion backbone within our staged training curriculum (Figure~\ref{fig:promptcurriculum}).
+    We train a lightweight Transformer to replace Qwen for prompt encoding, removing dependence on an external contextual encoder. In the joint stage of our curriculum, the prompt encoder and diffusion backbone learn together through flow-matching and decoding losses on the answer (Figure~\ref{fig:promptcurriculum}). We show that preserving the prompt information needed for answer denoising is sufficient for an ideal denoiser; exact imitation of Qwen's features is unnecessary (Lemma~\ref{lem:conditionalrepresentation}). This provides a principled basis for learning prompt representations through the downstream generative objective.
 
     \item \textbf{Guidance-compatible diffusion reinforcement learning for reasoning.}
-    We adapt DiffusionNFT \citep{diffusionnft} to work with learned self-conditioning guidance while retaining guided rollouts (Section~\ref{sec:nftsccfg}). Our update uses both model rollouts and gold solutions from the training set. We theoretically characterize the gold contribution as anchoring the learned denoising field toward a blend of the denoising target implied by gold data and the previous policy (Lemma~\ref{lem:goldanchor}).
+    We adapt DiffusionNFT \citep{diffusionnft} to work with learned self-conditioning guidance while retaining guided rollouts (Section~\ref{sec:nftsccfg}). Our modified NFT training uses both model rollouts and gold solutions from the training set. We show that the gold-solution term anchors the updated denoising field toward a combination of the gold-data denoising target and the previous policy's field (Lemma~\ref{lem:goldanchor}).
 \end{enumerate}
 
 \section{Related work}
