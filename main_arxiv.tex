@@ -218,7 +218,7 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 \begin{figure}[tbp]
 \centering
 \includegraphics[width=\linewidth]{figures/prompt_curriculum_training_cedr_rerun_horizontal.pdf}
-\caption{\textbf{From teacher conditioning to learned prompts.} Left: GSM8K; right: MATH500. Circles/squares denote CEDR-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Values and settings: Appendix~\ref{app:promptcurves}.}
+\caption{\textbf{From teacher conditioning to learned prompts.} Left: GSM8K; right: MATH500. All curves use ODE sampling (Euler) with 32 denoising steps, async $(2.5,2,1.5)$, and SCCFG 2. Circles/squares denote CEDR-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Numerical values and evaluation details: Appendix~\ref{app:promptcurves}.}
 \label{fig:promptcurriculum}
 \end{figure}
 
