@@ -242,15 +242,19 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 
 This information-preservation criterion allows more flexibility than coordinate-wise teacher imitation. Encodings can preserve the same information while differing substantially in MSE; Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. The lemma characterizes the requirement for an ideal denoiser, while our experiments test how well a compact encoder realizes this flexibility.
 
-MSE pretraining nevertheless provides a useful initialization for a denoiser initially trained with teacher features. Subsequent joint training allows the encoder and denoiser to adapt together, so that the compact encoder is optimized for its role in generation. We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:training}):
+\textbf{A staged curriculum for learning the prompt encoder.}
+\label{sec:conditioningcurriculum}
+The information-preservation argument allows the prompt encoder and denoiser to adapt together, but does not determine an effective optimization strategy. Learning both from initialization changes the conditioning interface while the denoiser is still learning to use it. In the matched six-epoch comparison, this approach reaches only \textbf{8.70\%} GSM8K accuracy, versus \textbf{30.76\%} with frozen teacher conditioning (Figure~\ref{fig:representationcomparison}). This motivates training the flow model first with stable teacher conditioning, then learning and adapting a compact prompt encoder.
 
-\textbf{1. Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective. \textbf{2. Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE. \textbf{3. Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss, to epoch 18 for CEDR-B or epoch 21 for CEDR-L on the mathematical reasoning tasks.
+We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:training}):
+
+\begin{enumerate}
+    \item \textbf{Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective, establishing a denoiser with informative, stable conditioning.
+    \item \textbf{Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE. This initializes the encoder to approximate the conditioning interface the flow model already uses.
+    \item \textbf{Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, allowing them to compensate for imperfect teacher-feature matching. On the mathematical reasoning tasks, this stage uses no additional prompt-MSE loss and continues to epoch 18 for CEDR-B or epoch 21 for CEDR-L.
+\end{enumerate}
 
 Figure~\ref{fig:promptcurriculum} shows that replacing Qwen with the MSE-trained encoder immediately reduces accuracy despite unchanged flow-model weights. MSE pretraining alone therefore does not fully preserve generative performance in this setting. Subsequent joint training recovers much of this loss on GSM8K and exceeds the original teacher-conditioned checkpoint on MATH500. This recovery reflects adaptation of \emph{both} networks and supports using teacher imitation for initialization, followed by learning the conditioning interface through the generative objective.
-
-\textbf{Importance of fixing initial conditioning.}
-\label{sec:conditioningcurriculum}
-Joint learning from initialization makes the conditioning interface change while the flow model is still learning to interpret it. Under the matched six-epoch comparison, this approach reaches only \textbf{8.70\%} GSM8K accuracy, versus \textbf{30.76\%} with frozen teacher conditioning (Figure~\ref{fig:representationcomparison}). This motivates stabilizing the condition during early learning and adapting it afterward.
 
 Table~\ref{tab:trainingstages} summarizes the curriculum and reported NFT endpoints for each task. The coding joint stage additionally regularizes prompt features toward the teacher; Appendix~\ref{app:codingtraining} specifies this term.
 
