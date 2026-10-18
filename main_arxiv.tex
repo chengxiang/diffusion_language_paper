@@ -152,14 +152,23 @@ The expectation averages valid answer tokens, including the terminal token; Appe
 \subsection{Learning the denoising representation}
 \label{sec:representation}
 
-The denoising representation must support generation and token recovery. We extract \textbf{teacher-forced Qwen3-4B-Instruct-2507 activations} \citep{qwen2507} in one forward pass; although these features are causal, our bidirectional denoiser jointly generates answer representations.
+The denoising representation must support both token recovery and generation from noise. We first define CEDR's learned multilayer representation, then analyze the evidence for combining teacher layers and learning how to compress them.
+
+\subsubsection{Representation construction}
+\label{sec:representationconstruction}
+
+We extract \textbf{teacher-forced Qwen3-4B-Instruct-2507 activations} \citep{qwen2507} in one forward pass; although these features are causal, our bidirectional denoiser jointly generates answer representations.
 
 \textbf{Latent construction.}
-\label{sec:representationconstruction}
 Let $h_j^{(\ell)}$ be the frozen teacher's post-block activation at answer position $j$. We concatenate centered linear projections as $z_{\mathrm{clean},j}=\big[(h_j^{(\ell)}-\mu_\ell)W_\ell^{\mathrm{enc}}\big]_{\ell\in\mathcal S}$ for $\mathcal S=\{16,24,32\}$, with widths $(d_{16},d_{24},d_{32})=(256,256,512)$ and fixed means $\mu_\ell$. These maps initially also encode prompts; answer representations stay fixed during flow training and NFT.
 
 \textbf{Learning the projectors.}
 Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}$ (Figure~\ref{fig:pipelineoverview}, left). Replacing layer-$\ell$ answer activations with these reconstructions and running the frozen Qwen suffix yields next-token predictions $p_{\ell,j}^{\mathrm{recon}}$. We preserve the teacher's predictions through $\mathcal L_{\mathrm{repr}}=\sum_{\ell\in\mathcal S}\E_{q,a,j}\,\CE(p_j^{\mathrm{teacher}},p_{\ell,j}^{\mathrm{recon}})$, where $\CE$ is full-vocabulary soft cross-entropy. Only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$ are learned; the reconstruction decoders are used only at this stage. Appendix~\ref{app:representationimplementation} gives initialization, whitening, and scoring details.
+
+\subsubsection{Design analysis: decoding and generation}
+\label{sec:representationablations}
+
+The first three arms in Figure~\ref{fig:representationcomparison} test two design choices: combining layers at fixed latent width, and learning projections rather than selecting PCA directions. All use 1,024-dimensional whitened representations, frozen Qwen conditioning, and matched six-epoch CEDR-B training and evaluation. Table~\ref{tab:representationcurvevalues} gives the four-seed endpoint results discussed below.
 
 \begin{figure}[tbp]
 \centering
@@ -179,18 +188,14 @@ Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}
 \end{minipage}
 \end{figure}
 
-The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch CEDR-B training and evaluation; Table~\ref{tab:representationcurvevalues} gives four-seed endpoint results.
+\textbf{Accurate decoding alone does not ensure strong reasoning.}
+The fixed 1,024-dimensional layer-32 PCA representation supports \textbf{99.24\%} held-out same-position token recovery after two epochs of training a separate decoder (Appendix~\ref{app:representationdiagnostics}). Yet CEDR-B using this same representation achieves only \textbf{11.20\%} GSM8K accuracy after six epochs. The probe measures recovery from clean teacher features, whereas reasoning requires the diffusion model to generate suitable features from noise. Our experiments show that accurate decoding alone does not ensure strong reasoning performance, motivating evaluation of the representation through downstream generation as well as token recovery.
 
-\textbf{Decodability and representation choice.}
-\label{sec:representationablations}
-The fixed 1,024-dimensional layer-32 PCA representation supports \textbf{99.24\%} held-out same-position token recovery after two epochs of training a separate decoder (Appendix~\ref{app:representationdiagnostics}). Yet CEDR-B using this same representation achieves only \textbf{11.20\%} GSM8K accuracy after six epochs. Accurate clean-token recovery alone is therefore an insufficient criterion for choosing a denoising representation.
+\textbf{Combining layers improves generation at fixed latent width.}
+To expose features from different depths, we choose layers 16, 24, and 32 using centered kernel alignment (CKA; \citealp{cka}) of Qwen activations (Figure~\ref{fig:representationcka}). The sharp transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features at layers 24 and 32; CKA motivates this triplet without establishing its optimality (Appendix~\ref{app:representationcka}). Holding the PCA projection method and total latent width fixed, distributing the representation across these layers raises GSM8K accuracy from \textbf{11.20\% to 28.43\%}. This supports CEDR's use of multiple depths within a compact latent space. The layer groups also provide the structure for separate denoising clocks (Section~\ref{sec:clocks}).
 
-\textbf{Layer selection.}
-We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations (Figure~\ref{fig:representationcka}). The sharp transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features at layers 24 and 32. This is a motivation for the triplet, rather than an exhaustive search for optimal layers; Appendix~\ref{app:representationcka} gives the measurement protocol. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy to \textbf{28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
-
-\textbf{Learned versus PCA.}
-PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
-
+\textbf{Learning projections beyond variance maximization.}
+Having selected the layers, we must also decide which information to retain within each layer. PCA retains directions with the greatest activation variance, but variance need not reflect their importance to the teacher's token predictions. CEDR instead learns projections through decoding cross-entropy, making compression sensitive to the teacher's predictive behavior. With the same layers, latent widths, whitening, and training protocol, learned projections raise accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}). The improvement supports teacher-prediction supervision as a useful criterion for constructing latents for diffusion reasoning, even though the projectors are not optimized through the flow loss. Together, the comparisons motivate both parts of CEDR's representation design: combining features across depths and learning which information to retain within each depth.
 
 \subsection{Learning the conditional encoding in three stages}
 \label{sec:conditionalencoding}
