@@ -278,17 +278,39 @@ OpenCodeInstruct / CEDR-L & 12 & 10 & 1 (13) & 100\\
 \subsection{Asynchronous inference with local clocks}
 \label{sec:clocks}
 
-Our multilayer representation allows different feature groups to become clean at different rates, potentially letting one group use cleaner information from another. We extend the shared clock of Section~\ref{sec:preliminaries} to layer-specific clocks $t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell}$ for $\ell\in\{16,24,32\}$ at inference, while retaining synchronous training. Equal exponents recover synchronous inference; unequal exponents give different noise levels within a single denoiser call.
+Our multilayer representation allows different feature groups to become clean at different rates, potentially letting one group use cleaner information from another. This introduces two inference choices: the \emph{local clocks} specify each group's noise level along the trajectory, while the \emph{sampler} specifies how to advance the state and whether to inject fresh noise. We describe their common continuous-time formulation before comparing these choices separately.
 
-\textbf{Adapting a synchronously trained denoiser.}
-Although training uses a shared time, inference applies the same learned time-embedding function to each local time and averages its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. This needs no retraining and recovers the original embedding when local times agree.
+\textbf{Asynchronous dynamics.}
+Following the asynchronous flow construction of \citet{asyncschedules}, assign each layer group $\ell\in\{16,24,32\}$ an increasing local clock $t_\ell=f_\ell(\tau)$, with $f_\ell(0)=0$ and $f_\ell(1)=1$. At shared solver time $\tau$, the joint corruption is
+\begin{equation}
+ Z_{\bm t}^{(\ell)}=t_\ell Z_{\mathrm{clean}}^{(\ell)}
+ +\sigma(1-t_\ell)\epsilon^{(\ell)},
+ \qquad \bm t=(t_{16},t_{24},t_{32}),\quad \epsilon\sim\mathcal N(0,I).
+ \label{eq:asynccorruption}
+\end{equation}
+Write $p_{\bm t}(z\mid q)$ for its joint density, $s_\ell^\star=\nabla_{z^{(\ell)}}\log p_{\bm t}(z\mid q)$, and $m_\ell^\star=\E[Z_{\mathrm{clean}}^{(\ell)}\mid Z_{\bm t}=z,q]$. For $0<t_\ell<1$, the local velocity and score satisfy
+\begin{equation}
+ v_\ell^\star=\frac{m_\ell^\star-z^{(\ell)}}{1-t_\ell},
+ \qquad
+ s_\ell^\star=\frac{t_\ell m_\ell^\star-z^{(\ell)}}{\sigma^2(1-t_\ell)^2}.
+ \label{eq:asynclocalfields}
+\end{equation}
+Each field depends on the \emph{entire} noisy state, so the groups can inform one another despite having different clocks. Adding score-based drift and matching diffusion to the probability flow gives the asynchronous SDE family \citep{edm}
+\begin{equation}
+ \mathrm d Z_\tau^{(\ell)}
+ =f'_\ell(\tau)\bigl[v_\ell^\star+\nu_\ell(\tau)s_\ell^\star\bigr]\,\mathrm d\tau
+ +\sqrt{2f'_\ell(\tau)\nu_\ell(\tau)}\,\mathrm d W_\tau^{(\ell)},
+ \qquad \nu_\ell(\tau)\geq0,
+ \label{eq:asyncsde}
+\end{equation}
+where the fields are evaluated at $(Z_\tau,\bm t(\tau);q)$, $W^{(\ell)}$ are independent Brownian motions, and $\nu_\ell$ is a time-dependent diffusivity per unit local time. The clock derivative therefore scales both drift and noise variance. With exact fields and the usual regularity conditions, every such SDE follows the same scheduled marginals; $\nu_\ell=0$ recovers the asynchronous probability-flow ODE. Appendix~\ref{app:asyncsde} gives the derivation and relates the stochastic updates below to this formulation.
 
+Our model is trained synchronously. At inference, we apply the same learned time-embedding function to each local time and average its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. This needs no retraining and recovers the original embedding when local times agree. The guided clean prediction supplies an approximation to the fields in Eq.~\eqref{eq:asynclocalfields}; exact-marginal equivalence is a property of the ideal fields, not a guarantee for this guided, inference-time adaptation.
 
-\textbf{Sampling with local clocks.}
-Let $z_r$ be the answer state at solver time $\tau_r$, with local times $t_{\ell,r}=f_\ell(\tau_r)$, and let $\widehat z_{\mathrm{clean},r}$ denote the guided clean prediction. We use three sampling rules with the same trained denoiser and local clocks; the stochastic rules adapt established sampling procedures to the groupwise corruption in Eq.~\eqref{eq:methodinterpolant}.
+\textbf{Sampler choice.}
+Let $z_r$ be the answer state at $\tau_r$, $t_{\ell,r}=f_\ell(\tau_r)$, and $\widehat z_{\mathrm{clean},r}$ the guided clean prediction. We use three update rules, retaining the same destination grid and local clocks.
 
-\textbf{ODE.}
-The Euler baseline advances the predicted velocity in the shared solver clock:
+\emph{ODE.} Setting $\nu_\ell=0$ in Eq.~\eqref{eq:asyncsde} and discretizing in the shared solver clock gives our Euler baseline:
 \begin{equation}
  z_{r+1}^{(\ell)}=z_r^{(\ell)}+
  (\tau_{r+1}-\tau_r)\,f'_\ell(\tau_r)
@@ -296,10 +318,9 @@ The Euler baseline advances the predicted velocity in the shared solver clock:
  {\Delta_{t_{\ell,r}}},
  \label{eq:asyncsampler}
 \end{equation}
-where $\Delta_t=\max(1-t,0.05)$ is the stabilized denominator from Section~\ref{sec:methodflow}. No new noise is added after initialization.
+where $\Delta_t=\max(1-t,0.05)$ is the practical denominator stabilization from Section~\ref{sec:methodflow}. No noise is added after initialization.
 
-\textbf{Stochastic (DMD2).}
-Following the multistep sampling construction used in consistency models and DMD2 \citep{consistencymodels,dmd2}, predict the clean endpoint and apply fresh Gaussian corruption at the next local times:
+\emph{Stochastic (DMD2).} Following consistency models and DMD2 \citep{consistencymodels,dmd2}, take one Euler step all the way to the clean endpoint, then apply forward Gaussian noising at the next local times. For the unstabilized velocity in Eq.~\eqref{eq:asynclocalfields}, a step of size $1-t_{\ell,r}$ reaches $\widehat z_{\mathrm{clean},r}^{(\ell)}$ directly. The combined update is
 \begin{equation}
  z_{r+1}^{(\ell)}
  =t_{\ell,r+1}\widehat z_{\mathrm{clean},r}^{(\ell)}
@@ -307,10 +328,9 @@ Following the multistep sampling construction used in consistency models and DMD
  \qquad \xi_r\sim\mathcal N(0,I).
  \label{eq:asyncdmd2}
 \end{equation}
-Noise is independent across steps and coordinates. We use this sampling construction without DMD2 distillation; ELF-REG also evaluates clean-prediction re-noising for continuous language generation \citep{scalingdlm}.
+This Euler-to-clean step followed by forward noising completely refreshes the noise at each nonterminal step. It is a finite denoise--diffuse composition; Appendix~\ref{app:asyncsde} distinguishes it from a local Euler--Maruyama discretization. We use the sampling construction without DMD2 distillation; ELF-REG also evaluates this construction for continuous language generation \citep{scalingdlm}.
 
-\textbf{Stochastic (EDM).}
-Following EDM's noise-churn principle \citep{edm}, first move the current state to noisier local times $\bar t_{\ell,r}\leq t_{\ell,r}$. For an interior step, define $\alpha_{\ell,r}=\bar t_{\ell,r}/t_{\ell,r}$ and sample
+\emph{Stochastic (EDM).} EDM's noise-churn principle instead splits a step into partial forward noising and ODE denoising \citep{edm}. First move to noisier local times $\bar t_{\ell,r}\leq t_{\ell,r}$. For an interior step, set $\alpha_{\ell,r}=\bar t_{\ell,r}/t_{\ell,r}$ and draw
 \begin{equation}
  \bar z_r^{(\ell)}
  =\alpha_{\ell,r}z_r^{(\ell)}
@@ -318,7 +338,7 @@ Following EDM's noise-churn principle \citep{edm}, first move the current state 
  -\alpha_{\ell,r}^2(1-t_{\ell,r})^2}\,\xi_r^{(\ell)}.
  \label{eq:asyncchurnback}
 \end{equation}
-Evaluate the denoiser on $\bar z_r$ at $\bar{\bm t}_r$, giving a new clean prediction $\widehat z_{\mathrm{clean},r}$, then take an Euler step in each local time:
+This is an exact forward-noising transition for the corruption in Eq.~\eqref{eq:asynccorruption}. Evaluate the denoiser at $(\bar z_r,\bar{\bm t}_r)$ and advance each local probability-flow ODE with one Euler step:
 \begin{equation}
  z_{r+1}^{(\ell)}
  =\bar z_r^{(\ell)}
@@ -326,9 +346,12 @@ Evaluate the denoiser on $\bar z_r$ at $\bar{\bm t}_r$, giving a new clean predi
  \bigl(\widehat z_{\mathrm{clean},r}^{(\ell)}-\bar z_r^{(\ell)}\bigr).
  \label{eq:asyncchurnforward}
 \end{equation}
-This variant uses finite local-time increments and an Euler update, rather than EDM's original second-order solver. Appendix~\ref{app:samplerimplementation} specifies the churn times and endpoint rules.
+For small churn and step sizes, this splitting recovers a member of Eq.~\eqref{eq:asyncsde}; our finite index-churn implementation uses local-time increments and Euler, rather than EDM's original second-order solver. Appendix~\ref{app:samplerimplementation} specifies the churn times, denominator handling, and endpoint rules.
 
-All three samplers restore clean prompt positions and carry the guided clean prediction as recurrent self-conditioning. Each step uses one shared denoiser call for all groups, so asynchrony does not increase NFE; token decoding requires one additional call. Unlike shared-clock reparameterization, these local clocks expose the synchronously trained model to unequal group noise levels. The stochastic rules are discrete sampling procedures, without a claim that they integrate a particular continuous-time SDE.
+All three samplers restore clean prompt positions and carry the guided clean prediction as recurrent self-conditioning. Each step uses one shared denoiser call for all groups, so asynchrony does not increase NFE; token decoding requires one additional call. DMD2-style sampling gives the strongest pass@1 under our headline settings. ODE remains competitive at low NFE and can give higher oracle pass@$k$ with more attempts, as shown in Figures~\ref{fig:samplerallocationgsml} and~\ref{fig:samplerallocationmathl}. Appendix~\ref{app:samplerallocations} compares the full oracle and voting curves; the preferred sampler depends on the generation budget and selection rule.
+
+\textbf{Clock choice.}
+We use power clocks $f_\ell(\tau)=\tau^{\gamma_\ell}$. Equal exponents give synchronous denoising, while unequal exponents give different group noise levels at the same solver time. Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, chosen based on the highest observed MATH validation accuracy under ODE sampling; it also has the highest mean in the GSM8K ODE validation comparison (Appendix~\ref{app:schedulecomparisons}). Table~\ref{tab:inferenceclocks} compares the four clocks across all three samplers. With ODE, the nonidentity clocks improve on $(1,1,1)$, with small differences among them; forward asynchrony has the highest GSM8K mean and reverse asynchrony the highest MATH500 mean. Both stochastic samplers favor $(2.5,2,1.5)$ on both datasets. Under our DMD2-style headline sampler, this clock improves on $(2,2,2)$ by 1.82 percentage points on GSM8K and 4.00 on MATH500. The two asynchronous clocks remain close on GSM8K, whereas the reverse clock leads by 2.90 points on MATH500. Appendix~\ref{app:schedulecomparisons} gives paired uncertainty. These results support the chosen schedule without establishing a universally optimal clock; we keep it fixed across headline samplers and checkpoints.
 
 \begin{table}[!htbp]
 \centering\small
@@ -348,9 +371,6 @@ $(2.5,2,1.5)$ & 59.78 {\scriptsize($\pm 0.16$)} & \textbf{19.70} {\scriptsize($\
 \bottomrule
 \end{tabular}
 \end{table}
-
-\textbf{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, chosen based on the highest observed MATH validation accuracy under ODE sampling; it also has the highest mean in the GSM8K ODE validation comparison (Appendix~\ref{app:schedulecomparisons}). Table~\ref{tab:inferenceclocks} compares the four clocks across all three samplers. With ODE, the nonidentity clocks improve on $(1,1,1)$, with small differences among them; forward asynchrony has the highest GSM8K mean and reverse asynchrony the highest MATH500 mean. Both stochastic samplers favor $(2.5,2,1.5)$ on both datasets. Under our DMD2-style headline sampler, this clock improves on $(2,2,2)$ by 1.82 percentage points on GSM8K and 4.00 on MATH500. The two asynchronous clocks remain close on GSM8K, whereas the reverse clock leads by 2.90 points on MATH500. Appendix~\ref{app:schedulecomparisons} gives paired uncertainty. These results support the chosen schedule without establishing a universally optimal clock; we keep it fixed across headline samplers and checkpoints.
 
 Reconstruction probes reveal distinct sensitivities across layer groups, with weaker contrasts under random coordinate grouping (Figure~\ref{fig:layerreconstruction}). These findings motivate studying coordinated denoising across representations, but do not establish the mechanism behind the sampling gains.
 
@@ -996,6 +1016,41 @@ Epoch & \shortstack{Learned\\16/24/32} & \shortstack{PCA\\16/24/32} & \shortstac
 \label{app:inferenceclocks}
 
 \subsection{Local clocks, time embeddings, and samplers}
+
+\paragraph{Asynchronous SDE and its probability-flow limit.}
+\label{app:asyncsde}
+The group-clock construction follows \citet{asyncschedules}. For fixed prompt $q$, write $p_\tau(z)=p_{\bm t(\tau)}(z\mid q)$. Differentiating expectations along Eq.~\eqref{eq:asynccorruption} and conditioning on the full state yields the continuity equation $\partial_\tau p_\tau=-\sum_\ell\nabla_\ell\!\cdot(p_\tau f'_\ell v_\ell^\star)$. Here $\nabla_\ell$ acts on all answer coordinates in group $\ell$. The Gaussian score identity gives Eq.~\eqref{eq:asynclocalfields}. Adding the score drift and diffusion in Eq.~\eqref{eq:asyncsde} contributes
+\[
+ \sum_\ell f'_\ell\nu_\ell
+ \left[-\nabla_\ell\!\cdot(p_\tau s_\ell^\star)
+ +\nabla_\ell^2 p_\tau\right]=0,
+\]
+because $p_\tau s_\ell^\star=\nabla_\ell p_\tau$ and $f'_\ell\nu_\ell$ is independent of the state. This is the probability-flow-plus-Langevin construction \citep{edm}, applied separately to each group while using the joint score. It establishes the common marginals for exact fields on interior times under regularity and well-posedness assumptions, with endpoints interpreted by limits. Guided predictions, synchronous-to-asynchronous model adaptation, finite steps, and denominator stabilization need not preserve those ideal marginals.
+
+\paragraph{Connecting the discrete samplers to these dynamics.}
+For $0\leq\bar t\leq t\leq1$ with $t>0$, a Markov forward-noising transition for one group is
+\begin{equation}
+ K_{\bar t\leftarrow t}(\bar z\mid z)
+ =\mathcal N\!\left(\frac{\bar t}{t}z,
+ \sigma^2\left[(1-\bar t)^2-\left(\frac{\bar t}{t}\right)^2(1-t)^2\right]I\right).
+ \label{eq:asyncforwardkernel}
+\end{equation}
+It rescales the signal coefficient from $t$ to $\bar t$ and adds precisely the missing noise variance. Applying these kernels independently across groups preserves the joint corruption law, including correlations inherited from the clean representation. Equivalently, this kernel integrates the forward-noising SDE $\mathrm dX_u=-X_u/(1-u)\,\mathrm du+\sigma\sqrt{2u/(1-u)}\,\mathrm dB_u$ in increasing noise time $u=1-t$.
+
+For DMD2-style sampling, let $m=\widehat z_{\mathrm{clean},r}^{(\ell)}$. One Euler step of size $1-t_{\ell,r}$ with the unstabilized local velocity $(m-z_r^{(\ell)})/(1-t_{\ell,r})$ gives exactly $m$. Following this endpoint approximation with $K_{t_{\ell,r+1}\leftarrow1}$ gives Eq.~\eqref{eq:asyncdmd2}. The deterministic substep therefore advances to $t=1$, while the stochastic substep returns to $t_{\ell,r+1}$; this differs from Euler--Maruyama's drift and noise update over a single time interval. The denoising jump and noise refresh remain finite as the destination grid is refined, so this implementation has no fixed finite-diffusivity Euler--Maruyama limit.
+
+For EDM-style sampling, Eq.~\eqref{eq:asyncchurnback} applies $K_{\bar t\leftarrow t}$ before a local ODE step. To relate it to Eq.~\eqref{eq:asyncsde}, let $h_\ell=t_{\ell,r+1}-t_{\ell,r}$ and $\delta_\ell=t_{\ell,r}-\bar t_{\ell,r}$. At an interior time, as $h_\ell\to0$ with $\delta_\ell/h_\ell\to\chi_\ell\geq0$, the conditional mean and covariance of the combined increment are, to first order,
+\begin{equation}
+ \begin{aligned}
+ \E[\Delta z^{(\ell)}\mid z]
+ &=h_\ell v_\ell^\star
+ +\delta_\ell\frac{\sigma^2(1-t_\ell)}{t_\ell}s_\ell^\star+o(h_\ell),\\
+ \operatorname{Cov}(\Delta z^{(\ell)}\mid z)
+ &=2\delta_\ell\frac{\sigma^2(1-t_\ell)}{t_\ell}I+o(h_\ell).
+ \end{aligned}
+ \label{eq:asyncchurnlimit}
+\end{equation}
+Thus the small-step splitting corresponds to Eq.~\eqref{eq:asyncsde} with $\nu_\ell=\chi_\ell\sigma^2(1-t_\ell)/t_\ell$, using $h_\ell=f'_\ell(\tau_r)\Delta\tau+o(\Delta\tau)$. Our evaluated index contraction is a finite-churn rule; it does not enforce this small-step scaling. Both stochastic implementations are therefore specified by their actual discrete updates, rather than identified with a shared fixed SDE coefficient.
 
 \paragraph{Local corruption and time embeddings.}
 The local clocks in Section~\ref{sec:clocks} assign each group its own Gaussian corruption, $z_{\bm t}^{(\ell)}=t_\ell z_{\mathrm{clean}}^{(\ell)}+(1-t_\ell)\sigma\epsilon^{(\ell)}$. The three time embedders are identical copies of the selected scalar-time checkpoint weights:
