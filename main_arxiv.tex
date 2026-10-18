@@ -163,9 +163,20 @@ Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}
 
 \begin{figure}[tbp]
 \centering
-\includegraphics[width=.72\linewidth]{figures/representation_shared2_sd.pdf}
+\begin{minipage}[t]{.49\linewidth}
+\vspace{0pt}
+\centering
+\includegraphics[width=\linewidth]{figures/representation_shared2_sd.pdf}
 \caption{\textbf{Representation and conditioning affect reasoning.} CEDR-B learning curves on GSM8K, with ODE sampling, 32 steps, and $t=\tau^2$. The first three variants retain Qwen conditioning; the fourth jointly trains a randomly initialized prompt encoder. Protocol: Appendix~\ref{app:representationclock}; values and SDs: Table~\ref{tab:representationcurvevalues} (Appendix~\ref{app:representationclock}).}
 \label{fig:representationcomparison}
+\end{minipage}\hfill
+\begin{minipage}[t]{.49\linewidth}
+\vspace{0pt}
+\centering
+\includegraphics[width=\linewidth]{figures/cka.pdf}
+\caption{\textbf{Qwen layer structure.} Linear CKA of teacher-forced activations on the combined discovery and confirmation panels. White markers select layers 16, 24, and 32. The transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features.}
+\label{fig:representationcka}
+\end{minipage}
 \end{figure}
 
 The first three arms in Figure~\ref{fig:representationcomparison} compare 1,024-dimensional whitened representations under matched six-epoch CEDR-B training and evaluation; Table~\ref{tab:representationcurvevalues} gives four-seed endpoint results.
@@ -176,13 +187,6 @@ The fixed 1,024-dimensional layer-32 PCA representation supports \textbf{99.24\%
 
 \textbf{Layer selection.}
 We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations (Figure~\ref{fig:representationcka}). The sharp transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features at layers 24 and 32. This is a motivation for the triplet, rather than an exhaustive search for optimal layers; Appendix~\ref{app:representationcka} gives the measurement protocol. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy to \textbf{28.43\%} (Figure~\ref{fig:representationcomparison}). The resulting layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=.62\linewidth]{figures/cka.pdf}
-\caption{\textbf{Qwen layer structure.} Linear CKA of teacher-forced activations on the combined discovery and confirmation panels. White markers select layers 16, 24, and 32. The transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features.}
-\label{fig:representationcka}
-\end{figure}
 
 \textbf{Learned versus PCA.}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
@@ -213,8 +217,8 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 
 \begin{figure}[tbp]
 \centering
-\includegraphics[width=.56\linewidth]{figures/prompt_curriculum_training_cedr_rerun.pdf}
-\caption{\textbf{From teacher conditioning to learned prompts.} Top: GSM8K; bottom: MATH500. Circles/squares denote CEDR-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Values and settings: Appendix~\ref{app:promptcurves}.}
+\includegraphics[width=\linewidth]{figures/prompt_curriculum_training_cedr_rerun_horizontal.pdf}
+\caption{\textbf{From teacher conditioning to learned prompts.} Left: GSM8K; right: MATH500. Circles/squares denote CEDR-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Values and settings: Appendix~\ref{app:promptcurves}.}
 \label{fig:promptcurriculum}
 \end{figure}
 
