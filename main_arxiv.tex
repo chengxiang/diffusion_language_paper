@@ -176,13 +176,20 @@ The latent representation is a key design choice for continuous diffusion reason
 \vspace{0pt}
 \centering
 \includegraphics[width=\linewidth]{figures/representation_shared2_sd.pdf}
-\caption{\textbf{Representation and conditioning affect reasoning.} CEDR-B learning curves on GSM8K, with ODE sampling, 32 steps, and $t=\tau^2$. The first three variants retain Qwen conditioning; the fourth jointly trains a randomly initialized prompt encoder. Protocol: Appendix~\ref{app:representationclock}; values and SDs: Table~\ref{tab:representationcurvevalues} (Appendix~\ref{app:representationclock}).}
-\label{fig:representationcomparison}
 \end{minipage}\hfill
 \begin{minipage}[t]{.49\linewidth}
 \vspace{0pt}
 \centering
 \includegraphics[width=\linewidth]{figures/cka.pdf}
+\end{minipage}
+\par
+\begin{minipage}[t]{.49\linewidth}
+\vspace{0pt}
+\caption{\textbf{Representation and conditioning affect reasoning.} CEDR-B learning curves on GSM8K, with ODE sampling, 32 steps, and $t=\tau^2$. The first three variants retain Qwen conditioning; the fourth jointly trains a randomly initialized prompt encoder. The same epoch-six ordering holds under $t=\tau$ (Figure~\ref{fig:representationidentity}). Protocol: Appendix~\ref{app:representationclock}; values and SDs: Table~\ref{tab:representationcurvevalues} (Appendix~\ref{app:representationclock}).}
+\label{fig:representationcomparison}
+\end{minipage}\hfill
+\begin{minipage}[t]{.49\linewidth}
+\vspace{0pt}
 \caption{\textbf{Qwen layer structure.} Linear CKA of teacher-forced activations on the combined discovery and confirmation panels. White markers select layers 16, 24, and 32. The transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features.}
 \label{fig:representationcka}
 \end{minipage}
