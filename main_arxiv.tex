@@ -2135,36 +2135,15 @@ Now we can add these together to find the sum: $f(-2) + f(-1) + f(0) = 2 + \frac
 \subsection{Intermediate generation trajectory}
 \label{app:trajectories}
 
-Figures~\ref{fig:gsmtrajectory}--\ref{fig:gsmtrajectoryfinal} show the ODE trajectory at steps 20, 40, 49, 60, 62, and 64 of the GSM8K example in Figure~\ref{fig:headlineexamples}. After sampling, we apply the terminal decoder (time $1$, SCCFG~2, zero decoder self-conditioning) to each saved state. These premature readouts neither feed back into sampling nor represent intermediate clean-latent predictions. The final text exactly reproduces the archived generation.
+Figure~\ref{fig:gsmtrajectory} shows the ODE trajectory at steps 60, 62, and 64 of the GSM8K example in Figure~\ref{fig:headlineexamples}. After sampling, we apply the terminal decoder (time $1$, SCCFG~2, zero decoder self-conditioning) to each saved state. The intermediate readouts neither feed back into sampling nor represent intermediate clean-latent predictions. The final text exactly reproduces the archived generation.
 
 Light blue marks exact token-ID equality at the same position in the final answer, before its EOS; matches need not persist. Panels label the local clocks $(t_{16},t_{24},t_{32})$: $0$ is noise and $1$ is clean. Each readout retains its native extraction and EOS; only whitespace layout changes.
 
 \begin{figure}[p]
 \centering
-\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{figures/gsm8k_trajectory_rerun_steps20.pdf}
-\caption{\textbf{GSM8K generation trajectory: step 20.} Early decoder readout for the example in Figure~\ref{fig:headlineexamples}. CEDR-L NFT update 600; backbone/prompt EMA $.99/.99$; seed 42; async $(2.5,2,1.5)$; 64 denoising steps; CFG~1 and SCCFG~2. Light blue identifies tokens matching the final answer at the same position.}
-\label{fig:gsmtrajectory}
-\end{figure}
-
-\begin{figure}[p]
-\centering
-\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{figures/gsm8k_trajectory_rerun_steps40.pdf}
-\caption{\textbf{GSM8K generation trajectory: step 40.} The same example and settings as Figure~\ref{fig:gsmtrajectory}, with positional final-token matches highlighted in light blue.}
-\label{fig:gsmtrajectory40}
-\end{figure}
-
-\begin{figure}[p]
-\centering
-\includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{figures/gsm8k_trajectory_rerun_steps49.pdf}
-\caption{\textbf{GSM8K generation trajectory: step 49.} The same example and settings as Figure~\ref{fig:gsmtrajectory}, with positional final-token matches highlighted in light blue.}
-\label{fig:gsmtrajectory49}
-\end{figure}
-
-\begin{figure}[p]
-\centering
 \includegraphics[width=\linewidth,height=0.84\textheight,keepaspectratio]{figures/gsm8k_trajectory_rerun_steps60_62_64.pdf}
-\caption{\textbf{GSM8K generation trajectory: steps 60, 62, and 64.} Later readouts for the same example and settings as Figure~\ref{fig:gsmtrajectory}, with the final solution in the bottom panel.}
-\label{fig:gsmtrajectoryfinal}
+\caption{\textbf{GSM8K ODE trajectory: steps 60, 62, and 64.} Decoder readouts for the example in Figure~\ref{fig:headlineexamples}, with the final solution in the bottom panel. CEDR-L NFT update 600; backbone/prompt EMA $.99/.99$; seed 42; async $(2.5,2,1.5)$; 64 denoising steps; CFG~1 and SCCFG~2. Light blue identifies tokens matching the final answer at the same position.}
+\label{fig:gsmtrajectory}
 \end{figure}
 
 \end{document}
