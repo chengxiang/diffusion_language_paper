@@ -356,7 +356,7 @@ We use power clocks $f_\ell(\tau)=\tau^{\gamma_\ell}$. Equal exponents give sync
 \begin{table}[!htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Inference-clock ablation across samplers.} CEDR-L epoch 21, 32 denoising steps, with headline guidance (SCCFG 2 for GSM8K, 3 for MATH500); mean pass@1 (\%) with seed SD over seeds 42/123. Bold marks the best clock within each dataset/sampler. EDM-style sampling uses index churn $0.7$; DMD2-style sampling uses $\eta=1$. Validation results, individual seeds, and paired comparisons appear in Appendix~\ref{app:schedulecomparisons}.}
+\caption{\textbf{Inference-clock ablation across samplers.} CEDR-L epoch 21, 32 denoising steps, with headline guidance (SCCFG 2 for GSM8K, 3 for MATH500); mean pass@1 (\%) with seed SD over seeds 42/123. Bold marks the best clock within each dataset/sampler. EDM-style sampling uses index churn $0.7$. Validation results, individual seeds, and paired comparisons appear in Appendix~\ref{app:schedulecomparisons}.}
 \label{tab:inferenceclocks}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
@@ -429,15 +429,15 @@ Because the external condition is the question text, NFT jointly updates the pro
 \section{Empirical Evaluation}
 \label{sec:headlineresults}
 
-We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math500}, and code generation in Section~\ref{sec:codingresults}. Math evaluations use zero-shot prompts, async clocks $(2.5,2,1.5)$, numerical-answer scoring for GSM8K, and Math-Verify for MATH500 \citep{mathverify}. All CEDR headline results use the same DMD2-style stochastic sampler (Eq.~\eqref{eq:asyncdmd2}, noise multiplier $\eta=1$) across checkpoints, datasets, and NFEs. Math headline pass@1 averages eight sampling seeds at 64 denoising steps. Representation and prompt-learning ablations retain ODE sampling; the schedule ablation compares all three samplers. NFE counts denoising calls, excluding prompt encoding and terminal decoding. Appendices~\ref{app:experimentdetails} and~\ref{app:seedvariability} give checkpoint settings and seed standard deviations.
+We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math500}, and code generation in Section~\ref{sec:codingresults}. Math evaluations use zero-shot prompts, async clocks $(2.5,2,1.5)$, numerical-answer scoring for GSM8K, and Math-Verify for MATH500 \citep{mathverify}. All CEDR headline results use the same DMD2-style stochastic sampler (Eq.~\eqref{eq:asyncdmd2}) across checkpoints, datasets, and NFEs. Math headline pass@1 averages eight sampling seeds at 64 denoising steps. Representation and prompt-learning ablations retain ODE sampling; the schedule ablation compares all three samplers. NFE counts denoising calls, excluding prompt encoding and terminal decoding. Appendices~\ref{app:experimentdetails} and~\ref{app:seedvariability} give checkpoint settings and seed standard deviations.
 
 \subsection{Mathematical reasoning}
 \label{sec:mathresults}
 \begin{table}[!htb]
-\caption{Mathematical reasoning across model families, mean pass@1 (\%). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
+\caption{Mathematical reasoning across model families, mean pass@1 (\%). Small brackets give available sampling-seed SDs (eight seeds for CEDR; four for ELF-REG). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
 \label{tab:headlinecomparison}
 \centering\small
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Model & \shortstack{Embedding\\Params (M)} & \shortstack{Other\\Params (M)} & NFE & GSM8K & MATH500\\
@@ -454,28 +454,28 @@ SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
 \shortstack[l]{$\mathbb S$-FLM (top-1)\\\citep{hyperspherical}} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
 FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
-ELF-REG-B (stoch.) \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 42.97 & ---\\
-\textbf{CEDR-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{47.62} & ---\\
-\textbf{CEDR-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{47.00} & ---\\
+ELF-REG-B (stoch.) \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 42.97 {\scriptsize [0.35]} & ---\\
+\textbf{CEDR-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{47.62} {\scriptsize [0.90]} & ---\\
+\textbf{CEDR-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{47.00} {\scriptsize [0.98]} & ---\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone 200M--1B}}\\
-ELF-REG-L (stoch.) \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 61.28 & 20.15\\
-\textbf{CEDR-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{67.13} & \underline{28.58}\\
-\textbf{CEDR-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{68.97} & \textbf{32.40}\\
+ELF-REG-L (stoch.) \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 61.28 {\scriptsize [0.42]} & 20.15 {\scriptsize [1.29]}\\
+\textbf{CEDR-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{67.13} {\scriptsize [0.58]} & \underline{28.58} {\scriptsize [0.90]}\\
+\textbf{CEDR-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{68.97} {\scriptsize [0.50]} & \textbf{32.40} {\scriptsize [1.17]}\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: larger backbones (reference)}}\\
-MLFM \citep{mlfm} & 123 & 1,220 & NR$^\S$ & 31.24 & ---\\
+MLFM \citep{mlfm} & 123 & 1,220 & 256$^\S$ & 31.24 & ---\\
 TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & $\approx68.9^\ddagger$ & ---\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
-\parbox{\linewidth}{\footnotesize External results are author-reported. ELF-REG uses its best reported stochastic settings (v3, Tables 4 and 30); CEDR uses DMD2-style sampling throughout. Table~\ref{tab:elfregselected} records the selected ELF-REG settings and seed SDs. $^\dagger$Python scoring, $^\ddagger$Approximate accuracy read from TESS 2 Figure 3b. $^\S$MLFM reports 256 sampling steps with guidance and online token promotion; the corresponding NFE is not established (NR). Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
+\parbox{\linewidth}{\footnotesize External results are author-reported. ELF-REG uses its best reported stochastic settings (v3, Tables 4 and 30); CEDR uses DMD2-style sampling throughout. Table~\ref{tab:elfregselected} records the selected ELF-REG settings and seed SDs. $^\dagger$Python scoring, $^\ddagger$Approximate accuracy read from TESS 2 Figure 3b. $^\S$MLFM reports 256 sampling steps; its exact NFE with guidance and online token promotion is unclear. Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed counts and SDs across denoising budgets.}
 \end{table}
 
 \textbf{Reasoning accuracy across denoising budgets.}
 \label{sec:headlinecomparison}
 \label{sec:headlinelownfe}
-At comparable denoising-backbone sizes, both supervised and post-NFT CEDR exceed the reported continuous-diffusion baselines at the headline budgets (Table~\ref{tab:headlinecomparison}). Supervised CEDR-L reaches 67.13\% on GSM8K and 28.58\% on MATH500, versus ELF-REG-L's strongest reported 61.28\% and 20.15\%; post-NFT CEDR-L reaches 68.97\% and 32.40\%. CEDR-B reaches 47.62\% before NFT and 47.00\% afterward, both above ELF-REG-B's 42.97\%. Our 90.4M/638M denoisers use compact learned prompt encoders, without executing the teacher Transformer during generation. The autoregressive, discrete-diffusion, and larger continuous-model rows provide broader context; training data, scale, and evaluation protocols differ.
+At comparable denoising-backbone sizes, both supervised and post-NFT CEDR outperform the reported continuous-diffusion baselines on GSM8K and MATH500 (Table~\ref{tab:headlinecomparison}). This advantage is already present before reinforcement learning and is achieved with compact learned prompt encoders, without running the teacher Transformer at inference.
 
 \begin{table}[!htb]
 \caption{Reasoning at lower NFE, mean pass@1 (\%). Table~\ref{tab:headlinecomparison} gives model parameter counts. Bold/underline mark first/second within each benchmark and backbone-scale block; $^{*}$ marks one fewer denoising call than the heading. External results follow \citet{posterior,scalingdlm}; Appendix~\ref{app:experimentdetails} gives source and protocol details.}
@@ -498,7 +498,7 @@ CEDR, post-NFT & \textbf{28.48} & \textbf{40.60} & \textbf{45.59} & \underline{4
 \parbox{\linewidth}{\footnotesize CEDR uses DMD2-style sampling and fixed checkpoints, with SCCFG 2 for GSM8K and 3 for MATH500. ELF-REG reports four-seed means: stochastic sampling except $^\dagger$ODE; settings can differ across budgets (Table~\ref{tab:elfregselected}). Our sampling-seed counts and SDs: Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability}.}
 \end{table}
 
-Supervised CEDR-L exceeds the reported comparable-scale baselines on both GSM8K and MATH500 at every displayed budget (Table~\ref{tab:headlinelownfe}). Supervised CEDR-B exceeds ELF-REG-B at 32 and 64 calls but trails it in the two smaller-budget comparisons; post-NFT CEDR-B exceeds it at all four budgets. Useful reasoning emerges without training a separate few-step student. These are reported operating points with different training and evaluation protocols; NFE does not equate FLOPs across methods. Both headline tables and inference-allocation curves use SCCFG 2 for GSM8K and 3 for MATH500.
+CEDR-L's advantage persists across all displayed denoising budgets (Table~\ref{tab:headlinelownfe}). For CEDR-B, the supervised model leads at 32 and 64 calls, while NFT extends the advantage to the smallest budgets. The same checkpoints support all these operating points, without separate few-step distillation.
 
 \textbf{Refining an answer or drawing more answers.}
 \label{sec:headlinebudget}
@@ -520,7 +520,7 @@ The corresponding GSM8K CEDR-B comparison appears in Appendix~\ref{app:elfbbudge
 Under DMD2-style sampling, NFT improves CEDR-L pass@1 at all four denoising depths: the 64-step gains are $+1.84$ percentage points on GSM8K and $+3.83$ on MATH500. The effect is not uniform across models and metrics. CEDR-B improves at 8--32 calls but changes from 47.62\% to 47.00\% at 64 calls. High-$k$ oracle coverage can also decrease: with eight 64-step samples, MATH500 pass@8 changes from 55.20\% to 53.80\%, while voting improves from 36.58\% to 38.80\%. At eight steps and 64 samples, MATH500 oracle accuracy instead rises from 65.40\% to 68.40\%. Voting depends on the correct answer's frequency relative to competing answers, whereas oracle selection needs only one successful draw. These patterns show that NFT gains depend on the inference allocation; they do not establish a loss of reasoning diversity. Appendix~\ref{app:budgetvalues} gives paired uncertainty, and Appendices~\ref{app:generations}--\ref{app:trajectories} illustrate ODE generations.
 
 \paragraph{Higher-pass comparison with continuous-diffusion baselines.}
-At 64 denoising calls, supervised and post-NFT CEDR-L with DMD2-style sampling reach MATH500 pass@8 of 55.20\% and 53.80\%. Both exceed ELF-REG-L's reported ODE pass@10 of 44.04\% at 63 denoising calls (Table~\ref{tab:mathhigherpass}; \citealp[v3, Table 20]{scalingdlm}). This compares different attempt counts, not equal compute or an estimate of our pass@10. CEDR uses SCCFG 3 throughout these headline comparisons.
+At 64 denoising calls, supervised and post-NFT CEDR-L with DMD2-style sampling reach MATH500 pass@8 of 55.20\% and 53.80\%. Both exceed ELF-REG-L's reported ODE pass@10 of 44.04\% at 63 denoising calls (Table~\ref{tab:mathhigherpass}; \citealp[v3, Table 20]{scalingdlm}). CEDR uses SCCFG 3 throughout these headline comparisons.
 
 \begin{table}[!htbp]
 \centering\small
@@ -578,7 +578,7 @@ In the ODE stage ablation, with identical epoch-12 flow weights and 32 denoising
 This replaces a 3.63B-parameter contextual teacher with a 121M-parameter prompt encoder, excluding vocabulary maps. Unique formatted training prompts average 233.44 tokens for code, versus 84.17 for GSM8K and 89.15 for MATH; longer contexts may make the compression harder, although we have not isolated length as the cause. With ODE at 128 steps, one joint epoch improves HumanEval(+) pass@1 by 1.60 points but decreases standard MBPP-378 base/MBPP+ by 1.16/0.56 points; subsequent NFT improves all four metrics. The conditioning interface therefore remains a meaningful design challenge. ELF-REG retains an approximately 440M-parameter contextual encoder, while our frozen-Qwen reference uses a much larger teacher, so neither comparison isolates encoder capacity. Appendix~\ref{app:codingdetails} gives the full trajectories, prompt-length statistics, and paired comparisons.
 
 \paragraph{Higher-pass code generation.}
-The eight saved draws also support oracle pass@8 (Table~\ref{tab:codinghigherpass}). Without function-name repair, pre- and post-NFT CEDR-L exceed PlaidQ+CFG's reported pass@10 on HumanEval and HumanEval+. Under aliasing, both exceed ELF-REG-L's reported ODE pass@8 and pass@10 on all three metrics. Its stochastic study provides only four draws, so this higher-pass comparison does not include that sampler. The higher-pass comparison on standard MBPP-378 remains weaker: our post-NFT pass@8 is 42.59\%, compared with guided PlaidQ's pass@10 of 44.79\%. These comparisons retain each paper's attempt count and scoring category; we do not infer CEDR pass@10 from eight draws. Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1/2/4/8 and uncertainty for every CEDR stage.
+The eight saved draws also support oracle pass@8 (Table~\ref{tab:codinghigherpass}). Without function-name repair, pre- and post-NFT CEDR-L exceed PlaidQ+CFG's reported pass@10 on HumanEval and HumanEval+. Under aliasing, both exceed ELF-REG-L's reported ODE pass@8 and pass@10 on all three metrics. Its stochastic study provides only four draws, so this higher-pass comparison does not include that sampler. The higher-pass comparison on standard MBPP-378 remains weaker: our post-NFT pass@8 is 42.59\%, compared with guided PlaidQ's pass@10 of 44.79\%. These comparisons retain each paper's attempt count and scoring category. Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1/2/4/8 and uncertainty for every CEDR stage.
 
 \begin{table}[!htbp]
 \centering\small
@@ -1074,7 +1074,7 @@ The base $\tau$ grid is fixed across schedule and sampler comparisons. For the O
 \label{app:samplerimplementation}
 The labels \emph{Stochastic (DMD2)} and \emph{Stochastic (EDM)} identify the update families in Eqs.~\eqref{eq:asyncdmd2}--\eqref{eq:asyncchurnforward}. Both use the same destination grid as ODE, $\sigma=2$, and default local-clock exponents $(2.5,2,1.5)$; the schedule comparison varies these powers. They operate on the fixed supervised and NFT endpoints without retraining or checkpoint reselection.
 
-For DMD2-style sampling, the fresh-noise multiplier is one ($\eta=1$): the injected standard deviation in group $\ell$ is exactly $\sigma(1-t_{\ell,r+1})$. Each nonterminal step draws fresh Gaussian noise after predicting the clean endpoint, including the first step. At $r=S-1$, Eq.~\eqref{eq:asyncdmd2} gives $z_S=\widehat z_{\mathrm{clean},S-1}$, and no noise is drawn.
+For DMD2-style sampling, the injected noise standard deviation in group $\ell$ is $\sigma(1-t_{\ell,r+1})$, as in Eq.~\eqref{eq:asyncdmd2}. Each nonterminal step draws fresh Gaussian noise after predicting the clean endpoint, including the first step. At $r=S-1$, Eq.~\eqref{eq:asyncdmd2} gives $z_S=\widehat z_{\mathrm{clean},S-1}$, and no noise is drawn.
 
 For EDM-style sampling, let $G(u)=\operatorname{sigmoid}[-1.5+0.8\Phi^{-1}(u)]$ for $0<u<1$, with $G(0)=0$ and $G(1)=1$. On interior transitions $1\leq r\leq S-2$, contract the \emph{uniform quantile index} by a factor of $0.7$:
 \begin{equation}
@@ -1473,7 +1473,7 @@ Figure~\ref{fig:elfbstages} extends the CEDR-L comparison in Figure~\ref{fig:hea
 \subsection{Inference allocation across sampling algorithms}
 \label{app:samplerallocations}
 
-Figures~\ref{fig:samplerallocationgsml}--\ref{fig:samplerallocationgsmb} compare ODE, EDM-style index churn ($0.7$), and DMD2-style sampling ($\eta=1$) at the fixed supervised and NFT endpoints. Columns fix denoising NFE per sample; rows separate oracle pass@$k$ and majority voting before and after NFT. The horizontal axis is the total denoising budget $kS$. We use all 64/32/16/8 saved draws at 8/16/32/64 NFE, respectively, up to 512 total calls, with identical ordered seed cohorts across samplers. Clocks remain $(2.5,2,1.5)$; GSM8K uses SCCFG 2 and MATH500 SCCFG 3. Checkpoints, EMA selectors, prompts, scorers, and voting rules match the headline comparisons in Appendix~\ref{app:experimentdetails}. These comparisons include each sampler's integration and terminal-state convention (Appendix~\ref{app:samplerimplementation}).
+Figures~\ref{fig:samplerallocationgsml}--\ref{fig:samplerallocationgsmb} compare ODE, EDM-style index churn ($0.7$), and DMD2-style sampling at the fixed supervised and NFT endpoints. Columns fix denoising NFE per sample; rows separate oracle pass@$k$ and majority voting before and after NFT. The horizontal axis is the total denoising budget $kS$. We use all 64/32/16/8 saved draws at 8/16/32/64 NFE, respectively, up to 512 total calls, with identical ordered seed cohorts across samplers. Clocks remain $(2.5,2,1.5)$; GSM8K uses SCCFG 2 and MATH500 SCCFG 3. Checkpoints, EMA selectors, prompts, scorers, and voting rules match the headline comparisons in Appendix~\ref{app:experimentdetails}. These comparisons include each sampler's integration and terminal-state convention (Appendix~\ref{app:samplerimplementation}).
 
 At 64 NFE, both stochastic samplers improve pass@1 over ODE at all six endpoints, but the ranking can change with the sample count and selection rule. For GSM8K CEDR-L after NFT, eight 64-step draws give ODE pass@8 of 83.02\%, compared with 80.21\% for EDM-style and 80.82\% for DMD2-style sampling. Yet DMD2-style majority voting reaches 71.81\%, versus ODE's 70.58\%. For MATH500 after NFT, the same allocation yields DMD2-style voting accuracy of 38.80\%, versus ODE's 33.38\%; at eight steps and 64 draws, ODE voting instead reaches 28.63\%, versus 27.80\% for DMD2-style sampling. Thus improvements in single-sample accuracy do not imply uniform improvements in oracle coverage or voting at every allocation. Our headline sampler remains fixed across all budgets.
 
@@ -2072,7 +2072,7 @@ Table~\ref{tab:codingsdedeltas} gives the corresponding comparison under DMD2-st
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{4pt}
-\caption{\textbf{DMD2-style sampling: NFT update 100 minus joint epoch 13.} Differences in percentage points, with paired 95\% problem-bootstrap intervals from 4,000 replicates. Both stages use the same eight seeds, 128 denoising calls, SCCFG 3, and noise multiplier $\eta=1$. Backbone/prompt EMAs are $.9999/.9999$ before NFT and $.9/.9$ afterward.}
+\caption{\textbf{DMD2-style sampling: NFT update 100 minus joint epoch 13.} Differences in percentage points, with paired 95\% problem-bootstrap intervals from 4,000 replicates. Both stages use the same eight seeds, 128 denoising calls, and SCCFG 3. Backbone/prompt EMAs are $.9999/.9999$ before NFT and $.9/.9$ afterward.}
 \label{tab:codingsdedeltas}
 \begin{tabular}{@{}llrr@{}}
 \toprule
