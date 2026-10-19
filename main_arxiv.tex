@@ -39,7 +39,7 @@ Department of Electrical and Computer Engineering\\
 \maketitle
 
 \begin{abstract}
-We show that continuous diffusion language models can achieve strong reasoning performance by denoising in a learned latent space. In our Continuous Embedding Diffusion Reasoner (CEDR), built on ELF, ablations identify latent representation as a key determinant of reasoning accuracy: accurate decoding alone does not ensure strong generation. We therefore combine learned representations from three hidden layers of Qwen3-4B to balance ease of generation and decoding. This decomposition also enables asynchronous denoising, allowing different components to be refined at different rates. A compact prompt encoder (121M parameters for CEDR-L, excluding token embeddings) replaces the external teacher Transformer at inference while retaining its frozen token embedding table. Adapting DiffusionNFT to learned self-conditioning guidance further demonstrates that established diffusion reinforcement learning techniques can improve the accuracy of continuous reasoning models. With a 638M-parameter denoising backbone, post-NFT CEDR-L achieves 68.97\% pass@1 on GSM8K and 32.40\% on MATH500 at 64 denoising steps, and 40.09\% on HumanEval and 36.74\% on HumanEval+ at 128 denoising steps, using DMD2-style stochastic sampling.
+We show that continuous diffusion language models can achieve strong reasoning performance by denoising in a learned latent space. In our Continuous Embedding Diffusion Reasoner (CEDR), built on ELF, ablations identify latent representation as a key determinant of reasoning accuracy: accurate decoding alone does not ensure strong generation. We therefore combine learned representations from three hidden layers of Qwen3-4B to balance ease of generation and decoding. This decomposition also enables asynchronous denoising, allowing different components to be refined at different rates. A compact prompt encoder (121M parameters for CEDR-L, excluding token embeddings) replaces the external teacher Transformer at inference while retaining its frozen token embedding table. Adapting DiffusionNFT to learned self-conditioning guidance further demonstrates that established diffusion reinforcement learning techniques can improve the accuracy of continuous reasoning models. With a 638M-parameter denoising backbone, post-NFT CEDR-L achieves 68.97\% pass@1 on GSM8K and 32.40\% on MATH500 at 64 denoising steps, and 40.98\% on HumanEval and 37.56\% on HumanEval+ at 128 denoising steps, using DMD2-style stochastic sampling.
 Code will be available at: \url{https://github.com/chengxiang/CEDR}.
 \end{abstract}
 
@@ -235,8 +235,8 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 
 \begin{figure}[tbp]
 \centering
-\includegraphics[width=\linewidth]{figures/prompt_curriculum_training_cedr_rerun_horizontal.pdf}
-\caption{\textbf{From teacher conditioning to learned prompts.} Left: GSM8K; right: MATH500. All curves use ODE sampling (Euler) with 32 denoising steps, async $(2.5,2,1.5)$, and SCCFG 2. Circles/squares denote CEDR-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Numerical values and evaluation details: Appendix~\ref{app:promptcurves}.}
+\includegraphics[width=\linewidth]{figures/prompt_curriculum_math_code_p20.pdf}
+\caption{\textbf{From teacher conditioning to learned prompts.} Left to right: GSM8K, MATH500, and code. All panels use ODE (Euler) and async $(2.5,2,1.5)$; math curves use 32 NFE and SCCFG 2, while code uses 64 NFE and SCCFG 3. Open/filled markers denote Qwen/learned prompt conditioning. The vertical line marks the epoch-12 switch; arrows show the immediate MSE-prompt substitution. Coding uses prompt-MSE epoch 20 followed by two joint epochs, and plots standard-scoring HumanEval+ and MBPP+. Numerical values and uncertainty: Appendices~\ref{app:promptcurves} and~\ref{app:codingdetails}.}
 \label{fig:promptcurriculum}
 \end{figure}
 
@@ -251,24 +251,19 @@ We use three stages, keeping answer representations and token embeddings fixed t
 \begin{enumerate}
     \item \textbf{Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective, establishing a denoiser with informative, stable conditioning.
     \item \textbf{Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE. This initializes the encoder to approximate the conditioning interface the flow model already uses.
-    \item \textbf{Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, allowing them to compensate for imperfect teacher-feature matching. On the mathematical reasoning tasks, this stage uses no additional prompt-MSE loss and continues to epoch 18 for CEDR-B or epoch 21 for CEDR-L.
+    \item \textbf{Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, allowing them to compensate for imperfect teacher-feature matching. This stage uses no additional prompt-MSE loss. Mathematical reasoning continues to epoch 18 for CEDR-B or epoch 21 for CEDR-L; coding continues for two joint epochs to epoch 14.
 \end{enumerate}
 
 Figure~\ref{fig:promptcurriculum} shows that replacing Qwen with the MSE-trained encoder immediately reduces accuracy despite unchanged flow-model weights. MSE pretraining alone therefore does not fully preserve generative performance in this setting. Subsequent joint training recovers much of this loss on GSM8K and exceeds the original teacher-conditioned checkpoint on MATH500. This recovery reflects adaptation of \emph{both} networks and supports using teacher imitation for initialization, followed by learning the conditioning interface through the generative objective.
 
-\textbf{Prompt adaptation is more demanding for code.}
-Figure~\ref{fig:codingpromptcurriculum} applies the same analysis to code generation. With the flow model fixed at epoch 12, substituting the compact encoder after one MSE epoch causes a substantial accuracy loss, especially on MBPP+. Continuing prompt imitation to ten epochs nearly recovers teacher-conditioned HumanEval+ accuracy, but leaves a large MBPP+ gap. Thus the same encoder architecture and imitation objective can preserve conditioning quality unevenly across reasoning tasks.
+\textbf{Prompt adaptation on code.}
+The coding panel of Figure~\ref{fig:promptcurriculum} follows the same curriculum: 12 epochs with Qwen conditioning, substitution of the compact encoder after 20 prompt-MSE epochs, and two joint epochs. The immediate substitution changes only the prompt encoder, while joint adaptation updates both learned networks through the downstream flow/decoder objective. At 64 NFE with ODE, the immediate swap reduces HumanEval+ from 30.34\% to 25.46\% and MBPP+ from 32.94\% to 15.15\%. Joint training partly recovers MBPP+ (17.59\% at epoch 14), but HumanEval+ recovery is not monotonic: 26.37\% at epoch 13 and 22.41\% at epoch 14. Thus joint adaptation does not uniformly recover teacher-conditioned accuracy under this sampler and budget. No auxiliary prompt-MSE anchor is used during joint adaptation.
 
 Replacing the teacher's 3.63B contextual network with a 121M Transformer is a substantial compression. Unique formatted training prompts average 233 tokens for code, versus 84 for GSM8K and 89 for MATH (Appendix~\ref{app:codingdetails}). Longer prompts may require the student to retain more contextual dependencies, making this compression harder. This is a possible explanation rather than a controlled finding: task content and prompt-imitation budgets also differ. The results reinforce the value of treating prompt encoding as a learned part of the conditional model, while showing that the amount and form of adaptation needed remain task dependent.
 
-\begin{figure}[tbp]
-\centering
-\includegraphics[width=\linewidth]{figures/coding_prompt_curriculum_cedr.pdf}
-\caption{\textbf{Prompt compression and adaptation on code.} CEDR-L pass@1 under standard scoring, using ODE (Euler), async $(2.5,2,1.5)$, and SCCFG 3. Left: flow training and prompt-MSE substitution at 32 NFE; right: subsequent joint training and NFT at 128 NFE, with the corresponding teacher-conditioned and MSE-trained references. Open/filled markers denote Qwen/learned prompt encoding; dashed lines mark the prompt swap. Stage labels give flow epochs, separate prompt-MSE epochs, or NFT updates; their spacing does not represent training duration. Numerical values, seed counts, and uncertainty: Appendix~\ref{app:codingdetails}.}
-\label{fig:codingpromptcurriculum}
-\end{figure}
 
-Table~\ref{tab:trainingstages} summarizes the curriculum and reported NFT endpoints for each task. The coding joint stage additionally regularizes prompt features toward the teacher; Appendix~\ref{app:codingtraining} specifies this term.
+
+Table~\ref{tab:trainingstages} summarizes the curriculum and reported NFT endpoints for each task. Appendix~\ref{app:training} gives the training details.
 
 \begin{table}[!htb]
 \centering\small
@@ -282,7 +277,7 @@ Task / model & \shortstack{Frozen-Qwen\\flow epochs} & \shortstack{Prompt-MSE\\e
 GSM8K / CEDR-B & 12 & 60 & 6 (18) & 300\\
 GSM8K / CEDR-L & 12 & 30 & 9 (21) & 600\\
 MATH / CEDR-L & 12 & 10 & 9 (21) & 600\\
-OpenCodeInstruct / CEDR-L & 12 & 10 & 1 (13) & 100\\
+OpenCodeInstruct / CEDR-L & 12 & 20 & 2 (14) & 100\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -555,12 +550,12 @@ CEDR-L, post-NFT & 64 & 8 & 512 & 53.80\\
 \subsection{Code generation}
 \label{sec:codingresults}
 
-On OpenCodeInstruct \citep{opencodeinstruct}, CEDR-L uses 12 epochs of frozen-Qwen flow training, ten prompt-MSE epochs, one joint epoch, and 100 NFT updates with execution-based rewards (Appendix~\ref{app:training}). Our rows in Table~\ref{tab:codingcomparison} use DMD2-style sampling, eight seeds, 128 denoising calls, async $(2.5,2,1.5)$, and SCCFG 3.
+On OpenCodeInstruct \citep{opencodeinstruct}, CEDR-L uses 12 epochs of frozen-Qwen flow training, 20 prompt-MSE epochs, two joint epochs without an auxiliary prompt-MSE loss, and 100 NFT updates with execution-based rewards (Appendix~\ref{app:training}). Our rows in Table~\ref{tab:codingcomparison} use DMD2-style sampling, ten seeds, 128 denoising calls, async $(2.5,2,1.5)$, and SCCFG 3.
 
-\begin{table}[!htbp]
+\begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Code generation under separate scoring conventions.} Mean pass@1 (\%) with generation-seed SD in small brackets where available. Bold/underline mark the best/second-best mean in each scoring block. HE/HE+ use base/full extended tests; both MBPP columns use 378 tasks. CEDR uses DMD2-style sampling with eight seeds; pre-NFT is joint epoch 13 and post-NFT is update 100. ELF-REG uses ODE with 16 seeds in the standard block and its stronger stochastic sampler with four seeds in the alias block (v3, Tables 15 and 4). $^{*}128$ denotes 127 denoising calls for ELF-REG; budgets exclude terminal decoding. The alias block permits single-function entry-point repair. Appendix~\ref{app:codingdetails} details the scoring protocols and remaining differences.}
+\caption{\textbf{Code generation under separate scoring conventions.} Mean pass@1 (\%) with generation-seed SD in small brackets where available. Bold/underline mark the best/second-best mean in each block. HE/HE+ use base/full extended tests; both MBPP columns use 378 tasks. CEDR uses DMD2-style sampling with ten seeds; pre-NFT is joint epoch 14 and post-NFT is update 100. ELF-REG uses ODE with 16 seeds in the standard block and its stronger stochastic sampler with four seeds in the alias block (v3, Tables 15 and 4). $^{*}128$ denotes 127 denoising calls; budgets exclude terminal decoding. Appendix~\ref{app:codingdetails} specifies the scoring protocols.}
 \label{tab:codingcomparison}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
@@ -570,30 +565,29 @@ Model / setting & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\
 PlaidQ \citep{plaidq} & 128 & 19.02 & 18.05 & 22.18 & ---\\
 PlaidQ+CFG \citep{plaidq} & 256 & 22.04 & 19.70 & 24.58 & ---\\
 ELF-REG-L (ODE) \citep{scalingdlm} & $^{*}128$ & 22.26 {\scriptsize [2.30]} & 21.15 {\scriptsize [2.13]} & 24.21 {\scriptsize [1.17]} & ---\\
-\addlinespace
-CEDR-L, pre-NFT (ours) & 128 & \underline{39.71} {\scriptsize [1.05]} & \underline{35.75} {\scriptsize [1.17]} & \textbf{28.08} {\scriptsize [0.59]} & \underline{24.34} {\scriptsize [0.40]}\\
-CEDR-L, post-NFT (ours) & 128 & \textbf{40.09} {\scriptsize [1.87]} & \textbf{36.74} {\scriptsize [2.32]} & \underline{27.94} {\scriptsize [0.77]} & \textbf{24.83} {\scriptsize [0.94]}\\
+CEDR-L, pre-NFT (ours) & 128 & \underline{39.51} {\scriptsize [3.20]} & \underline{36.10} {\scriptsize [2.60]} & \underline{30.32} {\scriptsize [1.26]} & \underline{26.69} {\scriptsize [0.95]}\\
+CEDR-L, post-NFT (ours) & 128 & \textbf{40.98} {\scriptsize [1.81]} & \textbf{37.56} {\scriptsize [2.04]} & \textbf{30.74} {\scriptsize [1.18]} & \textbf{26.96} {\scriptsize [1.51]}\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Single-function name aliasing}}\\
 ELF-REG-L (stoch.) \citep{scalingdlm} & $^{*}128$ & 33.08 {\scriptsize [3.16]} & 31.40 {\scriptsize [3.61]} & 38.76 {\scriptsize [1.09]} & ---\\
-CEDR-L, pre-NFT (ours) & 128 & \underline{39.94} {\scriptsize [1.08]} & \underline{35.82} {\scriptsize [1.25]} & \underline{45.01} {\scriptsize [0.64]} & \underline{38.72} {\scriptsize [0.84]}\\
-CEDR-L, post-NFT (ours) & 128 & \textbf{40.63} {\scriptsize [1.95]} & \textbf{36.89} {\scriptsize [2.23]} & \textbf{45.63} {\scriptsize [0.92]} & \textbf{39.48} {\scriptsize [1.16]}\\
+CEDR-L, pre-NFT (ours) & 128 & \underline{39.57} {\scriptsize [3.22]} & \underline{36.16} {\scriptsize [2.64]} & \underline{44.89} {\scriptsize [1.69]} & \underline{38.62} {\scriptsize [1.33]}\\
+CEDR-L, post-NFT (ours) & 128 & \textbf{40.98} {\scriptsize [1.81]} & \textbf{37.56} {\scriptsize [2.04]} & \textbf{45.87} {\scriptsize [1.46]} & \textbf{39.37} {\scriptsize [1.25]}\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-CEDR-L, both pre-NFT and post-NFT, outperforms the reported alternatives on HumanEval, HumanEval+, and MBPP-378 base within each scoring convention (Table~\ref{tab:codingcomparison}). PlaidQ and ELF-REG report only base-test accuracy on the 378-task MBPP subset, leaving full extended-test MBPP+ results unavailable. Additional NFT gains with DMD2-style sampling are modest and mixed (Table~\ref{tab:codingsdedeltas}); the strong coding results primarily reflect the supervised model and sampler.
+CEDR-L, both pre-NFT and post-NFT, outperforms the reported alternatives on HumanEval, HumanEval+, and MBPP-378 base within each scoring convention (Table~\ref{tab:codingcomparison}). PlaidQ and ELF-REG report base-test accuracy on the 378-task MBPP subset, leaving full extended-test MBPP+ results unavailable. NFT gives modest increases in mean pass@1 on all four benchmarks, with smaller changes on MBPP. Mean pass@10 is lower after NFT (Table~\ref{tab:codinghigherpass}), so the observed single-sample gains are not accompanied by broader oracle coverage. The paired comparisons in Tables~\ref{tab:codingnftdeltas} and~\ref{tab:codingsdedeltas} distinguish the effects under ODE and the headline stochastic sampler.
 
-\paragraph{Prompt adaptation remains task dependent.}
-Figure~\ref{fig:codingpromptcurriculum} shows the larger prompt-swap loss on code, particularly MBPP+, and the recovery from further prompt imitation. Section~\ref{sec:conditionalencoding} discusses the implications for compact conditioning. In the 128-step ODE comparison, one joint epoch improves HumanEval(+) but slightly reduces standard MBPP accuracy; subsequent NFT improves all four metrics. Appendix~\ref{app:codingdetails} provides the complete stage results and paired comparisons.
+\paragraph{Prompt adaptation.}
+Figure~\ref{fig:promptcurriculum} places coding alongside the mathematical reasoning curricula. The prompt swap retains more teacher-conditioned performance on HumanEval+ than on MBPP+, while the two joint epochs give mixed changes at 64 NFE with ODE. These stage curves and the 128-NFE DMD2-style headlines address different sampling settings. Section~\ref{sec:conditionalencoding} discusses the conditioning implications; Appendix~\ref{app:codingdetails} provides matched stage accuracies and paired differences.
 
 \paragraph{Higher-pass code generation.}
-The eight saved draws also support oracle pass@8 (Table~\ref{tab:codinghigherpass}). Without function-name repair, pre- and post-NFT CEDR-L exceed PlaidQ+CFG's reported pass@10 on HumanEval and HumanEval+. Under aliasing, both exceed ELF-REG-L's reported ODE pass@8 and pass@10 on all three metrics. Its stochastic study provides only four draws, so this higher-pass comparison does not include that sampler. The higher-pass comparison on standard MBPP-378 remains weaker: our post-NFT pass@8 is 42.59\%, compared with guided PlaidQ's pass@10 of 44.79\%. These comparisons retain each paper's attempt count and scoring category. Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1/2/4/8 and uncertainty for every CEDR stage.
+Table~\ref{tab:codinghigherpass} compares oracle pass@10 using ten saved generations per problem. Both supervised and post-NFT CEDR-L exceed PlaidQ+CFG on HumanEval, HumanEval+, and MBPP-378 base, and exceed ELF-REG-L's reported ODE pass@10 under function-name aliasing on all three available metrics. ELF-REG's stochastic study provides only four draws, so its higher-pass results use ODE. On standard MBPP-378 base, CEDR-L reaches 49.47\% before NFT and 48.15\% afterward, compared with PlaidQ+CFG's 44.79\%. These results keep the scoring conventions and per-sample NFE explicit. Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1/2/4/8/10 and uncertainty.
 
-\begin{table}[!htbp]
+\begin{table}[htbp]
 \centering\small
-\setlength{\tabcolsep}{4.5pt}
-\caption{\textbf{Oracle code accuracy with multiple attempts.} Entries are pass@$k$ (\%) at the stated $k$, with denoising NFE per sample. Our learned-conditioning rows use eight draws; external pass@10 values remain labeled as such. PlaidQ uses token-prefix conditioning and ELF-REG-L an external contextual encoder. Separate blocks retain standard versus alias scoring, and both MBPP columns use the same 378 tasks. External values are from PlaidQ Table 1 and ELF-REG v3 Table 18. CEDR uses DMD2-style sampling and ELF-REG uses ODE; ELF-REG does not report stochastic pass@8/10. Generation protocols and total compute differ.}
+\setlength{\tabcolsep}{3pt}
+\caption{\textbf{Oracle code accuracy with ten attempts.} Pass@10 (\%) with denoising NFE per sample. CEDR uses learned prompt conditioning and DMD2-style sampling; PlaidQ uses token-prefix conditioning, and ELF-REG uses an external contextual encoder and ODE sampling. Both MBPP columns use 378 tasks. External values are from PlaidQ Table 1 and ELF-REG v3 Table 18; stochastic pass@10 is unavailable for ELF-REG. Generation protocols and total compute differ.}
 \label{tab:codinghigherpass}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
@@ -602,14 +596,13 @@ Model & NFE & $k$ & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\
 \multicolumn{7}{@{}l}{\textit{Standard scoring: no function-name repair}}\\
 PlaidQ \citep{plaidq} & 128 & 10 & 25.72 & 24.03 & 34.33 & ---\\
 PlaidQ+CFG \citep{plaidq} & 256 & 10 & 39.87 & 36.74 & 44.79 & ---\\
-CEDR-L, pre-NFT & 128 & 8 & 56.71 & 53.66 & 44.71 & 38.36\\
-CEDR-L, post-NFT & 128 & 8 & 58.54 & 53.66 & 42.59 & 37.83\\
+CEDR-L, pre-NFT & 128 & 10 & 60.98 & 54.88 & 49.47 & 43.65\\
+CEDR-L, post-NFT & 128 & 10 & 58.54 & 51.83 & 48.15 & 41.01\\
 \midrule
 \multicolumn{7}{@{}l}{\textit{Single-function name aliasing}}\\
-ELF-REG-L \citep{scalingdlm} & 127 & 8 & 46.42 & 44.22 & 52.89 & ---\\
 ELF-REG-L \citep{scalingdlm} & 127 & 10 & 48.87 & 46.69 & 55.05 & ---\\
-CEDR-L, pre-NFT & 128 & 8 & 57.32 & 53.66 & 60.58 & 51.59\\
-CEDR-L, post-NFT & 128 & 8 & 59.15 & 54.27 & 59.52 & 50.53\\
+CEDR-L, pre-NFT & 128 & 10 & 60.98 & 54.88 & 61.90 & 52.91\\
+CEDR-L, post-NFT & 128 & 10 & 58.54 & 51.83 & 61.38 & 52.12\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -717,33 +710,31 @@ Hold the flow model and representation fixed and initialize the compact prompt e
  \|c_{\phi,i}(q)-c_{\mathrm T,i}(q)\|_2^2\right].
  \label{eq:methodpromptmse}
 \end{equation}
-The loss first averages valid positions and latent coordinates within a prompt, then weights prompts equally. Prompt-MSE training has its own epoch counter and does not change the epoch-12 flow checkpoint. Table~\ref{tab:trainingstages} gives the task-specific durations; prompt EMA $0.999$ initializes the joint stage.
+The loss first averages valid positions and latent coordinates within a prompt, then weights prompts equally. Prompt-MSE training has its own epoch counter and does not change the epoch-12 flow checkpoint. Table~\ref{tab:trainingstages} gives the task-specific durations; prompt EMA $0.999$ initializes the math joint stage, and $0.9999$ initializes the coding joint stage.
 
 \paragraph{Stage 3: joint adaptation.}
-Replace the teacher condition with the learned encoder and continue flow training with differentiable question-prefix latents and fixed answer targets. Preserve the flow model's raw weights, optimizer state, and independent EMAs; initialize the prompt model from its selected standalone EMA and start fresh prompt optimizers. The flow/decoder objective updates both trainable networks through the main conditioned forward, while auxiliary self-conditioning and guidance targets remain detached. Mathematical reasoning uses no additional prompt-MSE loss: CEDR-B trains six more epochs to epoch 18, and CEDR-L trains nine to epoch 21. Coding trains one more epoch to epoch 13 and uses the regularizer below. All three stages retain the same prompt architecture and frozen token table.
+Replace the teacher condition with the learned encoder and continue flow training with differentiable question-prefix latents and fixed answer targets. Preserve the flow model's raw weights, optimizer state, and independent EMAs; initialize the prompt model from its selected standalone EMA and start fresh prompt optimizers. The flow/decoder objective updates both trainable networks through the main conditioned forward, while auxiliary self-conditioning and guidance targets remain detached. No task uses an additional prompt-MSE loss during joint training: mathematical reasoning trains six more epochs to epoch 18 for CEDR-B or nine to epoch 21 for CEDR-L, while coding trains two more epochs to epoch 14. All three stages retain the same prompt architecture and frozen token table.
 
 \paragraph{Supervised optimization.}
-Flow training, standalone prompt imitation, and joint adaptation use effective batch 512, constant learning rate $0.002$, zero weight decay, and gradient clipping at norm one, applied separately to the flow and prompt models during joint training. Eligible matrices use Muon \citep{muon} with momentum $0.95$ and five FP32 Newton--Schulz iterations. Our implementation adapts the \texttt{muon-optimizer} package, with FP32 orthogonalization and Optax-compatible momentum bias correction and shape scaling. Remaining flow-model parameters use the auxiliary Nesterov-Adam optimizer; remaining prompt parameters use ordinary AdamW, with betas $(0.9,0.999)$ and epsilon $10^{-8}$. Trainable parameters and optimizer state use FP32, with compiled BF16 forward computation. Each trainable component maintains independent raw weights and EMAs with decays $0.99$, $0.999$, and $0.9999$, updated at optimizer boundaries. Evaluation selects flow and prompt states independently; Appendices~\ref{app:experimentdetails} and~\ref{app:codingdetails} specify the selectors for the reported results.
+Flow training, standalone prompt imitation, and joint adaptation use effective batch 512, constant learning rate $0.002$ (coding joint prompt encoder: $0.0005$), zero weight decay, and gradient clipping at norm one, applied separately to the flow and prompt models during joint training. Eligible matrices use Muon \citep{muon} with momentum $0.95$ and five FP32 Newton--Schulz iterations. Our implementation adapts the \texttt{muon-optimizer} package, with FP32 orthogonalization and Optax-compatible momentum bias correction and shape scaling. Remaining flow-model parameters use the auxiliary Nesterov-Adam optimizer; remaining prompt parameters use ordinary AdamW, with betas $(0.9,0.999)$ and epsilon $10^{-8}$. Trainable parameters and optimizer state use FP32, with compiled BF16 forward computation. Each trainable component maintains independent raw weights and EMAs with decays $0.99$, $0.999$, and $0.9999$, updated at optimizer boundaries. Evaluation selects flow and prompt states independently; Appendices~\ref{app:experimentdetails} and~\ref{app:codingdetails} specify the selectors for the reported results.
 
-\subsection{Coding joint-training regularizer}
+\subsection{Coding training stages}
 \label{app:codingtraining}
 
-The coding epoch-13 checkpoint follows one additional joint epoch (9,558 optimizer updates), starting from the epoch-12 flow checkpoint and the prompt-epoch-10 EMA $0.999$ state. Unlike the math joint stage, coding retains an auxiliary teacher-prompt MSE. Targets are the fixed, cached Qwen prompt representations; the loss averages valid prompt positions and latent coordinates within each training row, then weights rows equally. Only the prompt encoder receives this auxiliary gradient; answer representations and the vocabulary lookup remain frozen.
-
-At each optimizer update, let $g_{\mathrm{down}}$ and $g_{\mathrm{MSE}}$ denote the accumulated, data-parallel-mean prompt gradients from the downstream and auxiliary objectives. We combine them as $g_\phi=g_{\mathrm{down}}+\lambda g_{\mathrm{MSE}}$, with $\lambda=2\,\overline{\|g_{\mathrm{down}}\|_2}/\max(\overline{\|g_{\mathrm{MSE}}\|_2},10^{-12})$, where bars denote exponential moving averages with decay $0.99$. The target 2:1 ratio concerns smoothed gradient norms, not scalar loss values. The combined prompt gradient is clipped at norm one. Joint training otherwise retains the synchronous clocks and supervised optimization settings above. The subsequent coding NFT stage uses no auxiliary prompt MSE.
+The coding model uses the same frozen-conditioning, prompt-imitation, and joint-adaptation curriculum. Twelve flow-training epochs are followed by 20 epochs of standalone prompt MSE and two joint epochs (19,116 additional optimizer updates). Joint adaptation optimizes the prompt encoder and flow model through the downstream flow/decoder objective, without an auxiliary prompt-MSE anchor. Answer representations and the vocabulary lookup remain fixed.
 
 \subsection{NFT fine-tuning}
 \label{app:nfttraining}
 
 Initialize current, old, and reference policies from the selected supervised endpoint, with fresh NFT optimizers. The current flow backbone and prompt body are trainable. The Qwen vocabulary lookup and representation projectors remain fixed, as do the decoder-specific mode tokens, output projection, and vocabulary-head parameters. The shared backbone continues to change, so freezing these decoder-specific parameters does not freeze the entire decoding function. Old and reference policies receive no optimizer gradients; each retains its own prompt encoder.
 
-Both trainable components use constant learning rate $10^{-4}$, zero weight decay, and separate norm-one gradient clipping. The flow backbone uses Muon with auxiliary Nesterov-Adam; the prompt body uses Muon/AdamW. Computation uses BF16. Collection uses 32 denoising steps, synchronous identity clocks, and SCCFG two; optimization also retains synchronous scalar-time conditioning. Each round collects 24 prompt groups with 15 generated endpoints and one gold endpoint per group, followed by eight independently corrupted records per retained endpoint. Filtering makes the update size variable, so the supervised batch size 512 does not apply to NFT. Appendix~\ref{app:nftdetails} specifies rewards, filtering, loss normalization, and old-policy updates. Table~\ref{tab:trainingstages} lists the reported NFT endpoints. Evaluation uses flow/prompt EMA $0.99/0.99$ for math and $0.9/0.9$ for code, with asynchronous clocks only at inference.
+Both trainable components use constant learning rate $10^{-4}$ (coding prompt encoder: $2.5\times10^{-5}$), zero weight decay, and separate norm-one gradient clipping. The flow backbone uses Muon with auxiliary Nesterov-Adam; the prompt body uses Muon/AdamW. Computation uses BF16. Collection uses 32 denoising steps, synchronous identity clocks, and SCCFG two; optimization also retains synchronous scalar-time conditioning. Each round collects 24 prompt groups with 15 generated endpoints and one gold endpoint per group, followed by eight independently corrupted records per retained endpoint. Filtering makes the update size variable, so the supervised batch size 512 does not apply to NFT. Appendix~\ref{app:nftdetails} specifies rewards, filtering, loss normalization, and old-policy updates. Table~\ref{tab:trainingstages} lists the reported NFT endpoints. Evaluation uses flow/prompt EMA $0.99/0.99$ for both math and code, with asynchronous clocks only at inference.
 
 \paragraph{Coding reward population.}
-Coding NFT starts from joint epoch 13 with flow/prompt EMA $0.9999/0.9999$ and fresh optimizers, retaining the objective and optimization settings above. We select 4,096 unique OpenCodeInstruct training prompts and reserve 256 disjoint validation prompts, with selection seed 20260926. Eligible rows explicitly specify the tested interface, have unchanged native assertion tests and successful reference metadata, and pass reference execution in the reward harness. Prompt deduplication and exact held-out benchmark prompt exclusion precede selection. The training tests supply binary execution rewards; HumanEval/MBPP evaluation tests are never used for training. Gold endpoints receive reward one, generated programs receive $0.75$ if all retained assertions pass and zero otherwise. Synthetic training tests remain imperfect measures of correctness. Execution is isolated, network-disabled, and resource-limited, with a five-second timeout per assertion. Both flow and prompt models train jointly, without the supervised stage's prompt-MSE regularizer. We report successful NFT update 100.
+Coding NFT starts from joint epoch 14 with flow/prompt EMA $0.9999/0.9999$ and fresh optimizers, retaining the objective and optimization settings above. We select 4,096 unique OpenCodeInstruct training prompts and reserve 256 disjoint validation prompts, with selection seed 20260926. Eligible rows explicitly specify the tested interface, have unchanged native assertion tests and successful reference metadata, and pass reference execution in the reward harness. Prompt deduplication and exact held-out benchmark prompt exclusion precede selection. The training tests supply binary execution rewards; HumanEval/MBPP evaluation tests are never used for training. Gold endpoints receive reward one, generated programs receive $0.75$ if all retained assertions pass and zero otherwise. Synthetic training tests remain imperfect measures of correctness. Execution is isolated, network-disabled, and resource-limited, with a five-second timeout per assertion. Both flow and prompt models train jointly without an auxiliary prompt-MSE loss. We report successful NFT update 100.
 
 \paragraph{NFT checkpoint selection.}
-We compare updates 100/200/300/400 for GSM8K CEDR-B, 100/200/300/400/500/600 for GSM8K CEDR-L, and 200/400/600 for MATH CEDR-L. Selection uses mean validation accuracy over seeds 42/123 on fixed validation sets of 1,000 GSM8K and 500 MATH problems (Appendix~\ref{app:inferenceclocks}), with async $(2.5,2,1.5)$, 32 steps, and SCCFG two. Update 300 for GSM8K CEDR-B and 600 for GSM8K CEDR-L were selected based on validation accuracy; Math-Verify selects update 600 for MATH CEDR-L. For coding, update 100 with flow/prompt EMA $0.9/0.9$ was selected under computation resource constraints.
+We compare updates 100/200/300/400 for GSM8K CEDR-B, 100/200/300/400/500/600 for GSM8K CEDR-L, and 200/400/600 for MATH CEDR-L. Selection uses mean validation accuracy over seeds 42/123 on fixed validation sets of 1,000 GSM8K and 500 MATH problems (Appendix~\ref{app:inferenceclocks}), with async $(2.5,2,1.5)$, 32 steps, and SCCFG two. Update 300 for GSM8K CEDR-B and 600 for GSM8K CEDR-L were selected based on validation accuracy; Math-Verify selects update 600 for MATH CEDR-L.
 
 \section{CEDR objective and conditional encoding}
 \label{app:methodobjective}
@@ -860,14 +851,14 @@ Conditioning Eq.~\eqref{eq:conditioningdecomposition} on time defines an excess 
 
 \subsection{Prompt-learning curves and numerical results}
 \label{app:promptcurves}
-Table~\ref{tab:promptcurvevalues} contains every point in Figure~\ref{fig:promptcurriculum}. Points are means over seeds 42/123, evaluated with ODE sampling and async $(2.5,2,1.5)$, 32 denoising steps, SCCFG 2, and backbone EMA $0.9999$. Prompt EMA is $0.999$ at the MSE swap and $0.9999$ during joint training. GSM8K uses numerical-answer scoring and MATH500 uses Math-Verify. Error bars show pointwise 95\% intervals from 4,000 problem-bootstrap replicates; brackets in the table give their bounds. Epoch 12 appears twice because prompt substitution does not advance the flow-training epoch; the two rows have identical backbone weights. The axes start at zero, but no epoch-zero accuracy was measured or plotted.
+Table~\ref{tab:promptcurvevalues} contains the mathematical-reasoning points in Figure~\ref{fig:promptcurriculum}; Tables~\ref{tab:codingstages} and~\ref{tab:codingstageintervals} give the coding panel. Mathematical-reasoning points are means over seeds 42/123, evaluated with ODE sampling and async $(2.5,2,1.5)$, 32 denoising steps, SCCFG 2, and backbone EMA $0.9999$. Prompt EMA is $0.999$ at the MSE swap and $0.9999$ during joint training. GSM8K uses numerical-answer scoring and MATH500 uses Math-Verify. Error bars show pointwise 95\% intervals from 4,000 problem-bootstrap replicates; brackets in the table give their bounds. Epoch 12 appears twice because prompt substitution does not advance the flow-training epoch; the two rows have identical backbone weights. The axes start at zero, but no epoch-zero accuracy was measured or plotted.
 
 The curve samples flow epochs 4, 8, and 12 before prompt substitution; epoch 12 immediately after substitution; and epochs 16/18 for CEDR-B or 16/20/21 for CEDR-L. All 20 points retain their saved predictions and scores. The joint-from-start comparison in Figure~\ref{fig:representationcomparison} instead uses the common $t=\tau^2$ clock and backbone EMA $0.999$ for its six-epoch controls; its four-seed endpoint means are not points on these curriculum curves. Training durations are summarized in Table~\ref{tab:trainingstages}.
 
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{5pt}
-\caption{Numerical values for Figure~\ref{fig:promptcurriculum}. Correct counts for seeds 42/123 and the benchmark size $N$ specify the exact per-seed accuracies. Mean pass@1 and sample seed SD (parentheses) are percentages; brackets give the plotted 95\% problem-bootstrap intervals.}
+\caption{Mathematical-reasoning numerical values for Figure~\ref{fig:promptcurriculum}. Correct counts for seeds 42/123 and the benchmark size $N$ specify the exact per-seed accuracies. Mean pass@1 and sample seed SD (parentheses) are percentages; brackets give the plotted 95\% problem-bootstrap intervals.}
 \label{tab:promptcurvevalues}
 \begin{tabular}{@{}rlrrrr@{}}
 \toprule
@@ -1868,216 +1859,205 @@ NFE $S$ & $k$ & $kS$ & Pre-NFT & Post-NFT & Pre-NFT & Post-NFT \\
 \section{Code generation: protocols and detailed results}
 \label{app:codingdetails}
 
-\paragraph{Training stages and checkpoint selectors.}
-Appendix~\ref{app:training} describes the coding architecture, three supervised stages, and NFT continuation; Appendix~\ref{app:codingtraining} gives the supervised joint prompt-MSE regularizer. Supervised evaluations select backbone EMA $0.9999$, with prompt EMA $0.999$ for standalone MSE and $0.9999$ for joint epoch 13. Post-NFT uses update 100 with independently selected backbone/prompt EMA $0.9/0.9$. Frozen-Qwen and standalone-MSE conditions share the epoch-12 backbone; joint training and NFT each update both trainable models. The coding checkpoint-selection procedure is given in Appendix~\ref{app:nfttraining}.
+\paragraph{Training and evaluation.}
+Appendix~\ref{app:training} describes the coding architecture and curriculum. Supervised evaluations use flow/prompt EMA $0.9999/0.9999$; NFT update 100 uses $0.99/0.99$. Frozen-Qwen and prompt-MSE conditions at flow epoch 12 share identical backbone weights. Joint adaptation and NFT update both learned components.
 
 \paragraph{Generation and scoring.}
-We use the benchmark task text in the native Qwen chat format, without assistant prefill, with batch size 32, CFG 1, SCCFG 3, and async $(2.5,2,1.5)$ throughout. Answers fill the remaining positions of the 1,024-token canvas and are decoded greedily. Denoising NFE excludes one terminal decoder call. The eight-seed cohort is $\{42,123,456,789,2026,31415,27182,16180\}$. Headlines use DMD2-style sampling at 128 steps. The stage ablations retain ODE: the shorter training curve uses 32 steps and its stated two- or four-seed cohorts, and the detailed stage comparisons use eight seeds at 128 steps.
+We use native Qwen-chat benchmark prompts without assistant prefill, batch size 32, CFG 1, SCCFG 3, and async $(2.5,2,1.5)$. Answers fill the remaining positions of the 1,024-token canvas and are decoded greedily. NFE excludes one terminal decoder call. The 64-NFE ODE stage curves use seeds 42, 123, 456, and 789. The 128-NFE ODE and DMD2-style endpoints use ten seeds: $\{42,123,456,789,2026,31415,27182,16180,112358,104729\}$. Headlines use DMD2-style sampling.
 
 HumanEval \citep{humaneval} contains 164 tasks; MBPP \citep{mbpp} uses the 378 tasks retained by EvalPlus \citep{evalplus}. We report base and full extended tests on the same generated programs, requiring both suites to pass for a plus score. Standard scoring applies native EvalPlus sanitization without function-name repair. Execution uses a minimum timeout of 4 seconds, reference-runtime multiplier four, and 4 GiB per program; failures and timeouts count as incorrect. Our separate alias condition changes extraction only: if the expected binding is absent and exactly one top-level function is present, append \texttt{expected\_name = generated\_name} and sanitize again. Existing bindings and ambiguous cases are unchanged. This changes which programs the evaluator accepts without changing generation.
 
 \paragraph{Mapping external reports.}
 Our PlaidQ comparison uses the author-reported results from arXiv version 1, subsequently withdrawn by the authors to address institutional resource-disclosure requirements \citep{plaidq}. PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our pass@1 and pass@10 comparison values. ELF-REG v3 Table 15 supplies standard-scoring ODE pass@1, Table 4 supplies the stronger aliased stochastic pass@1, and Table 18 supplies aliased ODE pass@8/10 \citep{scalingdlm}. The stochastic results use four generation seeds, versus 16 for the ODE reports; no stochastic no-alias or pass@8/10 results are reported. Its sampler settings and seed SDs appear in Table~\ref{tab:elfregselected}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. We retain their reported values without re-evaluating their models.
 
-For additional discrete-model context, oDLM-0.6B reports HumanEval/HumanEval+ pass@1 of 17.87\%/16.40\% at 128 sampling steps with a 128-token response budget \citep[Table 1 and Appendix B.7]{odlm}. Edit Flow-1.3B reports 12.8\%/10.4\%, and its localized variant reports 14.0\%/10.4\% \citep[Table 3]{editflow}. Our DMD2-style learned-conditioning results without name repair are 39.71\%/35.75\% at joint epoch 13 and 40.09\%/36.74\% after NFT. These comparisons use the authors' reported accuracies; training data, initialization, and sampling protocols differ. We restrict the additional comparison to HumanEval(+) rather than equating differently defined MBPP columns.
+For additional discrete-model context, oDLM-0.6B reports HumanEval/HumanEval+ pass@1 of 17.87\%/16.40\% at 128 sampling steps with a 128-token response budget \citep[Table 1 and Appendix B.7]{odlm}. Edit Flow-1.3B reports 12.8\%/10.4\%, and its localized variant reports 14.0\%/10.4\% \citep[Table 3]{editflow}. Our DMD2-style learned-conditioning results without name repair are 39.51\%/36.10\% at joint epoch 14 and 40.98\%/37.56\% after NFT. These comparisons use the authors' reported accuracies; training data, initialization, and sampling protocols differ. We restrict the additional comparison to HumanEval(+) rather than equating differently defined MBPP columns.
 
 \paragraph{Comparison under function-name aliasing.}
-The lower block of Table~\ref{tab:codingcomparison} compares models under aliasing, separately from standard scoring. With DMD2-style sampling, post-NFT CEDR-L reaches 40.63\% on HumanEval, 36.89\% on HumanEval+, and 45.63\% on MBPP-378 base, versus ELF-REG-L's strongest reported stochastic results of 33.08\%, 31.40\%, and 38.76\%. Aliasing raises our post-NFT MBPP-378 base result from 27.94\% to 45.63\%. The repair rule and test definitions match, while prompts and execution limits differ. Mixing repaired and unrepaired scores would obscure a substantial difference in acceptance criteria.
-
+Table~\ref{tab:codingcomparison} keeps aliasing separate from standard scoring. Aliasing raises post-NFT MBPP-378 base accuracy from 30.74\% to 45.87\%. Under the same repair category, CEDR-L exceeds ELF-REG-L's reported stochastic accuracies on all three available metrics. Prompts and execution limits still differ between papers; repairing entry-point names changes acceptance criteria without changing the generated programs.
 
 \paragraph{Prompt lengths and encoder size.}
-The recorded mean prefix lengths over unique training prompts are 84.17 tokens for the GSM8K pipeline (275,661 prompts), 89.15 for MATH (508,953), and 233.44 for OpenCodeInstruct (4,772,508). These are native formatted training prefixes, including the assistant header, rather than benchmark question lengths. Code prefixes average 2.77 and 2.62 times the GSM8K and MATH lengths; their median is 216 and 99th percentile 506. The length difference motivates the conditioning hypothesis but is not a controlled length ablation. Likewise, the cross-task prompt-swap comparison uses each task's selected MSE checkpoint (GSM8K CEDR-L epoch 30, MATH epoch 10, code epoch 1) and the stated seed cohorts. At 32 steps, the code MBPP+ swap loss is 24.74 percentage points, compared with 9.86 points on GSM8K CEDR-L and 2.90 on MATH500. The 121,333,180 parameters of our CEDR-L contextual encoder exclude the frozen $151{,}936\times2{,}560$ vocabulary lookup. ELF-REG's Qwen3-0.6B-Base contextual body has approximately 440M parameters, excluding its approximately 156M lookup; its additional Qwen3-1.7B-Base alignment teacher is used only during training. Our frozen-Qwen reference instead uses a larger 4B teacher, so the cross-paper comparison does not isolate encoder size.
+Unique formatted training prefixes average 84.17 tokens for GSM8K (275,661 prompts), 89.15 for MATH (508,953), and 233.44 for OpenCodeInstruct (4,772,508). Code prefixes have median length 216 and 99th percentile 506. These are native training prefixes including the assistant header, rather than benchmark question lengths. Longer code prompts may make contextual compression harder, but the cross-task comparison does not isolate prompt length. The CEDR-L contextual encoder has 121,333,180 parameters, excluding the frozen $151{,}936\times2{,}560$ lookup. ELF-REG's Qwen3-0.6B-Base contextual body has approximately 440M parameters excluding its approximately 156M lookup, while our frozen-Qwen reference uses a 4B teacher.
 
 \paragraph{Training trajectory and prompt substitution.}
-Table~\ref{tab:codingstages} keeps NFE and guidance fixed across flow-training epochs 4/8/12 and the prompt-MSE substitution at the fixed epoch-12 backbone checkpoint. The prompt epoch counter starts afresh; prompt epoch 1 is already MSE-trained, not a random encoder. At 32 steps, the four-seed HumanEval+ gap between prompt epoch 10 and original Qwen is $-0.91$ points (paired 95\% problem-bootstrap interval $[-5.03,3.20]$); MBPP+ retains a $-17.20$ point gap ($[-20.24,-14.22]$). These comparisons isolate the conditioner because the backbone weights are identical. Figure~\ref{fig:codingpromptcurriculum} plots the full extended-test accuracies from this table (left panel) and the ODE block of Table~\ref{tab:codingstandarddetail} (right panel). Its bars are 95\% problem-bootstrap intervals from 4,000 replicates with bootstrap seed 20260918. The 32-step curve uses two seeds at flow epochs 4/8 and four at epoch 12 and both prompt checkpoints; the 128-step curve uses eight seeds throughout. The two panels retain their separate NFE budgets and seed cohorts. All stages use flow EMA .9999, except NFT, which uses .9; standalone prompt checkpoints use EMA .999 and the jointly trained encoder uses .9999 (NFT: .9).
+Figure~\ref{fig:promptcurriculum} and Table~\ref{tab:codingstages} compare frozen-Qwen flow epochs 4/8/12, substitution of the prompt-20 encoder at the unchanged epoch-12 backbone, and joint epochs 13/14. All coding points use four matched seeds, ODE64, and SCCFG 3. Prompt-MSE training has its own epoch counter and does not advance the flow-training epoch. Error bars use 4,000 problem-bootstrap replicates with seed 20260918; Table~\ref{tab:codingstageintervals} gives their bounds. Axes start at zero without an evaluated epoch-zero point.
 
 \begin{table}[htbp]
 \centering\small
-\setlength{\tabcolsep}{4pt}
-\caption{\textbf{Coding training and prompt-substitution results at 32 denoising steps.} Mean pass@1 (\%) with generation-seed SD in parentheses; no aliases. Flow-training epochs 4/8 use seeds 42/123; epoch 12 and both prompt endpoints add 456/789. All rows use ODE sampling and SCCFG 3. The prompt-MSE rows retain the same epoch-12 backbone weights.}
+\setlength{\tabcolsep}{3pt}
+\caption{\textbf{Coding training and prompt substitution at 64 NFE.} Mean pass@1 (\%) with generation-seed SD in brackets, using ODE, SCCFG 3, and four matched seeds. The prompt-MSE row retains the epoch-12 backbone. These standard-scoring results supply the coding panel of Figure~\ref{fig:promptcurriculum}.}
 \label{tab:codingstages}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Checkpoint / conditioner & Seeds & HE & HE+ & \shortstack{MBPP-378\\base} & MBPP+\\
 \midrule
-Epoch 4 / Qwen & 2 & 23.17 {\scriptsize (3.45)} & 21.04 {\scriptsize (2.16)} & 26.85 {\scriptsize (0.19)} & 23.68 {\scriptsize (0.19)}\\
-Epoch 8 / Qwen & 2 & 27.74 {\scriptsize (6.47)} & 25.61 {\scriptsize (5.17)} & 34.92 {\scriptsize (2.24)} & 30.42 {\scriptsize (1.87)}\\
-Epoch 12 / Qwen & 4 & 27.90 {\scriptsize (1.75)} & 25.61 {\scriptsize (2.49)} & 37.76 {\scriptsize (0.70)} & 32.34 {\scriptsize (0.79)}\\
-Epoch 12 / prompt MSE 1 & 4 & 19.82 {\scriptsize (2.08)} & 18.60 {\scriptsize (2.31)} & 8.93 {\scriptsize (1.02)} & 7.61 {\scriptsize (1.23)}\\
-Epoch 12 / prompt MSE 10 & 4 & 26.37 {\scriptsize (1.44)} & 24.70 {\scriptsize (2.08)} & 17.59 {\scriptsize (2.61)} & 15.15 {\scriptsize (2.16)}\\
+Epoch 4 / Qwen & 4 & 23.48 {\scriptsize [0.79]} & 21.80 {\scriptsize [1.04]} & 27.51 {\scriptsize [1.75]} & 24.27 {\scriptsize [1.23]}\\
+Epoch 8 / Qwen & 4 & 30.49 {\scriptsize [2.95]} & 27.90 {\scriptsize [2.46]} & 36.57 {\scriptsize [0.90]} & 31.81 {\scriptsize [0.82]}\\
+Epoch 12 / Qwen & 4 & 32.93 {\scriptsize [1.93]} & 30.34 {\scriptsize [2.01]} & 38.10 {\scriptsize [0.37]} & 32.94 {\scriptsize [0.55]}\\
+Epoch 12 / prompt MSE 20 & 4 & 27.44 {\scriptsize [1.22]} & 25.46 {\scriptsize [1.35]} & 17.66 {\scriptsize [1.62]} & 15.15 {\scriptsize [1.39]}\\
+Joint epoch 13 & 4 & 29.12 {\scriptsize [1.75]} & 26.37 {\scriptsize [1.35]} & 20.11 {\scriptsize [1.30]} & 17.53 {\scriptsize [1.55]}\\
+Joint epoch 14 & 4 & 24.85 {\scriptsize [1.52]} & 22.41 {\scriptsize [2.36]} & 19.97 {\scriptsize [1.09]} & 17.59 {\scriptsize [0.70]}\\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\paragraph{Eight-seed variation and multiple attempts.}
-Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} separate ODE stage ablations from DMD2-style headline endpoints, and give oracle pass@1/2/4/8 with problem-bootstrap standard errors in parentheses, and retain the pass@1 generation-seed SD in a separate column. For each problem with $c$ successful samples among eight, pass@$k$ uses $1-\binom{8-c}{k}/\binom{8}{k}$, averaged across problems. Eight samples do not support estimating pass@10. Table~\ref{tab:codinghigherpass} therefore compares our pass@8 with the authors' reported pass@8 or pass@10, explicitly retaining the differing sample counts; Table~\ref{tab:codingcomparison} compares pass@1. Bootstrap uncertainty uses 4,000 problem resamples with seed 20260918, retaining all eight generations per problem and pairing compared conditions. The bootstrap SE measures uncertainty across problems conditional on the saved generations; the seed SD describes sampling variation over the fixed benchmark. Neither estimates training variability (Appendix~\ref{app:uncertainty}).
-
-In the ODE stage ablation before joint training, at 128 steps, aliasing improves MSE-prompt MBPP-378 base by $11.38$ points (95\% interval $[9.19,13.69]$), compared with $4.73$ ($[3.41,6.18]$) for frozen Qwen. With the MSE encoder, full MBPP+ improves by $9.36$ points under repair, but remains $11.61$ points below repaired frozen-Qwen performance ($[9.13,14.25]$). Thus entry-point naming accounts for part of the measured conditioning gap; correcting it does not recover the teacher-conditioned result. Standard HumanEval+ also retains a $5.56$ point gap at this longer budget ($[1.75,9.38]$), so the near-recovery at 32 steps should not be interpreted as equivalence at every inference budget.
-
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Standard scoring without aliases.} CEDR-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use epoch 12; pre-NFT is joint epoch 13; post-NFT is update 100. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets. The first block is the ODE stage ablation; the last block gives the DMD2-style headlines.}
+\caption{Pointwise 95\% problem-bootstrap intervals (\%) for the coding curves in Figure~\ref{fig:promptcurriculum}, using 4,000 replicates.}
+\label{tab:codingstageintervals}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+Checkpoint / conditioner & HumanEval+ & MBPP+\\
+\midrule
+Epoch 4 / Qwen & $[17.07,26.98]$ & $[20.83,27.98]$\\
+Epoch 8 / Qwen & $[22.56,33.54]$ & $[27.84,35.85]$\\
+Epoch 12 / Qwen & $[24.85,36.13]$ & $[28.90,37.17]$\\
+Epoch 12 / prompt MSE 20 & $[20.12,31.10]$ & $[12.37,18.06]$\\
+Joint epoch 13 & $[20.73,32.32]$ & $[14.55,20.63]$\\
+Joint epoch 14 & $[17.53,27.59]$ & $[14.68,20.63]$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Ten-seed variation and multiple attempts.}
+Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give ODE and DMD2-style results at the supervised and NFT endpoints. For each problem with $c$ successes among $n=10$ draws, pass@$k$ is $1-\binom{n-c}{k}/\binom{n}{k}$, averaged over problems. We report $k=1,2,4,8,10$; pass@8 averages all eight-draw subsets of the ten-sample pool. Parentheses give problem-bootstrap standard errors, while the final column gives the separate sample SD of per-seed pass@1. Bootstrap resampling retains all draws for each sampled problem and uses 4,000 replicates with seed 20260918. Neither measure estimates training-run variability (Appendix~\ref{app:uncertainty}).
+
+\begin{table}[htbp]
+\centering\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\caption{\textbf{Standard scoring without aliases.} CEDR-L at 128 denoising calls and SCCFG 3, using ten seeds. Pre-NFT is joint epoch 14; post-NFT is update 100. Pass@$k$ values (\%) have problem-bootstrap SEs in parentheses; the final column gives the separate generation-seed SD of pass@1. Both MBPP columns use 378 tasks.}
 \label{tab:codingstandarddetail}
-\begin{tabular}{@{}llrrrrr@{}}
+\begin{tabular}{@{}llrrrrrr@{}}
 \toprule
-Stage & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
+Stage & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & pass@10 & \shortstack{pass@1\\seed SD}\\
 \midrule
-\multicolumn{7}{@{}l}{\textit{ODE: training-stage ablation}}\\
-Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.78)} & 44.66 {\scriptsize (3.21)} & 54.13 {\scriptsize (3.46)} & 62.20 {\scriptsize (3.75)} & 2.11\\
-Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.70)} & 41.53 {\scriptsize (3.18)} & 50.82 {\scriptsize (3.45)} & 59.15 {\scriptsize (3.77)} & 2.09\\
-Frozen Qwen & MBPP-378 base & 38.72 {\scriptsize (2.01)} & 49.17 {\scriptsize (2.21)} & 58.26 {\scriptsize (2.32)} & 66.40 {\scriptsize (2.48)} & 1.37\\
-Frozen Qwen & MBPP+ & 33.99 {\scriptsize (2.00)} & 43.26 {\scriptsize (2.25)} & 51.46 {\scriptsize (2.40)} & 58.73 {\scriptsize (2.60)} & 1.62\\
+\multicolumn{8}{@{}l}{\textit{ODE}}\\
+Pre-NFT & HE & 29.45 {\scriptsize (2.82)} & 38.02 {\scriptsize (3.25)} & 45.26 {\scriptsize (3.54)} & 50.88 {\scriptsize (3.77)} & 52.44 {\scriptsize (3.86)} & 2.34\\
+Pre-NFT & HE+ & 27.20 {\scriptsize (2.79)} & 34.95 {\scriptsize (3.20)} & 41.64 {\scriptsize (3.49)} & 47.11 {\scriptsize (3.76)} & 48.78 {\scriptsize (3.88)} & 2.53\\
+Pre-NFT & MBPP-378 base & 21.16 {\scriptsize (1.59)} & 29.19 {\scriptsize (1.95)} & 37.15 {\scriptsize (2.21)} & 45.05 {\scriptsize (2.47)} & 47.62 {\scriptsize (2.59)} & 1.53\\
+Pre-NFT & MBPP+ & 18.49 {\scriptsize (1.53)} & 25.63 {\scriptsize (1.91)} & 32.38 {\scriptsize (2.19)} & 39.12 {\scriptsize (2.46)} & 41.53 {\scriptsize (2.59)} & 1.21\\
+Post-NFT & HE & 30.91 {\scriptsize (2.86)} & 39.72 {\scriptsize (3.22)} & 47.89 {\scriptsize (3.44)} & 55.85 {\scriptsize (3.68)} & 58.54 {\scriptsize (3.83)} & 1.84\\
+Post-NFT & HE+ & 28.29 {\scriptsize (2.83)} & 36.14 {\scriptsize (3.20)} & 43.35 {\scriptsize (3.47)} & 49.88 {\scriptsize (3.77)} & 51.83 {\scriptsize (3.91)} & 1.78\\
+Post-NFT & MBPP-378 base & 22.12 {\scriptsize (1.68)} & 29.65 {\scriptsize (1.98)} & 37.06 {\scriptsize (2.22)} & 44.15 {\scriptsize (2.48)} & 46.30 {\scriptsize (2.58)} & 0.75\\
+Post-NFT & MBPP+ & 19.50 {\scriptsize (1.60)} & 26.43 {\scriptsize (1.94)} & 32.99 {\scriptsize (2.20)} & 39.14 {\scriptsize (2.47)} & 41.01 {\scriptsize (2.57)} & 0.66\\
 \midrule
-Prompt MSE & HumanEval & 27.97 {\scriptsize (2.84)} & 35.98 {\scriptsize (3.27)} & 42.87 {\scriptsize (3.58)} & 48.78 {\scriptsize (3.90)} & 1.44\\
-Prompt MSE & HumanEval+ & 25.30 {\scriptsize (2.81)} & 32.19 {\scriptsize (3.25)} & 37.65 {\scriptsize (3.55)} & 42.07 {\scriptsize (3.85)} & 1.84\\
-Prompt MSE & MBPP-378 base & 19.61 {\scriptsize (1.54)} & 27.44 {\scriptsize (1.90)} & 35.41 {\scriptsize (2.17)} & 43.92 {\scriptsize (2.53)} & 1.85\\
-Prompt MSE & MBPP+ & 16.96 {\scriptsize (1.47)} & 23.72 {\scriptsize (1.84)} & 30.30 {\scriptsize (2.14)} & 36.77 {\scriptsize (2.48)} & 1.11\\
-\midrule
-Pre-NFT & HumanEval & 29.57 {\scriptsize (2.74)} & 39.07 {\scriptsize (3.23)} & 47.23 {\scriptsize (3.55)} & 54.27 {\scriptsize (3.87)} & 2.33\\
-Pre-NFT & HumanEval+ & 26.91 {\scriptsize (2.73)} & 35.26 {\scriptsize (3.22)} & 42.22 {\scriptsize (3.58)} & 47.56 {\scriptsize (3.92)} & 1.99\\
-Pre-NFT & MBPP-378 base & 18.45 {\scriptsize (1.53)} & 25.77 {\scriptsize (1.90)} & 32.95 {\scriptsize (2.20)} & 39.95 {\scriptsize (2.53)} & 1.23\\
-Pre-NFT & MBPP+ & 16.40 {\scriptsize (1.45)} & 23.20 {\scriptsize (1.84)} & 29.81 {\scriptsize (2.15)} & 35.98 {\scriptsize (2.48)} & 1.30\\
-\midrule
-Post-NFT & HumanEval & 32.85 {\scriptsize (2.97)} & 41.59 {\scriptsize (3.35)} & 49.08 {\scriptsize (3.65)} & 54.27 {\scriptsize (3.89)} & 1.91\\
-Post-NFT & HumanEval+ & 30.18 {\scriptsize (2.97)} & 37.83 {\scriptsize (3.33)} & 44.48 {\scriptsize (3.64)} & 49.39 {\scriptsize (3.92)} & 1.79\\
-Post-NFT & MBPP-378 base & 22.26 {\scriptsize (1.71)} & 29.62 {\scriptsize (2.02)} & 36.76 {\scriptsize (2.27)} & 43.39 {\scriptsize (2.54)} & 1.50\\
-Post-NFT & MBPP+ & 19.61 {\scriptsize (1.63)} & 26.31 {\scriptsize (1.96)} & 32.54 {\scriptsize (2.24)} & 37.83 {\scriptsize (2.49)} & 1.36\\
-\midrule
-\multicolumn{7}{@{}l}{\textit{DMD2-style sampling: headline endpoints}}\\
-Pre-NFT & HumanEval & 39.71 {\scriptsize (3.31)} & 46.56 {\scriptsize (3.54)} & 51.87 {\scriptsize (3.66)} & 56.71 {\scriptsize (3.85)} & 1.05\\
-Pre-NFT & HumanEval+ & 35.75 {\scriptsize (3.24)} & 42.12 {\scriptsize (3.46)} & 47.44 {\scriptsize (3.57)} & 53.66 {\scriptsize (3.86)} & 1.17\\
-Pre-NFT & MBPP-378 base & 28.08 {\scriptsize (2.00)} & 34.44 {\scriptsize (2.21)} & 40.02 {\scriptsize (2.38)} & 44.71 {\scriptsize (2.55)} & 0.59\\
-Pre-NFT & MBPP+ & 24.34 {\scriptsize (1.94)} & 29.84 {\scriptsize (2.17)} & 34.42 {\scriptsize (2.34)} & 38.36 {\scriptsize (2.52)} & 0.40\\
-Post-NFT & HumanEval & 40.09 {\scriptsize (3.31)} & 47.17 {\scriptsize (3.48)} & 53.62 {\scriptsize (3.64)} & 58.54 {\scriptsize (3.86)} & 1.87\\
-Post-NFT & HumanEval+ & 36.74 {\scriptsize (3.30)} & 42.90 {\scriptsize (3.46)} & 48.89 {\scriptsize (3.65)} & 53.66 {\scriptsize (3.91)} & 2.32\\
-Post-NFT & MBPP-378 base & 27.94 {\scriptsize (2.05)} & 33.36 {\scriptsize (2.21)} & 38.42 {\scriptsize (2.38)} & 42.59 {\scriptsize (2.55)} & 0.77\\
-Post-NFT & MBPP+ & 24.83 {\scriptsize (1.99)} & 29.71 {\scriptsize (2.18)} & 34.07 {\scriptsize (2.35)} & 37.83 {\scriptsize (2.52)} & 0.94\\
+\multicolumn{8}{@{}l}{\textit{DMD2-style}}\\
+Pre-NFT & HE & 39.51 {\scriptsize (3.17)} & 47.68 {\scriptsize (3.44)} & 54.04 {\scriptsize (3.59)} & 59.31 {\scriptsize (3.75)} & 60.98 {\scriptsize (3.84)} & 3.20\\
+Pre-NFT & HE+ & 36.10 {\scriptsize (3.15)} & 43.31 {\scriptsize (3.43)} & 48.83 {\scriptsize (3.62)} & 53.46 {\scriptsize (3.81)} & 54.88 {\scriptsize (3.91)} & 2.60\\
+Pre-NFT & MBPP-378 base & 30.32 {\scriptsize (2.03)} & 36.78 {\scriptsize (2.24)} & 42.32 {\scriptsize (2.37)} & 47.68 {\scriptsize (2.52)} & 49.47 {\scriptsize (2.60)} & 1.26\\
+Pre-NFT & MBPP+ & 26.69 {\scriptsize (1.97)} & 32.41 {\scriptsize (2.20)} & 37.24 {\scriptsize (2.35)} & 41.99 {\scriptsize (2.51)} & 43.65 {\scriptsize (2.59)} & 0.95\\
+Post-NFT & HE & 40.98 {\scriptsize (3.36)} & 47.15 {\scriptsize (3.52)} & 52.47 {\scriptsize (3.62)} & 57.21 {\scriptsize (3.76)} & 58.54 {\scriptsize (3.82)} & 1.81\\
+Post-NFT & HE+ & 37.56 {\scriptsize (3.35)} & 42.86 {\scriptsize (3.52)} & 47.36 {\scriptsize (3.67)} & 51.00 {\scriptsize (3.85)} & 51.83 {\scriptsize (3.91)} & 2.04\\
+Post-NFT & MBPP-378 base & 30.74 {\scriptsize (2.06)} & 36.85 {\scriptsize (2.26)} & 41.93 {\scriptsize (2.39)} & 46.63 {\scriptsize (2.53)} & 48.15 {\scriptsize (2.60)} & 1.18\\
+Post-NFT & MBPP+ & 26.96 {\scriptsize (2.00)} & 32.31 {\scriptsize (2.24)} & 36.35 {\scriptsize (2.38)} & 39.92 {\scriptsize (2.51)} & 41.01 {\scriptsize (2.57)} & 1.51\\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\begin{table}[htbp]
+\centering\footnotesize
+\setlength{\tabcolsep}{2.5pt}
+\caption{\textbf{Single-function-name-alias scoring.} CEDR-L at 128 denoising calls and SCCFG 3, using ten seeds. Pre-NFT is joint epoch 14; post-NFT is update 100. Pass@$k$ values (\%) have problem-bootstrap SEs in parentheses; the final column gives the separate generation-seed SD of pass@1. Both MBPP columns use 378 tasks.}
+\label{tab:codingaliasdetail}
+\begin{tabular}{@{}llrrrrrr@{}}
+\toprule
+Stage & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & pass@10 & \shortstack{pass@1\\seed SD}\\
+\midrule
+\multicolumn{8}{@{}l}{\textit{ODE}}\\
+Pre-NFT & HE & 29.63 {\scriptsize (2.83)} & 38.17 {\scriptsize (3.25)} & 45.43 {\scriptsize (3.54)} & 50.99 {\scriptsize (3.77)} & 52.44 {\scriptsize (3.86)} & 2.43\\
+Pre-NFT & HE+ & 27.38 {\scriptsize (2.79)} & 35.11 {\scriptsize (3.19)} & 41.88 {\scriptsize (3.48)} & 47.60 {\scriptsize (3.74)} & 49.39 {\scriptsize (3.87)} & 2.63\\
+Pre-NFT & MBPP-378 base & 34.21 {\scriptsize (1.97)} & 43.55 {\scriptsize (2.21)} & 51.69 {\scriptsize (2.35)} & 58.52 {\scriptsize (2.47)} & 60.32 {\scriptsize (2.53)} & 1.87\\
+Pre-NFT & MBPP+ & 29.74 {\scriptsize (1.95)} & 37.75 {\scriptsize (2.23)} & 44.49 {\scriptsize (2.39)} & 50.64 {\scriptsize (2.55)} & 52.65 {\scriptsize (2.63)} & 1.66\\
+Post-NFT & HE & 31.22 {\scriptsize (2.88)} & 39.84 {\scriptsize (3.23)} & 47.90 {\scriptsize (3.44)} & 55.85 {\scriptsize (3.68)} & 58.54 {\scriptsize (3.83)} & 1.97\\
+Post-NFT & HE+ & 28.60 {\scriptsize (2.86)} & 36.26 {\scriptsize (3.21)} & 43.36 {\scriptsize (3.47)} & 49.88 {\scriptsize (3.77)} & 51.83 {\scriptsize (3.91)} & 1.94\\
+Post-NFT & MBPP-378 base & 36.08 {\scriptsize (2.02)} & 45.22 {\scriptsize (2.24)} & 52.91 {\scriptsize (2.35)} & 59.38 {\scriptsize (2.46)} & 61.11 {\scriptsize (2.51)} & 1.44\\
+Post-NFT & MBPP+ & 31.22 {\scriptsize (1.99)} & 39.19 {\scriptsize (2.24)} & 45.77 {\scriptsize (2.39)} & 51.64 {\scriptsize (2.54)} & 53.44 {\scriptsize (2.61)} & 1.38\\
+\midrule
+\multicolumn{8}{@{}l}{\textit{DMD2-style}}\\
+Pre-NFT & HE & 39.57 {\scriptsize (3.17)} & 47.75 {\scriptsize (3.44)} & 54.07 {\scriptsize (3.59)} & 59.31 {\scriptsize (3.75)} & 60.98 {\scriptsize (3.84)} & 3.22\\
+Pre-NFT & HE+ & 36.16 {\scriptsize (3.15)} & 43.37 {\scriptsize (3.44)} & 48.86 {\scriptsize (3.62)} & 53.46 {\scriptsize (3.81)} & 54.88 {\scriptsize (3.91)} & 2.64\\
+Pre-NFT & MBPP-378 base & 44.89 {\scriptsize (2.24)} & 52.05 {\scriptsize (2.39)} & 57.12 {\scriptsize (2.46)} & 60.83 {\scriptsize (2.52)} & 61.90 {\scriptsize (2.56)} & 1.69\\
+Pre-NFT & MBPP+ & 38.62 {\scriptsize (2.24)} & 44.77 {\scriptsize (2.42)} & 49.01 {\scriptsize (2.53)} & 52.02 {\scriptsize (2.60)} & 52.91 {\scriptsize (2.63)} & 1.33\\
+Post-NFT & HE & 40.98 {\scriptsize (3.36)} & 47.15 {\scriptsize (3.52)} & 52.47 {\scriptsize (3.62)} & 57.21 {\scriptsize (3.76)} & 58.54 {\scriptsize (3.82)} & 1.81\\
+Post-NFT & HE+ & 37.56 {\scriptsize (3.35)} & 42.86 {\scriptsize (3.52)} & 47.36 {\scriptsize (3.67)} & 51.00 {\scriptsize (3.85)} & 51.83 {\scriptsize (3.91)} & 2.04\\
+Post-NFT & MBPP-378 base & 45.87 {\scriptsize (2.28)} & 52.45 {\scriptsize (2.41)} & 57.05 {\scriptsize (2.47)} & 60.36 {\scriptsize (2.51)} & 61.38 {\scriptsize (2.54)} & 1.46\\
+Post-NFT & MBPP+ & 39.37 {\scriptsize (2.28)} & 44.87 {\scriptsize (2.44)} & 48.56 {\scriptsize (2.52)} & 51.32 {\scriptsize (2.59)} & 52.12 {\scriptsize (2.62)} & 1.25\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Joint adaptation without a prompt-MSE anchor.}
+Table~\ref{tab:codingjointdeltas} compares joint epoch 14 with the immediate prompt-20 swap at 64 NFE. Both stages use the same four seeds, guidance, and scoring, and flow/prompt EMA $0.9999/0.9999$. The comparison measures the combined adaptation of the encoder and denoiser through the downstream objective, rather than an isolated change to the encoder.
 
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Scoring with single-function aliases.} CEDR-L with 128 denoising calls, SCCFG 3, eight seeds. Frozen Qwen and prompt MSE use epoch 12; pre-NFT is joint epoch 13; post-NFT is update 100. Pass@$k$ entries are accuracies (\%) with problem-bootstrap standard errors in parentheses; the final column gives the separate generation-seed SD of pass@1. Both uncertainty measures are in percentage points (Appendix~\ref{app:uncertainty}). Higher-$k$ values average all seed subsets. The first block is the ODE stage ablation; the last block gives the DMD2-style headlines.}
-\label{tab:codingaliasdetail}
-\begin{tabular}{@{}llrrrrr@{}}
-\toprule
-Stage & Benchmark & pass@1 & pass@2 & pass@4 & pass@8 & \shortstack{pass@1\\seed SD}\\
-\midrule
-\multicolumn{7}{@{}l}{\textit{ODE: training-stage ablation}}\\
-Frozen Qwen & HumanEval & 33.69 {\scriptsize (2.78)} & 44.66 {\scriptsize (3.21)} & 54.13 {\scriptsize (3.46)} & 62.20 {\scriptsize (3.75)} & 2.11\\
-Frozen Qwen & HumanEval+ & 30.87 {\scriptsize (2.70)} & 41.53 {\scriptsize (3.18)} & 50.82 {\scriptsize (3.45)} & 59.15 {\scriptsize (3.77)} & 2.09\\
-Frozen Qwen & MBPP-378 base & 43.45 {\scriptsize (2.06)} & 53.97 {\scriptsize (2.22)} & 62.90 {\scriptsize (2.28)} & 70.63 {\scriptsize (2.39)} & 1.21\\
-Frozen Qwen & MBPP+ & 37.93 {\scriptsize (2.07)} & 47.21 {\scriptsize (2.28)} & 55.07 {\scriptsize (2.40)} & 61.90 {\scriptsize (2.55)} & 1.43\\
-\midrule
-Prompt MSE & HumanEval & 28.05 {\scriptsize (2.84)} & 36.11 {\scriptsize (3.27)} & 43.05 {\scriptsize (3.59)} & 48.78 {\scriptsize (3.90)} & 1.38\\
-Prompt MSE & HumanEval+ & 25.38 {\scriptsize (2.81)} & 32.32 {\scriptsize (3.25)} & 37.82 {\scriptsize (3.56)} & 42.07 {\scriptsize (3.85)} & 1.78\\
-Prompt MSE & MBPP-378 base & 30.99 {\scriptsize (1.88)} & 40.54 {\scriptsize (2.18)} & 48.72 {\scriptsize (2.37)} & 55.82 {\scriptsize (2.57)} & 1.48\\
-Prompt MSE & MBPP+ & 26.32 {\scriptsize (1.81)} & 34.45 {\scriptsize (2.14)} & 41.41 {\scriptsize (2.38)} & 47.09 {\scriptsize (2.61)} & 1.54\\
-\midrule
-Pre-NFT & HumanEval & 29.73 {\scriptsize (2.76)} & 39.16 {\scriptsize (3.23)} & 47.24 {\scriptsize (3.55)} & 54.27 {\scriptsize (3.87)} & 2.34\\
-Pre-NFT & HumanEval+ & 27.06 {\scriptsize (2.74)} & 35.39 {\scriptsize (3.23)} & 42.31 {\scriptsize (3.59)} & 47.56 {\scriptsize (3.92)} & 2.14\\
-Pre-NFT & MBPP-378 base & 32.11 {\scriptsize (1.91)} & 41.66 {\scriptsize (2.20)} & 49.82 {\scriptsize (2.37)} & 57.14 {\scriptsize (2.57)} & 1.72\\
-Pre-NFT & MBPP+ & 27.81 {\scriptsize (1.86)} & 36.19 {\scriptsize (2.18)} & 43.16 {\scriptsize (2.39)} & 49.21 {\scriptsize (2.60)} & 1.88\\
-\midrule
-Post-NFT & HumanEval & 33.16 {\scriptsize (2.97)} & 42.03 {\scriptsize (3.34)} & 49.64 {\scriptsize (3.64)} & 54.88 {\scriptsize (3.88)} & 2.06\\
-Post-NFT & HumanEval+ & 30.26 {\scriptsize (2.97)} & 37.87 {\scriptsize (3.34)} & 44.48 {\scriptsize (3.64)} & 49.39 {\scriptsize (3.92)} & 1.75\\
-Post-NFT & MBPP-378 base & 38.96 {\scriptsize (2.10)} & 47.68 {\scriptsize (2.32)} & 54.42 {\scriptsize (2.42)} & 60.32 {\scriptsize (2.55)} & 1.60\\
-Post-NFT & MBPP+ & 33.76 {\scriptsize (2.07)} & 41.21 {\scriptsize (2.33)} & 46.55 {\scriptsize (2.47)} & 50.79 {\scriptsize (2.61)} & 1.43\\
-\midrule
-\multicolumn{7}{@{}l}{\textit{DMD2-style sampling: headline endpoints}}\\
-Pre-NFT & HumanEval & 39.94 {\scriptsize (3.33)} & 46.71 {\scriptsize (3.53)} & 52.18 {\scriptsize (3.64)} & 57.32 {\scriptsize (3.83)} & 1.08\\
-Pre-NFT & HumanEval+ & 35.82 {\scriptsize (3.25)} & 42.12 {\scriptsize (3.46)} & 47.44 {\scriptsize (3.57)} & 53.66 {\scriptsize (3.86)} & 1.25\\
-Pre-NFT & MBPP-378 base & 45.01 {\scriptsize (2.28)} & 52.00 {\scriptsize (2.40)} & 57.03 {\scriptsize (2.48)} & 60.58 {\scriptsize (2.55)} & 0.64\\
-Pre-NFT & MBPP+ & 38.72 {\scriptsize (2.28)} & 44.48 {\scriptsize (2.44)} & 48.58 {\scriptsize (2.54)} & 51.59 {\scriptsize (2.63)} & 0.84\\
-Post-NFT & HumanEval & 40.63 {\scriptsize (3.30)} & 47.84 {\scriptsize (3.48)} & 54.27 {\scriptsize (3.64)} & 59.15 {\scriptsize (3.85)} & 1.95\\
-Post-NFT & HumanEval+ & 36.89 {\scriptsize (3.30)} & 43.14 {\scriptsize (3.46)} & 49.22 {\scriptsize (3.64)} & 54.27 {\scriptsize (3.90)} & 2.23\\
-Post-NFT & MBPP-378 base & 45.63 {\scriptsize (2.34)} & 51.21 {\scriptsize (2.41)} & 55.82 {\scriptsize (2.47)} & 59.52 {\scriptsize (2.55)} & 0.92\\
-Post-NFT & MBPP+ & 39.48 {\scriptsize (2.33)} & 44.01 {\scriptsize (2.44)} & 47.58 {\scriptsize (2.52)} & 50.53 {\scriptsize (2.61)} & 1.16\\
-\bottomrule
-\end{tabular}
-\end{table}
-
-
-\paragraph{One epoch of joint adaptation.}
-Table~\ref{tab:codingjointdeltas} uses ODE sampling to compare joint epoch 13 with the epoch-12 backbone and prompt-MSE-epoch-10 encoder, matching all eight seeds, 128 denoising steps, guidance, prompts, and scoring. Both learned components change, and the prompt EMA selector changes from $0.999$ to $0.9999$; this compares the reported training stages rather than isolating the MSE regularizer's effect. Standard HumanEval(+) pass@1 rises by 1.60 points, with paired intervals including zero. HumanEval+ pass@8 rises by 5.49 points, while standard MBPP-378 base pass@8 falls by 3.97 points. Under alias scoring, MBPP+ pass@1 rises by 1.49 points; under standard scoring it falls by 0.56 points. These differing outcomes reinforce the need to separate entry-point repair from the full coding task.
-
-\begin{table}[htbp]
-\centering\small
-\setlength{\tabcolsep}{4pt}
-\caption{\textbf{Joint epoch 13 minus pre-joint prompt MSE.} ODE differences in percentage points at 128 denoising calls and SCCFG 3, using the same eight seeds. Brackets give paired 95\% problem-bootstrap intervals from 4,000 replicates. Both models use backbone EMA $0.9999$; prompt EMA is $0.999$ before joint training and $0.9999$ afterward. Differences are computed before rounding the stage accuracies.}
+\caption{\textbf{Joint epoch 14 minus the prompt-20 swap.} ODE differences in percentage points at 64 NFE and SCCFG 3, using four matched seeds. Brackets give paired 95\% problem-bootstrap intervals. Both stages use flow/prompt EMA $.9999/.9999$.}
 \label{tab:codingjointdeltas}
 \begin{tabular}{@{}llrr@{}}
 \toprule
-Scoring & Benchmark & $\Delta$ pass@1 [95\% CI] & $\Delta$ pass@8 [95\% CI]\\
+Scoring & Benchmark & $\Delta$ pass@1 [95\% CI] & $\Delta$ pass@4 [95\% CI]\\
 \midrule
-Standard & HumanEval & $+1.60$ {\scriptsize $[-0.61,+3.73]$} & $+5.49$ {\scriptsize $[+0.00,+11.59]$}\\
-Standard & HumanEval+ & $+1.60$ {\scriptsize $[-0.53,+3.58]$} & $+5.49$ {\scriptsize $[+0.61,+10.98]$}\\
-Standard & MBPP-378 base & $-1.16$ {\scriptsize $[-2.38,+0.03]$} & $-3.97$ {\scriptsize $[-7.67,-0.53]$}\\
-Standard & MBPP+ & $-0.56$ {\scriptsize $[-1.69,+0.53]$} & $-0.79$ {\scriptsize $[-4.23,+2.38]$}\\
+Standard & HumanEval & $-2.59$ {\scriptsize $[-5.95,+0.61]$} & $+0.61$ {\scriptsize $[-4.88,+6.10]$}\\
+Standard & HumanEval+ & $-3.05$ {\scriptsize $[-6.25,+0.00]$} & $+0.00$ {\scriptsize $[-4.88,+4.88]$}\\
+Standard & MBPP-378 base & $+2.31$ {\scriptsize $[+0.33,+4.30]$} & $+2.38$ {\scriptsize $[-1.32,+6.35]$}\\
+Standard & MBPP+ & $+2.45$ {\scriptsize $[+0.66,+4.23]$} & $+3.44$ {\scriptsize $[+0.00,+6.88]$}\\
 \midrule
-Alias & HumanEval & $+1.68$ {\scriptsize $[-0.53,+3.81]$} & $+5.49$ {\scriptsize $[+0.00,+11.59]$}\\
-Alias & HumanEval+ & $+1.68$ {\scriptsize $[-0.46,+3.73]$} & $+5.49$ {\scriptsize $[+0.61,+10.98]$}\\
-Alias & MBPP-378 base & $+1.12$ {\scriptsize $[-0.33,+2.65]$} & $+1.32$ {\scriptsize $[-2.38,+4.76]$}\\
-Alias & MBPP+ & $+1.49$ {\scriptsize $[+0.17,+2.88]$} & $+2.12$ {\scriptsize $[-1.06,+5.03]$}\\
+Alias & HumanEval & $-2.29$ {\scriptsize $[-5.49,+0.91]$} & $+0.61$ {\scriptsize $[-4.88,+6.10]$}\\
+Alias & HumanEval+ & $-2.74$ {\scriptsize $[-5.95,+0.30]$} & $+0.00$ {\scriptsize $[-4.88,+4.88]$}\\
+Alias & MBPP-378 base & $+1.85$ {\scriptsize $[-0.40,+4.03]$} & $+1.06$ {\scriptsize $[-2.65,+5.03]$}\\
+Alias & MBPP+ & $+2.25$ {\scriptsize $[+0.33,+4.23]$} & $+1.59$ {\scriptsize $[-1.85,+5.03]$}\\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{NFT with execution-based rewards.}
-Table~\ref{tab:codingnftdeltas} retains the ODE ablation comparing NFT update 100 against joint epoch 13 under matched prompts, ordered seeds, 128 denoising calls, SCCFG 3, arithmetic, and scorers. Backbone/prompt evaluation EMAs change from $0.9999/0.9999$ to $0.9/0.9$, so this comparison measures the reported training-stage change, including its EMA selection. Standard pass@1 improves on all four benchmarks, with positive paired intervals: HumanEval and HumanEval+ gain $3.28$ points, MBPP-378 base $3.80$, and MBPP+ $3.21$. Under alias scoring, the corresponding gains are $3.43$, $3.20$, $6.85$, and $5.95$ points. Aliasing remains a separate evaluation convention, rather than part of standard scoring.
-
-Higher-pass gains are less pronounced. Standard HumanEval pass@8 remains $54.27\%$, and HumanEval+ rises from $47.56\%$ to $49.39\%$; neither paired interval excludes zero. The MBPP pass@8 intervals also include zero, including the base-test interval whose lower endpoint rounds to zero. Under ODE, the gains are clearer for single-sample accuracy than for oracle coverage; this pattern does not establish a decrease in diversity. HumanEval(+) pass@1 approaches the frozen-Qwen reference, but a substantial MBPP gap remains. These are conditional comparisons of fixed checkpoints and saved draws, not estimates of training-run or checkpoint-selection uncertainty.
+Tables~\ref{tab:codingnftdeltas} and~\ref{tab:codingsdedeltas} compare NFT update 100 against joint epoch 14 under ODE and DMD2-style sampling, respectively. Both use ten matched seeds, 128 NFE, SCCFG 3, and the same scoring rules. Flow/prompt evaluation EMAs are $0.9999/0.9999$ before NFT and $0.99/0.99$ afterward. Under DMD2-style sampling, mean pass@1 increases on all four benchmarks, but each paired 95\% interval includes zero. Pass@10 decreases on all four; only the standard MBPP+ decrease has an interval excluding zero. Thus the coding evidence supports modest shifts in single-sample accuracy, rather than a uniform improvement in oracle coverage. The tables report paired problem-bootstrap intervals for pass@1 and pass@10.
 
 \begin{table}[htbp]
 \centering\small
-\setlength{\tabcolsep}{4pt}
-\caption{\textbf{NFT update 100 minus joint epoch 13.} ODE differences in percentage points with paired 95\% problem-bootstrap intervals, over eight matched seeds at 128 denoising calls and SCCFG 3. Backbone/prompt EMAs are $0.9999/0.9999$ before NFT and $0.9/0.9$ afterward. Intervals use 4,000 problem resamples and condition on the selected endpoints.}
+\setlength{\tabcolsep}{3pt}
+\caption{\textbf{ODE: NFT update 100 minus joint epoch 14.} Differences in percentage points with paired 95\% problem-bootstrap intervals, using ten matched seeds at 128 NFE and SCCFG 3.}
 \label{tab:codingnftdeltas}
 \begin{tabular}{@{}llrr@{}}
 \toprule
-Scoring & Benchmark & $\Delta$ pass@1 [95\% CI] & $\Delta$ pass@8 [95\% CI]\\
+Scoring & Benchmark & $\Delta$ pass@1 [95\% CI] & $\Delta$ pass@10 [95\% CI]\\
 \midrule
-Standard & HumanEval & $+3.28$ {\scriptsize $[+1.22,+5.34]$} & $+0.00$ {\scriptsize $[-5.49,+5.49]$}\\
-Standard & HumanEval+ & $+3.28$ {\scriptsize $[+1.30,+5.34]$} & $+1.83$ {\scriptsize $[-3.05,+6.71]$}\\
-Standard & MBPP-378 base & $+3.80$ {\scriptsize $[+2.61,+5.09]$} & $+3.44$ {\scriptsize $[+0.00,+7.14]$}\\
-Standard & MBPP+ & $+3.21$ {\scriptsize $[+2.05,+4.43]$} & $+1.85$ {\scriptsize $[-1.32,+5.03]$}\\
+Standard & HumanEval & $+1.46$ {\scriptsize $[-0.12,+3.05]$} & $+6.10$ {\scriptsize $[+0.61,+10.98]$}\\
+Standard & HumanEval+ & $+1.10$ {\scriptsize $[-0.37,+2.56]$} & $+3.05$ {\scriptsize $[-1.83,+7.93]$}\\
+Standard & MBPP-378 base & $+0.95$ {\scriptsize $[+0.03,+1.88]$} & $-1.32$ {\scriptsize $[-4.23,+1.59]$}\\
+Standard & MBPP+ & $+1.01$ {\scriptsize $[+0.13,+1.85]$} & $-0.53$ {\scriptsize $[-3.17,+1.85]$}\\
 \midrule
-Alias & HumanEval & $+3.43$ {\scriptsize $[+1.30,+5.56]$} & $+0.61$ {\scriptsize $[-4.27,+6.10]$}\\
-Alias & HumanEval+ & $+3.20$ {\scriptsize $[+1.14,+5.34]$} & $+1.83$ {\scriptsize $[-3.05,+6.71]$}\\
-Alias & MBPP-378 base & $+6.85$ {\scriptsize $[+5.22,+8.40]$} & $+3.17$ {\scriptsize $[+0.00,+6.61]$}\\
-Alias & MBPP+ & $+5.95$ {\scriptsize $[+4.46,+7.47]$} & $+1.59$ {\scriptsize $[-1.32,+4.76]$}\\
+Alias & HumanEval & $+1.59$ {\scriptsize $[-0.00,+3.11]$} & $+6.10$ {\scriptsize $[+0.61,+10.98]$}\\
+Alias & HumanEval+ & $+1.22$ {\scriptsize $[-0.18,+2.62]$} & $+2.44$ {\scriptsize $[-2.44,+7.32]$}\\
+Alias & MBPP-378 base & $+1.88$ {\scriptsize $[+0.85,+2.88]$} & $+0.79$ {\scriptsize $[-1.85,+3.44]$}\\
+Alias & MBPP+ & $+1.48$ {\scriptsize $[+0.53,+2.41]$} & $+0.79$ {\scriptsize $[-1.59,+3.17]$}\\
 \bottomrule
 \end{tabular}
 \end{table}
-
-
-\paragraph{NFT under the headline stochastic sampler.}
-Table~\ref{tab:codingsdedeltas} gives the corresponding comparison under DMD2-style sampling, matching the main coding tables. Standard pass@1 gains are smaller than with ODE and are mixed across benchmarks; all four paired intervals include zero. The same is true for standard pass@8. These results separate strong stochastic-sampler performance from evidence for further improvement through this short NFT run.
 
 \begin{table}[htbp]
 \centering\small
-\setlength{\tabcolsep}{4pt}
-\caption{\textbf{DMD2-style sampling: NFT update 100 minus joint epoch 13.} Differences in percentage points, with paired 95\% problem-bootstrap intervals from 4,000 replicates. Both stages use the same eight seeds, 128 denoising calls, and SCCFG 3. Backbone/prompt EMAs are $.9999/.9999$ before NFT and $.9/.9$ afterward.}
+\setlength{\tabcolsep}{3pt}
+\caption{\textbf{DMD2-style sampling: NFT update 100 minus joint epoch 14.} Differences in percentage points with paired 95\% problem-bootstrap intervals, using ten matched seeds at 128 NFE and SCCFG 3.}
 \label{tab:codingsdedeltas}
 \begin{tabular}{@{}llrr@{}}
 \toprule
-Scoring & Benchmark & $\Delta$ pass@1 [95\% CI] & $\Delta$ pass@8 [95\% CI]\\
+Scoring & Benchmark & $\Delta$ pass@1 [95\% CI] & $\Delta$ pass@10 [95\% CI]\\
 \midrule
-Standard & HumanEval & $+0.38$ {\scriptsize $[-2.13,+2.67]$} & $+1.83$ {\scriptsize $[-3.05,+6.71]$}\\
-Standard & HumanEval+ & $+0.99$ {\scriptsize $[-0.99,+2.97]$} & $+0.00$ {\scriptsize $[-4.88,+4.88]$}\\
-Standard & MBPP-378 base & $-0.13$ {\scriptsize $[-1.36,+1.06]$} & $-2.12$ {\scriptsize $[-5.03,+0.79]$}\\
-Standard & MBPP+ & $+0.50$ {\scriptsize $[-0.69,+1.65]$} & $-0.53$ {\scriptsize $[-3.17,+2.12]$}\\
+Standard & HumanEval & $+1.46$ {\scriptsize $[-0.43,+3.41]$} & $-2.44$ {\scriptsize $[-6.71,+2.44]$}\\
+Standard & HumanEval+ & $+1.46$ {\scriptsize $[-0.55,+3.54]$} & $-3.05$ {\scriptsize $[-7.32,+1.22]$}\\
+Standard & MBPP-378 base & $+0.42$ {\scriptsize $[-0.63,+1.59]$} & $-1.32$ {\scriptsize $[-3.97,+1.32]$}\\
+Standard & MBPP+ & $+0.26$ {\scriptsize $[-0.66,+1.30]$} & $-2.65$ {\scriptsize $[-5.03,-0.26]$}\\
 \midrule
-Alias & HumanEval & $+0.69$ {\scriptsize $[-1.52,+2.75]$} & $+1.83$ {\scriptsize $[-3.05,+6.71]$}\\
-Alias & HumanEval+ & $+1.07$ {\scriptsize $[-0.84,+2.97]$} & $+0.61$ {\scriptsize $[-4.27,+5.49]$}\\
-Alias & MBPP-378 base & $+0.63$ {\scriptsize $[-0.86,+2.12]$} & $-1.06$ {\scriptsize $[-3.70,+1.59]$}\\
-Alias & MBPP+ & $+0.76$ {\scriptsize $[-0.60,+2.08]$} & $-1.06$ {\scriptsize $[-3.70,+1.32]$}\\
+Alias & HumanEval & $+1.40$ {\scriptsize $[-0.49,+3.29]$} & $-2.44$ {\scriptsize $[-6.71,+2.44]$}\\
+Alias & HumanEval+ & $+1.40$ {\scriptsize $[-0.55,+3.41]$} & $-3.05$ {\scriptsize $[-7.32,+1.22]$}\\
+Alias & MBPP-378 base & $+0.98$ {\scriptsize $[-0.19,+2.17]$} & $-0.53$ {\scriptsize $[-2.91,+2.12]$}\\
+Alias & MBPP+ & $+0.74$ {\scriptsize $[-0.29,+1.83]$} & $-0.79$ {\scriptsize $[-3.17,+1.59]$}\\
 \bottomrule
 \end{tabular}
 \end{table}
+
 
 \section{Generation examples and trajectories}
 \label{app:qualitative}
