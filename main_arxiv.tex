@@ -40,7 +40,7 @@ Department of Electrical and Computer Engineering\\
 
 \begin{abstract}
 We show that continuous diffusion language models can achieve strong reasoning performance by denoising in a learned latent space. In our Continuous Embedding Diffusion Reasoner (CEDR), built on ELF, ablations identify latent representation as a key determinant of reasoning accuracy: accurate decoding alone does not ensure strong generation. We therefore combine learned representations from three hidden layers of Qwen3-4B to balance ease of generation and decoding. This decomposition also enables asynchronous denoising, allowing different components to be refined at different rates. A compact prompt encoder (121M parameters for CEDR-L, excluding token embeddings) replaces the external teacher Transformer at inference while retaining its frozen token embedding table. Adapting DiffusionNFT to learned self-conditioning guidance further demonstrates that established diffusion reinforcement learning techniques can improve the accuracy of continuous reasoning models. With a 638M-parameter denoising backbone, post-NFT CEDR-L achieves 68.97\% pass@1 on GSM8K and 32.40\% on MATH500 at 64 denoising steps, and 40.98\% on HumanEval and 37.56\% on HumanEval+ at 128 denoising steps, using DMD2-style stochastic sampling.
-Code will be available at: \url{https://github.com/chengxiang/CEDR}.
+Code and model weights are available at \url{https://github.com/chengxiang/CEDR} and \url{https://huggingface.co/xc91/CEDR}, respectively.
 \end{abstract}
 
 \section{Introduction}
