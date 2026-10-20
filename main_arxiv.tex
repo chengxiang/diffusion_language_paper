@@ -122,6 +122,9 @@ At inference, let $\tau\in[0,1]$ be solver time and $t=f(\tau)$ an increasing di
 \label{sec:methodology}
 \label{sec:methodflow}
 
+\textbf{Pipeline overview.}
+We first learn and freeze the answer representation (Section~\ref{sec:representation}). The supervised curriculum then trains the backbone with frozen teacher prompt conditioning, fits a compact prompt encoder by MSE, and jointly adapts both networks (Section~\ref{sec:conditionalencoding}; Table~\ref{tab:trainingstages}). NFT adds reward-based fine-tuning (Section~\ref{sec:nft}). At inference, local clocks and a numerical sampler determine how the trained model refines the answer (Section~\ref{sec:clocks}).
+
 For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding $c=c(q)$, CEDR follows ELF's denoising and token-decoding formulation~\citep{elf} (Figure~\ref{fig:pipelineoverview}). We use canvas length $L=1024$, latent width $d=1024$, and noise scale $\sigma=2$.
 
 \begin{figure}[t]
@@ -147,7 +150,7 @@ A vocabulary head on the same backbone predicts same-position answer tokens unde
  =\E_{\mathrm{valid}}\!\left[-\log p_{\theta,j}^{\mathrm{tok}}(a_j\mid z^{\mathrm{dec}},c(q))\right].
  \label{eq:methoddecoderloss}
 \end{equation}
-The expectation averages valid answer tokens, including the terminal token; Appendix~\ref{app:methodobjective} specifies the exact batch weighting, decoder corruption, and mode mixing. At inference, encode the prompt once and keep it clean through $S$ Euler steps with recurrent self-conditioning; one additional backbone call decodes the answer in parallel and is excluded from denoising NFE.
+The expectation averages valid answer tokens, including the terminal token; Appendix~\ref{app:methodobjective} specifies the exact batch weighting, decoder corruption, and mode mixing. At inference, encode the prompt once and keep it clean through $S$ denoising steps with recurrent self-conditioning; one additional backbone call decodes the answer in parallel and is excluded from denoising NFE.
 
 \subsection{Learning the denoising representation}
 \label{sec:representation}
@@ -279,7 +282,10 @@ OpenCodeInstruct / CEDR-L & 12 & 20 & 2 (14) & 100\\
 
 Our multilayer representation allows different feature groups to become clean at different rates, potentially letting one group use cleaner information from another. This introduces two inference choices: the \emph{local clocks} specify each group's noise level along the trajectory, while the \emph{sampler} specifies how to advance the state and whether to inject fresh noise. We describe their common continuous-time formulation before comparing these choices separately.
 
-\textbf{Asynchronous dynamics.}
+\textbf{Choosing local clocks.}
+We use power clocks $t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell}$. Equal exponents recover synchronous denoising: $(1,1,1)$ gives the identity clock and $(2,2,2)$ the shared quadratic clock. Unequal exponents let the representation groups become clean at different rates; a larger exponent keeps a group noisier for longer. Our headline setting is $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$.
+
+\textbf{Common asynchronous dynamics.}
 Following the asynchronous flow construction of \citet{asyncschedules}, assign each layer group $\ell\in\{16,24,32\}$ an increasing local clock $t_\ell=f_\ell(\tau)$, with $f_\ell(0)=0$ and $f_\ell(1)=1$. At shared solver time $\tau$, the joint corruption is
 \begin{equation}
  Z_{\bm t}^{(\ell)}=t_\ell Z_{\mathrm{clean}}^{(\ell)}
@@ -353,7 +359,7 @@ All three samplers restore clean prompt positions and carry the guided clean pre
 DMD2-style sampling gives the strongest pass@1 under our headline settings. ODE remains competitive at low NFE and can give higher oracle pass@$k$ with more attempts (Figures~\ref{fig:samplerallocationgsml} and~\ref{fig:samplerallocationmathl}; Appendix~\ref{app:samplerallocations}).
 
 \textbf{Asynchronous clocks can improve generation accuracy.}
-We use power clocks $f_\ell(\tau)=\tau^{\gamma_\ell}$: equal exponents give synchronous denoising, while unequal exponents give different group noise levels. Our headline clock $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$ has the highest observed ODE validation mean on both datasets (Appendix~\ref{app:schedulecomparisons}). At 32 NFE, nonidentity ODE clocks improve on $(1,1,1)$, with smaller differences among them, whereas both stochastic samplers favor $(2.5,2,1.5)$ on both test sets (Table~\ref{tab:inferenceclocks}). Under DMD2-style sampling, this clock improves on $(2,2,2)$ by 1.82 percentage points on GSM8K and 4.00 on MATH500. We retain this clock across headline samplers and checkpoints.
+The headline clock $(2.5,2,1.5)$ has the highest observed ODE validation mean on both datasets (Appendix~\ref{app:schedulecomparisons}). At 32 NFE, nonidentity ODE clocks improve on $(1,1,1)$, with smaller differences among them, whereas both stochastic samplers favor $(2.5,2,1.5)$ on both test sets (Table~\ref{tab:inferenceclocks}). Under DMD2-style sampling, this clock improves on $(2,2,2)$ by 1.82 percentage points on GSM8K and 4.00 on MATH500. We retain this clock across headline samplers and checkpoints.
 
 \begin{table}[!htbp]
 \centering\small
@@ -385,6 +391,8 @@ DiffusionNFT \citep{diffusionnft} improves continuous generators through rewarde
 
 \subsection{NFT with learned self-conditioning guidance}
 \label{sec:nftsccfg}
+
+Our central modification retains guided rollouts while optimizing guidance-corrected velocity fields. We first describe NFT's regression objective, then construct the correction that makes it compatible with learned self-conditioning guidance.
 
 \textbf{The velocity field optimized by standard NFT.}
 Let $v_{\mathrm{cur}}$ and $v_{\mathrm{old}}$ denote the current and old policy velocity fields, $u$ a sample's forward velocity target, and $\rho\in[0,1]$ its normalized optimality coefficient. NFT forms implicit positive and negative velocity fields, $v^+=(1-\beta)v_{\mathrm{old}}+\beta v_{\mathrm{cur}}$ and $v^-=(1+\beta)v_{\mathrm{old}}-\beta v_{\mathrm{cur}}$. For current and old velocity-field values $f,h$, the pointwise loss is
@@ -430,12 +438,15 @@ Because the external condition is the question text, NFT jointly updates the pro
 \section{Empirical Evaluation}
 \label{sec:headlineresults}
 
-We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math500}, and code generation in Section~\ref{sec:codingresults}. Math evaluations use zero-shot prompts, async clocks $(2.5,2,1.5)$, numerical-answer scoring for GSM8K, and Math-Verify for MATH500 \citep{mathverify}. All CEDR headline results use the same DMD2-style stochastic sampler (Eq.~\eqref{eq:asyncdmd2}) across checkpoints, datasets, and NFEs. Math headline pass@1 averages eight sampling seeds at 64 denoising steps. Representation and prompt-learning ablations retain ODE sampling; the schedule ablation compares all three samplers. NFE counts denoising calls, excluding prompt encoding and terminal decoding. Appendices~\ref{app:experimentdetails} and~\ref{app:seedvariability} give checkpoint settings and seed standard deviations.
+We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math500}, and code generation in Section~\ref{sec:codingresults}. Math evaluations use zero-shot prompts, async clocks $(2.5,2,1.5)$, numerical-answer scoring for GSM8K, and Math-Verify for MATH500 \citep{mathverify}. All CEDR headline results use the same DMD2-style stochastic sampler (Eq.~\eqref{eq:asyncdmd2}) across checkpoints, datasets, and NFEs. Math headline pass@1 averages eight sampling seeds at 64 denoising steps. Representation and prompt-learning ablations retain ODE sampling; the schedule ablation compares all three samplers. NFE counts denoising calls, excluding prompt encoding and terminal decoding. Appendix~\ref{app:experimentdetails} gives the evaluation protocols.
+
+\textbf{Comparison and uncertainty conventions.}
+We use author-reported baseline accuracies and retain each method's conditioning setup: CEDR uses its learned prompt encoder, ELF-REG an external contextual encoder, and PlaidQ token-prefix conditioning. Higher-pass ELF-REG comparisons use ODE because its stochastic study reports only four draws. In the main comparison tables, pass@1 uncertainties are \emph{seed SDs} across generation seeds; higher-pass uncertainties are \emph{bootstrap SEs} across resampled problems. Appendices~\ref{app:uncertainty} and~\ref{app:seedvariability} define these measures and give the seed counts.
 
 \subsection{Mathematical reasoning}
 \label{sec:mathresults}
 \begin{table}[!htb]
-\caption{Mathematical reasoning across model families, mean pass@1 (\%). Small brackets give available sampling-seed SDs (eight seeds for CEDR; four for ELF-REG). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
+\caption{Mathematical reasoning across model families, mean pass@1 (\%). Small brackets give available seed SDs (eight seeds for CEDR; four for ELF-REG). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
 \label{tab:headlinecomparison}
 \centering\small
 \setlength{\tabcolsep}{3.5pt}
@@ -479,7 +490,7 @@ TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & $\approx68.9^\ddagger$ & 
 At comparable denoising-backbone sizes, both supervised and post-NFT CEDR outperform the reported continuous-diffusion baselines on GSM8K and MATH500 (Table~\ref{tab:headlinecomparison}). This advantage is already present before reinforcement learning and is achieved with compact learned prompt encoders, without running the teacher Transformer at inference.
 
 \begin{table}[!htb]
-\caption{Reasoning at lower NFE, mean pass@1 (\%). Small brackets beneath CEDR accuracies give sampling-seed SDs. Table~\ref{tab:headlinecomparison} gives model parameter counts. Bold/underline mark first/second within each benchmark and backbone-scale block; $^{*}$ marks one fewer denoising call than the heading. External results follow \citet{posterior,scalingdlm}; Appendix~\ref{app:experimentdetails} gives source and protocol details.}
+\caption{Reasoning at lower NFE, mean pass@1 (\%). Small brackets beneath CEDR accuracies give seed SDs. Table~\ref{tab:headlinecomparison} gives model parameter counts. Bold/underline mark first/second within each benchmark and backbone-scale block; $^{*}$ marks one fewer denoising call than the heading. External results follow \citet{posterior,scalingdlm}; Appendix~\ref{app:experimentdetails} gives source and protocol details.}
 \label{tab:headlinelownfe}
 \centering\small
 \setlength{\tabcolsep}{1.7pt}
@@ -527,7 +538,7 @@ With eight DMD2-style samples at 64 denoising calls each, both supervised and po
 \begin{table}[!htbp]
 \centering\small
 \setlength{\tabcolsep}{8pt}
-\caption{\textbf{MATH500 oracle accuracy at higher sample counts.} CEDR-L uses learned prompt conditioning, SCCFG 3, and eight saved draws. ELF-REG-L retains its external prompt encoder. CEDR uses DMD2-style sampling and ELF-REG uses ODE; ELF-REG's stochastic study reports only four draws and cannot supply pass@8/10. NFE counts denoising calls per sample; $k\times\mathrm{NFE}$ makes the differing total budgets explicit. These are cross-paper reported results, with protocol details in Appendix~\ref{app:experimentdetails}. Small brackets give CEDR's problem-bootstrap SDs (standard errors; Appendix~\ref{app:uncertainty}). Bold/underline mark the best/second-best displayed accuracy.}
+\caption{\textbf{MATH500 oracle accuracy at higher sample counts.} CEDR-L uses DMD2-style sampling, SCCFG 3, and eight draws; ELF-REG-L uses ODE (\citealp[v3, Table 20]{scalingdlm}). NFE is per sample, and $k\times\mathrm{NFE}$ gives the total budget. Small brackets give CEDR's bootstrap SEs; bold/underline mark the best/second-best displayed accuracy.}
 \label{tab:mathhigherpass}
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
@@ -550,7 +561,7 @@ CEDR-L follows the staged curriculum on OpenCodeInstruct \citep{opencodeinstruct
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Code generation under separate scoring conventions.} Mean pass@1 (\%) with generation-seed SD in small brackets where available. Bold/underline mark the best/second-best mean in each block. HE/HE+ use base/full extended tests; both MBPP columns use 378 tasks. CEDR uses DMD2-style sampling with ten seeds; pre-NFT is joint epoch 14 and post-NFT is update 100. ELF-REG uses ODE with 16 seeds in the standard block and its stronger stochastic sampler with four seeds in the alias block (v3, Tables 15 and 4). Budgets exclude terminal decoding. Appendix~\ref{app:codingdetails} specifies the scoring protocols.}
+\caption{\textbf{Code generation under separate scoring conventions.} Mean pass@1 (\%) with seed SD in small brackets where available. Bold/underline mark the best/second-best mean in each block. HE/HE+ use base/full extended tests; both MBPP columns use 378 tasks. CEDR uses DMD2-style sampling with ten seeds; pre-NFT is joint epoch 14 and post-NFT is update 100. ELF-REG uses ODE with 16 seeds in the standard block and its stronger stochastic sampler with four seeds in the alias block (v3, Tables 15 and 4). Budgets exclude terminal decoding. Appendix~\ref{app:codingdetails} specifies the scoring protocols.}
 \label{tab:codingcomparison}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
@@ -574,12 +585,12 @@ CEDR-L, post-NFT (ours) & 128 & \textbf{40.98} {\scriptsize [1.81]} & \textbf{37
 CEDR-L, both pre-NFT and post-NFT, outperforms the reported alternatives on HumanEval, HumanEval+, and MBPP-378 base within each scoring convention (Table~\ref{tab:codingcomparison}). PlaidQ and ELF-REG report base-test accuracy on the 378-task MBPP subset, leaving full extended-test MBPP+ results unavailable. NFT gives modest increases in mean pass@1 on all four benchmarks, with smaller changes on MBPP. Mean pass@10 is lower after NFT (Table~\ref{tab:codinghigherpass}). The paired comparisons in Tables~\ref{tab:codingnftdeltas} and~\ref{tab:codingsdedeltas} distinguish the effects under ODE and the headline stochastic sampler.
 
 \paragraph{Higher-pass code generation.}
-Both supervised and post-NFT CEDR-L exceed PlaidQ+CFG's standard pass@10 and ELF-REG-L's pass@10 with function-name aliasing on HumanEval, HumanEval+, and MBPP-378 base (Table~\ref{tab:codinghigherpass}). ELF-REG's higher-pass results use ODE because its stochastic study provides only four draws. Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1/2/4/8/10 and uncertainty.
+Both supervised and post-NFT CEDR-L exceed PlaidQ+CFG's standard pass@10 and ELF-REG-L's pass@10 with function-name aliasing on HumanEval, HumanEval+, and MBPP-378 base (Table~\ref{tab:codinghigherpass}). Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1/2/4/8/10 and uncertainty.
 
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Oracle code accuracy with ten attempts.} Pass@10 (\%) with denoising NFE per sample. Small brackets give CEDR's problem-bootstrap SDs (standard errors; Appendix~\ref{app:uncertainty}). Bold/underline mark the best/second-best accuracy within each scoring block. CEDR uses learned prompt conditioning and DMD2-style sampling; PlaidQ uses token-prefix conditioning, and ELF-REG uses an external contextual encoder and ODE sampling. Both MBPP columns use 378 tasks. External values are from PlaidQ Table 1 and ELF-REG v3 Table 18; stochastic pass@10 is unavailable for ELF-REG. Generation protocols and total compute differ.}
+\caption{\textbf{Oracle code accuracy with ten attempts.} Pass@10 (\%) with CEDR's bootstrap SEs in small brackets. Bold/underline mark the best/second-best accuracy within each scoring block. Both MBPP columns use 378 tasks. CEDR uses DMD2-style sampling; ELF-REG uses ODE. Baseline values are from PlaidQ Table 1 and ELF-REG v3 Table 18.}
 \label{tab:codinghigherpass}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
@@ -603,7 +614,7 @@ CEDR-L, post-NFT & 128 & 10 & \underline{58.54} {\scriptsize [3.82]} & \underlin
 \section{Discussion and Conclusion}
 \label{sec:conclusion}
 
-CEDR shows that continuous latent diffusion can support strong mathematical reasoning and code generation with compact denoising backbones. Representation design is central: accurate decoding alone does not ensure strong reasoning performance, while learned multilayer features improve generation and provide separate components whose denoising trajectories can be controlled. Treating prompt text as the condition makes its encoding an internal interface that can adapt with the flow model, rather than a fixed target that must be reproduced exactly. A staged curriculum makes this flexibility practical. Guidance-corrected NFT further shows that diffusion reinforcement learning can improve this system while retaining learned guidance during sampling.
+CEDR demonstrates that continuous latent diffusion can support strong reasoning with a compact denoising backbone and learned prompt conditioning. The experiments distinguish recoverable information from representations that a generative model can readily produce, and show the value of a stable conditioning interface during early training. Once that interface is established, joint adaptation can recover performance with a much smaller encoder. The sampler and answer-selection rule also shape the value of additional computation: single-sample accuracy, oracle coverage, and majority-vote accuracy favor different allocation choices. Guidance-compatible NFT extends this system to reward-based learning, with gains that depend on the task and evaluation criterion.
 
 The results also expose useful directions for further work. Coding retains a substantial gap between compact and teacher prompt conditioning, motivating better context compression and adaptation. High-pass oracle accuracy exceeds majority-vote accuracy, leaving room for selectors that use latent trajectories or hidden states. The layer-sensitivity analyses motivate coordinated denoising but do not yet explain the optimal clocks. Progress on these questions could improve both reasoning quality and how effectively parallel generation uses a fixed inference budget.
 
@@ -619,6 +630,29 @@ We thank Duke University Research Computing for providing the high-performance c
 
 \clearpage
 \appendix
+\section*{Appendix contents}
+\label{app:contents}
+
+The appendices collect implementation details, derivations, evaluation protocols, and complete numerical results.
+
+\begingroup
+\renewcommand{\arraystretch}{1.6}
+\noindent\begin{tabular*}{\linewidth}{@{}l@{\extracolsep{\fill}}r@{}}
+\textbf{Appendix} & \textbf{Page}\\
+\hline
+\hyperref[app:training]{\ref*{app:training}\quad Training recipe and model architectures} & \pageref{app:training}\\
+\hyperref[app:methodobjective]{\ref*{app:methodobjective}\quad CEDR objective and conditional encoding} & \pageref{app:methodobjective}\\
+\hyperref[app:representationimplementation]{\ref*{app:representationimplementation}\quad Representation construction and ablations} & \pageref{app:representationimplementation}\\
+\hyperref[app:inferenceclocks]{\ref*{app:inferenceclocks}\quad Inference clocks and reconstruction diagnostics} & \pageref{app:inferenceclocks}\\
+\hyperref[app:nftdetails]{\ref*{app:nftdetails}\quad NFT implementation and gold-anchor analysis} & \pageref{app:nftdetails}\\
+\hyperref[app:experimentdetails]{\ref*{app:experimentdetails}\quad Evaluation protocols and uncertainty} & \pageref{app:experimentdetails}\\
+\hyperref[app:mathresults]{\ref*{app:mathresults}\quad Additional mathematical-reasoning results} & \pageref{app:mathresults}\\
+\hyperref[app:codingdetails]{\ref*{app:codingdetails}\quad Code generation: protocols and detailed results} & \pageref{app:codingdetails}\\
+\hyperref[app:qualitative]{\ref*{app:qualitative}\quad Generation examples and trajectories} & \pageref{app:qualitative}\\
+\end{tabular*}
+\endgroup
+
+\clearpage
 \section{Training recipe and model architectures}
 \label{app:training}
 
