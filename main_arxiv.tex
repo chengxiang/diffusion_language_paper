@@ -165,10 +165,10 @@ Let $h_j^{(\ell)}$ be the frozen teacher's post-block activation at answer posit
 \textbf{Learning the projectors.}
 Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}^{(\ell)}W_\ell^{\mathrm{rec}}$ (Figure~\ref{fig:pipelineoverview}, left). Replacing layer-$\ell$ answer activations with these reconstructions and running the frozen Qwen suffix yields next-token predictions $p_{\ell,j}^{\mathrm{recon}}$. We preserve the teacher's predictions through $\mathcal L_{\mathrm{repr}}=\sum_{\ell\in\mathcal S}\E_{q,a,j}\,\CE(p_j^{\mathrm{teacher}},p_{\ell,j}^{\mathrm{recon}})$, where $\CE$ is full-vocabulary soft cross-entropy. Only $W_\ell^{\mathrm{enc}}$ and $W_\ell^{\mathrm{rec}}$ are learned; the reconstruction decoders are used only at this stage. Appendix~\ref{app:representationimplementation} gives initialization, whitening, and scoring details.
 
-\subsubsection{Design analysis: decoding and generation}
+\subsubsection{What makes a good denoising representation?}
 \label{sec:representationablations}
 
-The latent representation is a key design choice for continuous diffusion reasoning. The construction in Section~\ref{sec:representationconstruction} is motivated by a sequence of ablations: we first examine whether accurate decoding is sufficient, then consider combining teacher layers and learning their compression. Figure~\ref{fig:representationcomparison} compares their GSM8K reasoning accuracy during CEDR-B training. We compare 1,024-dimensional whitened representations with frozen Qwen prompt conditioning and matched six-epoch flow training and evaluation; Table~\ref{tab:representationcurvevalues} gives the four-seed endpoint results discussed below.
+The construction in Section~\ref{sec:representationconstruction} is motivated by three ablations: whether accurate decoding suffices for generation, whether combining teacher layers helps, and how their features should be compressed. The representation comparisons in Figure~\ref{fig:representationcomparison} use matched six-epoch CEDR-B training on GSM8K, 1,024-dimensional whitened latents, and frozen Qwen prompt conditioning. Table~\ref{tab:representationcurvevalues} gives the four-seed endpoint results.
 
 \begin{figure}[tbp]
 \centering
@@ -195,29 +195,27 @@ The latent representation is a key design choice for continuous diffusion reason
 \end{minipage}
 \end{figure}
 
-\textbf{Accurate decoding is necessary but not sufficient.}
-A useful representation must retain enough information to decode the reasoning solution, but this requirement alone does not ensure that a diffusion model can generate it well. We begin with the top 1,024 PCA coordinates of Qwen's layer-32 activations. A separate decoder trained for two epochs achieves \textbf{99.24\%} held-out same-position token recovery from these coordinates (Appendix~\ref{app:representationdiagnostics}). However, CEDR-B trained to generate this same representation reaches only \textbf{11.20\%} GSM8K accuracy after six epochs. The two evaluations address different requirements: recovering tokens from clean teacher features and producing suitable features through denoising. Our experiments show that accurate decoding alone does not ensure strong reasoning performance.
+\textbf{Accurate decoding alone does not ensure strong reasoning.}
+The top 1,024 PCA coordinates of Qwen's layer-32 activations support \textbf{99.24\%} held-out same-position token recovery with a decoder trained for two epochs (Appendix~\ref{app:representationdiagnostics}). Yet CEDR-B trained to generate this representation reaches only \textbf{11.20\%} GSM8K accuracy after six epochs. Recovering tokens from clean teacher features is therefore a different requirement from generating suitable features through denoising.
 
-\textbf{Combining hidden activations from multiple layers.}
-A natural next step is to include features from earlier teacher layers alongside the deep-layer representation. Our intuition is that earlier-layer features may be easier to generate because they are formed through fewer successive transformations in the teacher; they may also expose intermediate structures useful for generating later-layer features. This motivates investigating a representation that combines several depths.
+\textbf{Multilayer representations improve reasoning over final-layer features.}
+Earlier-layer features may be easier to generate because they arise from fewer successive teacher transformations; they may also expose intermediate structures useful for generating later-layer features. To guide layer selection, we compute centered kernel alignment (CKA; \citealp{cka}) across Qwen's hidden layers (Figure~\ref{fig:representationcka}). The sharp transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features at layers 24 and 32; this motivates the triplet without establishing its optimality (Appendix~\ref{app:representationcka}). Keeping PCA and the total latent width fixed, combining these layers raises GSM8K accuracy from \textbf{11.20\% to 28.43\%}. Their decomposition also enables separate denoising clocks (Section~\ref{sec:clocks}).
 
-To guide layer selection, we compute centered kernel alignment (CKA; \citealp{cka}), a measure of similarity between representations, across Qwen's hidden layers (Figure~\ref{fig:representationcka}). The sharp transition after layer 16 motivates retaining that layer, followed by regularly spaced deeper features at layers 24 and 32. CKA motivates this triplet without establishing its optimality; Appendix~\ref{app:representationcka} describes the measurement. Keeping PCA as the projection method and the total latent width fixed, combining these layers raises GSM8K accuracy from \textbf{11.20\% to 28.43\%}. This comparison supports CEDR's use of multiple depths within a compact latent space. The resulting layer groups also enable separate denoising clocks (Section~\ref{sec:clocks}).
-
-\textbf{Learning projectors under a finite latent budget.}
-Having selected the layers, we must decide which information to retain within each layer. PCA maximizes retained activation variance and already provides a strong multilayer baseline. However, variance need not reflect a direction's importance to token prediction. Downstream cross-entropy offers a criterion tied more directly to this task: preserving the teacher's predictive behavior after compression. CEDR therefore learns its projections through the frozen teacher's decoding cross-entropy, as described in Section~\ref{sec:representationconstruction}. With the same layers, latent widths, whitening, and flow-training protocol, learned projections raise accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}). The improvement supports teacher-prediction supervision as a useful criterion for constructing latents for diffusion reasoning, even though the projectors are not optimized through the flow loss. Together, the comparisons motivate both parts of CEDR's representation design: combining features across depths and learning which information to retain within each depth.
+\textbf{CE-trained projectors outperform PCA.}
+PCA preserves high-variance directions, which need not be those most important for token prediction. Learning projections through the teacher's decoding cross-entropy (Section~\ref{sec:representationconstruction}) raises accuracy from \textbf{28.43\% to 30.76\%} with the same layers, latent widths, whitening, and flow-training protocol (Figure~\ref{fig:representationcomparison}). This supports predictive information preservation as a criterion for constructing diffusion latents, even though the projectors are not optimized through the flow loss.
 
 \subsection{Learning the conditional encoding in three stages}
 \label{sec:conditionalencoding}
 
-A useful denoising representation may require a powerful network to compute. However, this does not necessarily make that network part of the generation procedure. At inference, answer latents start from Gaussian noise and are generated by the diffusion model, so the answer encoder is unnecessary. Prompt tokens, in contrast, are observed inputs and must still be encoded to condition generation. Consequently, a model that diffuses in a pretrained representation space can retain a dependence on its external encoder through prompt conditioning.
+Computing a useful denoising representation may require a large teacher, but inference needs that teacher only for prompt conditioning: answer latents start from Gaussian noise, whereas observed prompt tokens must still be encoded. Replacing the prompt encoder can therefore remove the remaining dependence on the teacher Transformer.
 
 ELF's conditional-generation experiments use a pretrained T5-small encoder, reported as 35M parameters \citep{elf}, while ELF-REG uses Qwen3-0.6B-Base \citep{scalingdlm}. Our answer representations are extracted from the substantially larger Qwen3-4B teacher. Nevertheless, for CEDR-L we replace its contextual prompt encoder with a learned Transformer containing \textbf{121M parameters}, compared with 3.63B in the teacher's contextual network (both excluding vocabulary input/output maps). The student uses six bidirectional attention blocks and encodes each prompt once, retaining the teacher's frozen token-embedding table for prompt input. Appendix~\ref{app:training} gives the architecture.
 
 
-\textbf{The prompt as the condition.}
-This replacement exploits the different roles of the answer and prompt representations. The answer representation defines the space in which diffusion generates solutions. The prompt representation communicates the information needed to guide that generation; it need not reproduce the teacher's hidden coordinates. We therefore regard the prompt text $q$ as the external condition and its encoding $P_\phi(q)$ as an internal component of the conditional model, $v_\Theta(z,t;q)=v_\theta(z,t;P_\phi(q))$, with $\Theta=(\theta,\phi)$.
+\textbf{Preserving conditioning information does not require matching teacher prompt features.}
+The answer representation defines the space in which diffusion generates solutions; the prompt encoding supplies the information needed to guide generation. We treat prompt text $q$ as the external condition and its encoding $P_\phi(q)$ as an internal component, $v_\Theta(z,t;q)=v_\theta(z,t;P_\phi(q))$, with $\Theta=(\theta,\phi)$. Unlike teacher-prompt imitation, this formulation lets the encoder and denoiser adapt together through the generative objective, keeping the answer representation and forward corruption fixed. Self-conditioning and guidance remain auxiliary inputs.
 
-The distinction concerns what is fixed by the learning task: teacher-feature imitation prescribes the prompt representation, whereas the text-conditioned objective allows the encoder and denoiser to adapt together. Keeping the answer representation and forward corruption fixed, we jointly optimize $\theta$ and $\phi$ through the generative objective. Self-conditioning and guidance remain auxiliary inputs. Lemma~\ref{lem:conditionalrepresentation} makes the relevant information requirement precise: preserving the posterior mean clean answer suffices to preserve the ideal text-conditional score; exact agreement with teacher features is unnecessary.
+Lemma~\ref{lem:conditionalrepresentation} characterizes the information that must be preserved: an encoded prompt gives the same ideal text-conditional score exactly when it preserves the posterior mean clean answer.
 
 \begin{lemma}[Preserving the text-conditional score]
 \label{lem:conditionalrepresentation}
@@ -240,25 +238,24 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 \label{fig:promptcurriculum}
 \end{figure}
 
-This information-preservation criterion allows more flexibility than coordinate-wise teacher imitation. Encodings can preserve the same information while differing substantially in MSE; Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. The lemma characterizes the requirement for an ideal denoiser, while our experiments test how well a compact encoder realizes this flexibility.
+Encodings can preserve the required information while \emph{differing substantially in MSE}; Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. This is a criterion for an ideal denoiser; learning a compact encoder that meets it remains an optimization problem.
 
-\textbf{A staged curriculum for learning the prompt encoder.}
+\textbf{Early flow training benefits from fixed teacher conditioning.}
 \label{sec:conditioningcurriculum}
-The information-preservation argument allows the prompt encoder and denoiser to adapt together, but does not determine an effective optimization strategy. Learning both from initialization changes the conditioning interface while the denoiser is still learning to use it. In the matched six-epoch comparison, this approach reaches only \textbf{8.70\%} GSM8K accuracy, versus \textbf{30.76\%} with frozen teacher conditioning (Figure~\ref{fig:representationcomparison}). This motivates training the flow model first with stable teacher conditioning, then learning and adapting a compact prompt encoder.
-
-We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:training}):
+Learning both networks from initialization changes the conditioning interface while the denoiser is still learning to use it. In the matched six-epoch comparison, this reaches only \textbf{8.70\%} GSM8K accuracy, versus \textbf{30.76\%} with frozen teacher conditioning (Figure~\ref{fig:representationcomparison}). We therefore learn the flow model first, then adapt a compact prompt encoder through three stages, keeping answer representations and token embeddings fixed:
 
 \begin{enumerate}
-    \item \textbf{Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective, establishing a denoiser with informative, stable conditioning.
-    \item \textbf{Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE. This initializes the encoder to approximate the conditioning interface the flow model already uses.
-    \item \textbf{Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, allowing them to compensate for imperfect teacher-feature matching. This stage uses no additional prompt-MSE loss. Mathematical reasoning continues to epoch 18 for CEDR-B or epoch 21 for CEDR-L; coding continues for two joint epochs to epoch 14.
+    \item \textbf{Frozen conditioning.} Train the flow model with fixed Qwen prompt representations and the flow/decoder objective.
+    \item \textbf{Prompt imitation.} Freeze the flow model and fit the compact encoder to teacher prompt representations using MSE, initializing it to the conditioning interface already in use.
+    \item \textbf{Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss.
 \end{enumerate}
 
+\textbf{MSE prompt imitation does not fully preserve generation quality.}
 Figure~\ref{fig:promptcurriculum} shows a shared effect across mathematical reasoning and coding: substituting the MSE-trained prompt encoder reduces accuracy despite unchanged flow-model weights. Matching teacher features alone therefore does not fully preserve generative performance. Subsequent joint training recovers much of the loss on GSM8K, exceeds the teacher-conditioned baseline on MATH500, and partially recovers MBPP+, although HumanEval+ recovery is non-monotonic. This adaptation changes \emph{both} the prompt encoder and denoiser, allowing them to learn a compatible conditioning interface through the downstream objective. Tables~\ref{tab:promptcurvevalues} and~\ref{tab:codingstages} give the corresponding stage accuracies.
 
 The prompt-swap loss is particularly severe on MBPP+, highlighting the greater conditioning demands of some coding tasks. Unique formatted training prompts average 233 tokens for code, versus 84 for GSM8K and 89 for MATH (Appendix~\ref{app:codingdetails}). Preserving the context and structural constraints of longer coding prompts may be more demanding for the compact student encoder. This is a plausible explanation, but the comparison does not isolate prompt complexity: prompt length was not varied in a controlled experiment, and HumanEval+ does not exhibit the same large drop. The results suggest that compact conditioning requires task-dependent adaptation, even within a shared training curriculum.
 
-Table~\ref{tab:trainingstages} summarizes the curriculum and reported NFT endpoints for each task. Appendix~\ref{app:training} gives the training details.
+Table~\ref{tab:trainingstages} gives the stage durations and reported NFT endpoints; Appendix~\ref{app:training} details training.
 
 \begin{table}[!htb]
 \centering\small
@@ -330,7 +327,7 @@ where $\Delta_t=\max(1-t,0.05)$ is the practical denominator stabilization from 
  \qquad \xi_r\sim\mathcal N(0,I).
  \label{eq:asyncdmd2}
 \end{equation}
-This Euler-to-clean step followed by forward noising completely refreshes the noise at each nonterminal step. It is a finite denoise--diffuse composition; Appendix~\ref{app:asyncsde} distinguishes it from a local Euler--Maruyama discretization. We use the sampling construction without DMD2 distillation; ELF-REG also evaluates this construction for continuous language generation \citep{scalingdlm}.
+This finite denoise--diffuse composition refreshes the noise at each nonterminal step; its relation to the SDE is discussed in Appendix~\ref{app:asyncsde}. We use the sampling construction without DMD2 distillation; ELF-REG also evaluates this construction for continuous language generation \citep{scalingdlm}.
 
 \emph{Stochastic (EDM).} EDM's noise-churn principle instead splits a step into partial forward noising and ODE denoising \citep{edm}. First move to noisier local times $\bar t_{\ell,r}\leq t_{\ell,r}$. For an interior step, set $\alpha_{\ell,r}=\bar t_{\ell,r}/t_{\ell,r}$ and draw
 \begin{equation}
@@ -348,12 +345,15 @@ This is an exact forward-noising transition for the corruption in Eq.~\eqref{eq:
  \bigl(\widehat z_{\mathrm{clean},r}^{(\ell)}-\bar z_r^{(\ell)}\bigr).
  \label{eq:asyncchurnforward}
 \end{equation}
-For small churn and step sizes, this splitting recovers a member of Eq.~\eqref{eq:asyncsde}; our finite index-churn implementation uses local-time increments and Euler, rather than EDM's original second-order solver. Appendix~\ref{app:samplerimplementation} specifies the churn times, denominator handling, and endpoint rules.
+For small churn and step sizes, this splitting recovers a member of Eq.~\eqref{eq:asyncsde}. Appendix~\ref{app:samplerimplementation} specifies our finite index-churn implementation, including local-time Euler increments and endpoint handling.
 
-All three samplers restore clean prompt positions and carry the guided clean prediction as recurrent self-conditioning. Each step uses one shared denoiser call for all groups, so asynchrony does not increase NFE; token decoding requires one additional call. DMD2-style sampling gives the strongest pass@1 under our headline settings. ODE remains competitive at low NFE and can give higher oracle pass@$k$ with more attempts, as shown in Figures~\ref{fig:samplerallocationgsml} and~\ref{fig:samplerallocationmathl}. Appendix~\ref{app:samplerallocations} compares the full oracle and voting curves; the preferred sampler depends on the generation budget and selection rule.
+All three samplers restore clean prompt positions and carry the guided clean prediction as recurrent self-conditioning. Each step uses one shared denoiser call for all groups, so asynchrony does not increase NFE; token decoding requires one additional call.
 
-\textbf{Clock choice.}
-We use power clocks $f_\ell(\tau)=\tau^{\gamma_\ell}$. Equal exponents give synchronous denoising, while unequal exponents give different group noise levels at the same solver time. Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, chosen based on the highest observed MATH validation accuracy under ODE sampling; it also has the highest mean in the GSM8K ODE validation comparison (Appendix~\ref{app:schedulecomparisons}). Table~\ref{tab:inferenceclocks} compares the four clocks across all three samplers. With ODE, the nonidentity clocks improve on $(1,1,1)$, with small differences among them; forward asynchrony has the highest GSM8K mean and reverse asynchrony the highest MATH500 mean. Both stochastic samplers favor $(2.5,2,1.5)$ on both datasets. Under our DMD2-style headline sampler, this clock improves on $(2,2,2)$ by 1.82 percentage points on GSM8K and 4.00 on MATH500. The two asynchronous clocks remain close on GSM8K, whereas the reverse clock leads by 2.90 points on MATH500. Appendix~\ref{app:schedulecomparisons} gives paired uncertainty. These results support the chosen schedule without establishing a universally optimal clock; we keep it fixed across headline samplers and checkpoints.
+\textbf{The preferred sampler depends on the budget and answer-selection rule.}
+DMD2-style sampling gives the strongest pass@1 under our headline settings. ODE remains competitive at low NFE and can give higher oracle pass@$k$ with more attempts (Figures~\ref{fig:samplerallocationgsml} and~\ref{fig:samplerallocationmathl}; Appendix~\ref{app:samplerallocations}).
+
+\textbf{Asynchronous clocks can improve generation accuracy.}
+We use power clocks $f_\ell(\tau)=\tau^{\gamma_\ell}$: equal exponents give synchronous denoising, while unequal exponents give different group noise levels. Our headline clock $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$ has the highest observed ODE validation mean on both datasets (Appendix~\ref{app:schedulecomparisons}). At 32 NFE, nonidentity ODE clocks improve on $(1,1,1)$, with smaller differences among them, whereas both stochastic samplers favor $(2.5,2,1.5)$ on both test sets (Table~\ref{tab:inferenceclocks}). Under DMD2-style sampling, this clock improves on $(2,2,2)$ by 1.82 percentage points on GSM8K and 4.00 on MATH500. We retain it across headline samplers and checkpoints; the comparison supports this choice without establishing a universally optimal clock.
 
 \begin{table}[!htbp]
 \centering\small
@@ -396,8 +396,8 @@ Let $v_{\mathrm{cur}}$ and $v_{\mathrm{old}}$ denote the current and old policy 
 \end{equation}
 Standard NFT applies this loss to $f=v_{\mathrm{cur}}$ and $h=v_{\mathrm{old}}$, holding the old field fixed; its original experiments use CFG-free optimization \citep{diffusionnft}. CEDR instead learns a guidance-conditioned field, motivating a correction before applying NFT's regression objective.
 
-\textbf{Constructing the SCCFG-compatible field.}
-For each policy $p\in\{\mathrm{cur},\mathrm{old},\mathrm{ref}\}$, forward-noise an endpoint and obtain velocity $v_p^0$ from a detached bootstrap without answer self-conditioning. The main prediction $v_p^{\mathrm{main}}$ uses the bootstrap clean endpoint when $b_{\mathrm{sc}}=1$ and zero answer self-conditioning otherwise; both passes retain the question. Following ELF's guidance construction, define
+\textbf{Guided rollouts with guidance-corrected optimization.}
+For policy $p\in\{\mathrm{cur},\mathrm{old},\mathrm{ref}\}$, forward-noise an endpoint and obtain velocity $v_p^0$ from a detached bootstrap without answer self-conditioning. The main prediction $v_p^{\mathrm{main}}$ uses the bootstrap clean endpoint when $b_{\mathrm{sc}}=1$ and zero answer self-conditioning otherwise; both passes retain the question. Following ELF's guidance construction, define
 \begin{equation}
  \widetilde v_p=v_p^{\mathrm{main}}-
  \sg\!\left[b_{\mathrm{sc}}(1-g^{-1})(v_p^{\mathrm{main}}-v_p^0)\right],
@@ -405,10 +405,9 @@ For each policy $p\in\{\mathrm{cur},\mathrm{old},\mathrm{ref}\}$, forward-noise 
 \end{equation}
 where $g>0$ is the SCCFG scale. Our update applies Eq.~\eqref{eq:nftquadratic} to $f=\widetilde v_{\mathrm{cur}}$, $h=\sg(\widetilde v_{\mathrm{old}})$, and $u=u_t^{\mathrm{stab}}$ from Section~\ref{sec:methodflow}. We use $\beta=1$ and add a squared-velocity penalty toward the corrected field $\widetilde v_{\mathrm{ref}}$ of the fixed initial reference. With self-conditioning enabled, the corrected value is $v_p^0+(v_p^{\mathrm{main}}-v_p^0)/g$. Detaching the correction preserves the main-pass Jacobian rather than scaling it by $1/g$ (Appendix~\ref{app:nftdetails}).
 
-\textbf{Guided rollouts and forward-process updates.}
-Collection retains recurrent self-conditioning and SCCFG guidance. We reward decoded answers but optimize their saved continuous endpoints, using fresh forward corruption and bootstrap predictions rather than replaying rollout histories. Thus rollouts remain guided while NFT optimizes the corrected fields in Eq.~\eqref{eq:nftcorrectedfield}.
+Collection retains recurrent self-conditioning and SCCFG guidance. We reward decoded answers but optimize their saved continuous endpoints with the corrected fields, using fresh forward corruption and bootstrap predictions rather than replaying rollout histories.
 
-\subsection{Gold-anchored reasoning updates}
+\subsection{Gold solutions supplement rewards and anchor the velocity field}
 \label{sec:nftgold}
 
 Each question contributes 15 old-policy generations and one gold latent endpoint, with raw rewards 0.75 for correct generated answers, 0 for incorrect answers, and 1 for gold. The gold endpoint supplies a preferred target even when all generated answers are incorrect. We discard groups whose generated answers are all correct, concentrating updates on observed failures; retained rewards are normalized into $\rho$ as described in Appendix~\ref{app:nftdetails}. This recipe uses reference solutions as well as verifiable rewards. Gold raw reward one need not give $\rho_G=1$; the following lemma characterizes its contribution.
@@ -474,7 +473,7 @@ TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & $\approx68.9^\ddagger$ & 
 \parbox{\linewidth}{\footnotesize External results are author-reported. ELF-REG uses its best reported stochastic settings (v3, Tables 4 and 30); CEDR uses DMD2-style sampling throughout. Table~\ref{tab:elfregselected} records the selected ELF-REG settings and seed SDs. $^\dagger$Python scoring, $^\ddagger$Approximate accuracy read from TESS 2 Figure 3b. $^\S$MLFM reports 256 sampling steps; its exact NFE with guidance and online token promotion is unclear. Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed counts and SDs across denoising budgets.}
 \end{table}
 
-\textbf{Reasoning accuracy across denoising budgets.}
+\textbf{Strong reasoning performance before reinforcement learning.}
 \label{sec:headlinecomparison}
 \label{sec:headlinelownfe}
 At comparable denoising-backbone sizes, both supervised and post-NFT CEDR outperform the reported continuous-diffusion baselines on GSM8K and MATH500 (Table~\ref{tab:headlinecomparison}). This advantage is already present before reinforcement learning and is achieved with compact learned prompt encoders, without running the teacher Transformer at inference.
@@ -502,7 +501,7 @@ CEDR, post-NFT & \textbf{28.48} & \textbf{40.60} & \textbf{45.59} & \underline{4
 
 CEDR-L's advantage persists across all displayed denoising budgets (Table~\ref{tab:headlinelownfe}). For CEDR-B, the supervised model leads at 32 and 64 calls, while NFT extends the advantage to the smallest budgets. The same checkpoints support all these operating points, without separate few-step distillation.
 
-\textbf{Refining an answer or drawing more answers.}
+\textbf{Oracle selection favors more attempts; voting favors deeper denoising.}
 \label{sec:headlinebudget}
 For $k$ samples with $S$ denoising steps each, we use $kS$ as the inference budget. Oracle pass@$k$ measures whether any sample is correct; majority vote selects the most frequent final answer after grouping equivalent answers, without consulting the reference. For selectors returning one of the generated answers, voting provides an achievable \emph{lower bound} on optimal selection accuracy, while oracle pass@$k$ supplies its \emph{upper bound}. We compare $S\in\{8,16,32,64\}$ up to a budget of 512 calls; Appendix~\ref{app:budgetvalues} gives aggregation details.
 
@@ -513,16 +512,14 @@ For $k$ samples with $S$ denoising steps each, we use $kS$ as the inference budg
 \label{fig:headlinestages}
 \end{figure}
 
-Figure~\ref{fig:headlinestages} shows that oracle selection generally favors more attempts with fewer steps, whereas voting generally favors higher-NFE samples. On MATH500 after NFT, 64 eight-step samples reach 68.40\% oracle accuracy, versus 53.80\% for eight 64-step samples; voting reverses this preference, at 27.80\% versus 38.80\%. Intermediate depths remain competitive for voting. The voting--oracle gap motivates better answer selection, potentially using latent-space or hidden-state classifiers.
+The contrast in Figure~\ref{fig:headlinestages} is clear on MATH500 after NFT: 64 eight-step samples reach 68.40\% oracle accuracy, versus 53.80\% for eight 64-step samples; voting reverses this preference, at 27.80\% versus 38.80\%. Intermediate depths remain competitive for voting. The voting--oracle gap motivates better answer selection, potentially using latent-space or hidden-state classifiers. Appendices~\ref{app:elfbbudgets} and~\ref{app:samplerallocations} give the CEDR-B and cross-sampler comparisons.
 
-The corresponding GSM8K CEDR-B comparison appears in Appendix~\ref{app:elfbbudgets}. Appendix~\ref{app:samplerallocations} compares these allocations across ODE and both stochastic samplers.
-
-\textbf{What changes after NFT?}
+\textbf{NFT improves single-sample accuracy more consistently than oracle coverage.}
 \label{sec:nftresults}
-Under DMD2-style sampling, NFT improves CEDR-L pass@1 at all four denoising depths: the 64-step gains are $+1.84$ percentage points on GSM8K and $+3.83$ on MATH500. The effect is not uniform across models and metrics. CEDR-B improves at 8--32 calls but changes from 47.62\% to 47.00\% at 64 calls. High-$k$ oracle coverage can also decrease: with eight 64-step samples, MATH500 pass@8 changes from 55.20\% to 53.80\%, while voting improves from 36.58\% to 38.80\%. At eight steps and 64 samples, MATH500 oracle accuracy instead rises from 65.40\% to 68.40\%. Voting depends on the correct answer's frequency relative to competing answers, whereas oracle selection needs only one successful draw. These patterns show that NFT gains depend on the inference allocation; they do not establish a loss of reasoning diversity. Appendix~\ref{app:budgetvalues} gives paired uncertainty, and Appendices~\ref{app:generations}--\ref{app:trajectories} illustrate ODE generations.
+Under DMD2-style sampling, NFT improves CEDR-L pass@1 at all four denoising depths; CEDR-B improves at 8--32 calls but declines slightly at 64. Higher-pass effects depend on the allocation. With eight 64-step samples, MATH500 oracle accuracy falls from 55.20\% to 53.80\%, while voting improves from 36.58\% to 38.80\%; at eight steps with 64 samples, oracle accuracy instead increases. Voting benefits from a higher frequency of the correct answer relative to alternatives, whereas oracle selection needs only one successful draw. These patterns do not establish a loss of reasoning diversity. Appendix~\ref{app:budgetvalues} gives paired uncertainty, and Appendices~\ref{app:generations}--\ref{app:trajectories} illustrate ODE generations.
 
 \paragraph{Higher-pass comparison with continuous-diffusion baselines.}
-At 64 denoising calls, supervised and post-NFT CEDR-L with DMD2-style sampling reach MATH500 pass@8 of 55.20\% and 53.80\%. Both exceed ELF-REG-L's reported ODE pass@10 of 44.04\% at 63 denoising calls (Table~\ref{tab:mathhigherpass}; \citealp[v3, Table 20]{scalingdlm}). CEDR uses SCCFG 3 throughout these headline comparisons.
+With eight DMD2-style samples at 64 denoising calls each, both supervised and post-NFT CEDR-L exceed ELF-REG-L's reported ODE pass@10 on MATH500 (Table~\ref{tab:mathhigherpass}; \citealp[v3, Table 20]{scalingdlm}).
 
 \begin{table}[!htbp]
 \centering\small
@@ -545,7 +542,7 @@ CEDR-L, post-NFT & 64 & 8 & 512 & 53.80\\
 \subsection{Code generation}
 \label{sec:codingresults}
 
-On OpenCodeInstruct \citep{opencodeinstruct}, CEDR-L uses 12 epochs of frozen-Qwen flow training, 20 prompt-MSE epochs, two joint epochs without an auxiliary prompt-MSE loss, and 100 NFT updates with execution-based rewards (Appendix~\ref{app:training}). Our rows in Table~\ref{tab:codingcomparison} use DMD2-style sampling, ten seeds, 128 denoising calls, async $(2.5,2,1.5)$, and SCCFG 3.
+CEDR-L follows the staged curriculum on OpenCodeInstruct \citep{opencodeinstruct}, then uses execution-based rewards for NFT (Table~\ref{tab:trainingstages}; Appendix~\ref{app:training}). Our results in Table~\ref{tab:codingcomparison} use DMD2-style sampling, ten seeds, 128 denoising calls, async $(2.5,2,1.5)$, and SCCFG 3. Figure~\ref{fig:promptcurriculum} and Section~\ref{sec:conditionalencoding} analyze prompt adaptation separately using ODE at 64 NFE.
 
 \begin{table}[htbp]
 \centering\small
@@ -573,11 +570,8 @@ CEDR-L, post-NFT (ours) & 128 & \textbf{40.98} {\scriptsize [1.81]} & \textbf{37
 
 CEDR-L, both pre-NFT and post-NFT, outperforms the reported alternatives on HumanEval, HumanEval+, and MBPP-378 base within each scoring convention (Table~\ref{tab:codingcomparison}). PlaidQ and ELF-REG report base-test accuracy on the 378-task MBPP subset, leaving full extended-test MBPP+ results unavailable. NFT gives modest increases in mean pass@1 on all four benchmarks, with smaller changes on MBPP. Mean pass@10 is lower after NFT (Table~\ref{tab:codinghigherpass}), so the observed single-sample gains are not accompanied by broader oracle coverage. The paired comparisons in Tables~\ref{tab:codingnftdeltas} and~\ref{tab:codingsdedeltas} distinguish the effects under ODE and the headline stochastic sampler.
 
-\paragraph{Prompt adaptation.}
-Figure~\ref{fig:promptcurriculum} places coding alongside the mathematical reasoning curricula. The prompt swap retains more teacher-conditioned performance on HumanEval+ than on MBPP+, while the two joint epochs give mixed changes at 64 NFE with ODE. These stage curves and the 128-NFE DMD2-style headlines address different sampling settings. Section~\ref{sec:conditionalencoding} discusses the conditioning implications; Appendix~\ref{app:codingdetails} provides matched stage accuracies and paired differences.
-
 \paragraph{Higher-pass code generation.}
-Table~\ref{tab:codinghigherpass} compares oracle pass@10 using ten saved generations per problem. Both supervised and post-NFT CEDR-L exceed PlaidQ+CFG on HumanEval, HumanEval+, and MBPP-378 base, and exceed ELF-REG-L's reported ODE pass@10 under function-name aliasing on all three available metrics. ELF-REG's stochastic study provides only four draws, so its higher-pass results use ODE. On standard MBPP-378 base, CEDR-L reaches 49.47\% before NFT and 48.15\% afterward, compared with PlaidQ+CFG's 44.79\%. These results keep the scoring conventions and per-sample NFE explicit. Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1/2/4/8/10 and uncertainty.
+Both supervised and post-NFT CEDR-L exceed PlaidQ+CFG's standard pass@10 and ELF-REG-L's pass@10 with function-name aliasing on HumanEval, HumanEval+, and MBPP-378 base (Table~\ref{tab:codinghigherpass}). ELF-REG's higher-pass results use ODE because its stochastic study provides only four draws. Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} give pass@1/2/4/8/10 and uncertainty.
 
 \begin{table}[htbp]
 \centering\small
