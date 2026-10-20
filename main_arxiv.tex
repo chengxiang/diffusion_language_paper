@@ -524,7 +524,7 @@ With eight DMD2-style samples at 64 denoising calls each, both supervised and po
 \begin{table}[!htbp]
 \centering\small
 \setlength{\tabcolsep}{8pt}
-\caption{\textbf{MATH500 oracle accuracy at higher sample counts.} CEDR-L uses learned prompt conditioning, SCCFG 3, and eight saved draws. ELF-REG-L retains its external prompt encoder. CEDR uses DMD2-style sampling and ELF-REG uses ODE; ELF-REG's stochastic study reports only four draws and cannot supply pass@8/10. NFE counts denoising calls per sample; $k\times\mathrm{NFE}$ makes the differing total budgets explicit. These are cross-paper reported results, with protocol details in Appendix~\ref{app:experimentdetails}. Table~\ref{tab:budgetvaluesmathl} gives our uncertainty estimates.}
+\caption{\textbf{MATH500 oracle accuracy at higher sample counts.} CEDR-L uses learned prompt conditioning, SCCFG 3, and eight saved draws. ELF-REG-L retains its external prompt encoder. CEDR uses DMD2-style sampling and ELF-REG uses ODE; ELF-REG's stochastic study reports only four draws and cannot supply pass@8/10. NFE counts denoising calls per sample; $k\times\mathrm{NFE}$ makes the differing total budgets explicit. These are cross-paper reported results, with protocol details in Appendix~\ref{app:experimentdetails}. Small brackets give CEDR's problem-bootstrap SDs (standard errors; Appendix~\ref{app:uncertainty}). Bold/underline mark the best/second-best displayed accuracy.}
 \label{tab:mathhigherpass}
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
@@ -532,8 +532,8 @@ Model & NFE & $k$ & $k\times\mathrm{NFE}$ & Pass@$k$ (\%)\\
 \midrule
 ELF-REG-L \citep{scalingdlm} & 63 & 8 & 504 & 40.41\\
 ELF-REG-L \citep{scalingdlm} & 63 & 10 & 630 & 44.04\\
-CEDR-L, pre-NFT & 64 & 8 & 512 & 55.20\\
-CEDR-L, post-NFT & 64 & 8 & 512 & 53.80\\
+CEDR-L, pre-NFT & 64 & 8 & 512 & \textbf{55.20} {\scriptsize [2.24]}\\
+CEDR-L, post-NFT & 64 & 8 & 512 & \underline{53.80} {\scriptsize [2.24]}\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -576,7 +576,7 @@ Both supervised and post-NFT CEDR-L exceed PlaidQ+CFG's standard pass@10 and ELF
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Oracle code accuracy with ten attempts.} Pass@10 (\%) with denoising NFE per sample. CEDR uses learned prompt conditioning and DMD2-style sampling; PlaidQ uses token-prefix conditioning, and ELF-REG uses an external contextual encoder and ODE sampling. Both MBPP columns use 378 tasks. External values are from PlaidQ Table 1 and ELF-REG v3 Table 18; stochastic pass@10 is unavailable for ELF-REG. Generation protocols and total compute differ.}
+\caption{\textbf{Oracle code accuracy with ten attempts.} Pass@10 (\%) with denoising NFE per sample. Small brackets give CEDR's problem-bootstrap SDs (standard errors; Appendix~\ref{app:uncertainty}). Bold/underline mark the best/second-best accuracy within each scoring block. CEDR uses learned prompt conditioning and DMD2-style sampling; PlaidQ uses token-prefix conditioning, and ELF-REG uses an external contextual encoder and ODE sampling. Both MBPP columns use 378 tasks. External values are from PlaidQ Table 1 and ELF-REG v3 Table 18; stochastic pass@10 is unavailable for ELF-REG. Generation protocols and total compute differ.}
 \label{tab:codinghigherpass}
 \begin{tabular}{@{}lrrrrrr@{}}
 \toprule
@@ -585,13 +585,13 @@ Model & NFE & $k$ & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\
 \multicolumn{7}{@{}l}{\textit{Standard scoring: no function-name repair}}\\
 PlaidQ \citep{plaidq} & 128 & 10 & 25.72 & 24.03 & 34.33 & ---\\
 PlaidQ+CFG \citep{plaidq} & 256 & 10 & 39.87 & 36.74 & 44.79 & ---\\
-CEDR-L, pre-NFT & 128 & 10 & 60.98 & 54.88 & 49.47 & 43.65\\
-CEDR-L, post-NFT & 128 & 10 & 58.54 & 51.83 & 48.15 & 41.01\\
+CEDR-L, pre-NFT & 128 & 10 & \textbf{60.98} {\scriptsize [3.84]} & \textbf{54.88} {\scriptsize [3.91]} & \textbf{49.47} {\scriptsize [2.60]} & \textbf{43.65} {\scriptsize [2.59]}\\
+CEDR-L, post-NFT & 128 & 10 & \underline{58.54} {\scriptsize [3.82]} & \underline{51.83} {\scriptsize [3.91]} & \underline{48.15} {\scriptsize [2.60]} & \underline{41.01} {\scriptsize [2.57]}\\
 \midrule
 \multicolumn{7}{@{}l}{\textit{Single-function name aliasing}}\\
 ELF-REG-L \citep{scalingdlm} & 127 & 10 & 48.87 & 46.69 & 55.05 & ---\\
-CEDR-L, pre-NFT & 128 & 10 & 60.98 & 54.88 & 61.90 & 52.91\\
-CEDR-L, post-NFT & 128 & 10 & 58.54 & 51.83 & 61.38 & 52.12\\
+CEDR-L, pre-NFT & 128 & 10 & \textbf{60.98} {\scriptsize [3.84]} & \textbf{54.88} {\scriptsize [3.91]} & \textbf{61.90} {\scriptsize [2.56]} & \textbf{52.91} {\scriptsize [2.63]}\\
+CEDR-L, post-NFT & 128 & 10 & \underline{58.54} {\scriptsize [3.82]} & \underline{51.83} {\scriptsize [3.91]} & \underline{61.38} {\scriptsize [2.54]} & \underline{52.12} {\scriptsize [2.62]}\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1380,7 +1380,7 @@ These values describe generation randomness at a fixed checkpoint and test set. 
 Bars in the representation learning curves are $\pm1$ seed SD; small parenthesized values in the corresponding tables report the same statistic. External baselines retain author-reported accuracies.
 
 \paragraph{Problem-bootstrap uncertainty.}
-Parentheses in Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb}, Tables~\ref{tab:samplerbudgetgsmlode}--\ref{tab:samplerbudgetgsmbedm}, and Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} report the standard deviation of the benchmark mean across 4,000 problem-bootstrap replicates, using bootstrap seed 20260918. Each replicate resamples whole problems with replacement while preserving their complete draw sets. These problem-bootstrap standard errors quantify uncertainty across problems, conditional on the trained checkpoints, sampler choices, saved generations, and fixed voting-subset approximation. At the largest $k$, each resampled problem contributes its entire saved draw pool. All values are rounded independently from full precision.
+Small brackets in Tables~\ref{tab:mathhigherpass} and~\ref{tab:codinghigherpass}, and parentheses in Tables~\ref{tab:budgetvaluesgsml}--\ref{tab:budgetvaluesgsmb}, Tables~\ref{tab:samplerbudgetgsmlode}--\ref{tab:samplerbudgetgsmbedm}, and Tables~\ref{tab:codingstandarddetail}--\ref{tab:codingaliasdetail} report the standard deviation of the benchmark mean across 4,000 problem-bootstrap replicates, using bootstrap seed 20260918. Each replicate resamples whole problems with replacement while preserving their complete draw sets. These problem-bootstrap standard errors quantify uncertainty across problems, conditional on the trained checkpoints, sampler choices, saved generations, and fixed voting-subset approximation. At the largest $k$, each resampled problem contributes its entire saved draw pool. All values are rounded independently from full precision.
 
 \paragraph{Confidence intervals and paired comparisons.}
 A 95\% CI is a pointwise percentile interval from 4,000 problem-bootstrap replicates. This convention applies to the prompt-curriculum and reconstruction-probe figures. For pre/post comparisons, we resample the same problem indices in both stages and form the difference within each replicate. Pointwise 95\% percentile intervals for changes therefore use paired differences. These measures condition on fixed trained checkpoints and exclude variation across independent training runs.
