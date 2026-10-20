@@ -435,7 +435,7 @@ We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math50
 \subsection{Mathematical reasoning}
 \label{sec:mathresults}
 \begin{table}[!htb]
-\caption{Mathematical reasoning across model families, mean pass@1 (\%). Small brackets give available sampling-seed SDs (eight seeds for CEDR; four for ELF-REG). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. $^{*}N$ denotes $N-1$ denoising calls for ELF-REG. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
+\caption{Mathematical reasoning across model families, mean pass@1 (\%). Small brackets give available sampling-seed SDs (eight seeds for CEDR; four for ELF-REG). Parameters are in millions (three significant digits). Embedding Params count vocabulary input/output maps, tied weights once; Other Params count remaining weights, with $(+X)$ used once per response. Frozen components are included. Bold/underline mark first/second within each sub-billion continuous-backbone group.}
 \label{tab:headlinecomparison}
 \centering\small
 \setlength{\tabcolsep}{3.5pt}
@@ -455,12 +455,12 @@ SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
 \shortstack[l]{$\mathbb S$-FLM (top-1)\\\citep{hyperspherical}} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
 FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
-ELF-REG-B (stoch.) \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 42.97 {\scriptsize [0.35]} & ---\\
+ELF-REG-B (stoch.) \citep{scalingdlm} & 311 & 104 $(+441)$ & 63 & 42.97 {\scriptsize [0.35]} & ---\\
 \textbf{CEDR-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{47.62} {\scriptsize [0.90]} & ---\\
 \textbf{CEDR-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{47.00} {\scriptsize [0.98]} & ---\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone 200M--1B}}\\
-ELF-REG-L (stoch.) \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 61.28 {\scriptsize [0.42]} & 20.15 {\scriptsize [1.29]}\\
+ELF-REG-L (stoch.) \citep{scalingdlm} & 311 & 652 $(+442)$ & 63 / 127 & 61.28 {\scriptsize [0.42]} & 20.15 {\scriptsize [1.29]}\\
 \textbf{CEDR-L, pre-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \underline{67.13} {\scriptsize [0.58]} & \underline{28.58} {\scriptsize [0.90]}\\
 \textbf{CEDR-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{68.97} {\scriptsize [0.50]} & \textbf{32.40} {\scriptsize [1.17]}\\
 \midrule
@@ -547,7 +547,7 @@ CEDR-L follows the staged curriculum on OpenCodeInstruct \citep{opencodeinstruct
 \begin{table}[htbp]
 \centering\small
 \setlength{\tabcolsep}{3pt}
-\caption{\textbf{Code generation under separate scoring conventions.} Mean pass@1 (\%) with generation-seed SD in small brackets where available. Bold/underline mark the best/second-best mean in each block. HE/HE+ use base/full extended tests; both MBPP columns use 378 tasks. CEDR uses DMD2-style sampling with ten seeds; pre-NFT is joint epoch 14 and post-NFT is update 100. ELF-REG uses ODE with 16 seeds in the standard block and its stronger stochastic sampler with four seeds in the alias block (v3, Tables 15 and 4). $^{*}128$ denotes 127 denoising calls; budgets exclude terminal decoding. Appendix~\ref{app:codingdetails} specifies the scoring protocols.}
+\caption{\textbf{Code generation under separate scoring conventions.} Mean pass@1 (\%) with generation-seed SD in small brackets where available. Bold/underline mark the best/second-best mean in each block. HE/HE+ use base/full extended tests; both MBPP columns use 378 tasks. CEDR uses DMD2-style sampling with ten seeds; pre-NFT is joint epoch 14 and post-NFT is update 100. ELF-REG uses ODE with 16 seeds in the standard block and its stronger stochastic sampler with four seeds in the alias block (v3, Tables 15 and 4). Budgets exclude terminal decoding. Appendix~\ref{app:codingdetails} specifies the scoring protocols.}
 \label{tab:codingcomparison}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
@@ -556,12 +556,12 @@ Model / setting & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\
 \multicolumn{6}{@{}l}{\textit{Standard scoring: no function-name repair}}\\
 PlaidQ \citep{plaidq} & 128 & 19.02 & 18.05 & 22.18 & ---\\
 PlaidQ+CFG \citep{plaidq} & 256 & 22.04 & 19.70 & 24.58 & ---\\
-ELF-REG-L (ODE) \citep{scalingdlm} & $^{*}128$ & 22.26 {\scriptsize [2.30]} & 21.15 {\scriptsize [2.13]} & 24.21 {\scriptsize [1.17]} & ---\\
+ELF-REG-L (ODE) \citep{scalingdlm} & 127 & 22.26 {\scriptsize [2.30]} & 21.15 {\scriptsize [2.13]} & 24.21 {\scriptsize [1.17]} & ---\\
 CEDR-L, pre-NFT (ours) & 128 & \underline{39.51} {\scriptsize [3.20]} & \underline{36.10} {\scriptsize [2.60]} & \underline{30.32} {\scriptsize [1.26]} & \underline{26.69} {\scriptsize [0.95]}\\
 CEDR-L, post-NFT (ours) & 128 & \textbf{40.98} {\scriptsize [1.81]} & \textbf{37.56} {\scriptsize [2.04]} & \textbf{30.74} {\scriptsize [1.18]} & \textbf{26.96} {\scriptsize [1.51]}\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Single-function name aliasing}}\\
-ELF-REG-L (stoch.) \citep{scalingdlm} & $^{*}128$ & 33.08 {\scriptsize [3.16]} & 31.40 {\scriptsize [3.61]} & 38.76 {\scriptsize [1.09]} & ---\\
+ELF-REG-L (stoch.) \citep{scalingdlm} & 127 & 33.08 {\scriptsize [3.16]} & 31.40 {\scriptsize [3.61]} & 38.76 {\scriptsize [1.09]} & ---\\
 CEDR-L, pre-NFT (ours) & 128 & \underline{39.57} {\scriptsize [3.22]} & \underline{36.16} {\scriptsize [2.64]} & \underline{44.89} {\scriptsize [1.69]} & \underline{38.62} {\scriptsize [1.33]}\\
 CEDR-L, post-NFT (ours) & 128 & \textbf{40.98} {\scriptsize [1.81]} & \textbf{37.56} {\scriptsize [2.04]} & \textbf{45.87} {\scriptsize [1.46]} & \textbf{39.37} {\scriptsize [1.25]}\\
 \bottomrule
