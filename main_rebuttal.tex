@@ -450,7 +450,7 @@ Figure~\ref{fig:headlinestages} shows that oracle selection generally favors mor
 We ablate gold anchoring and guidance correction from the same GSM8K-B checkpoint, retaining guided rollouts and joint prompt/backbone updates. At update 600, correction adds 2.98 points; gold anchoring buffers deterioration without correction (Table~\ref{tab:nftablations}). Full NFT leads at 600, while correction alone leads at 300.
 
 \textbf{NFT outperforms supervised continuation.}
-Gold-only supervised continuation at both learning rates remains below NFT with matched updates (300/600) and greater compute (6,000/8,000 updates; Table~\ref{tab:nftablations}). Continued gold supervision alone therefore does not explain the improvement. Appendix~\ref{app:nftcontrols} gives implementation, compute accounting, and paired comparisons.
+Standard and NFT-like supervised continuation remain below NFT with matched updates (300/600) and greater compute (6,000/8,000 updates; Table~\ref{tab:nftablations}). Continued gold supervision alone therefore does not explain the improvement. Appendix~\ref{app:nftcontrols} gives implementation, compute accounting, and paired comparisons.
 \end{revision}
 \begin{table}[!htb]\color{blue}
 \centering\small
@@ -473,12 +473,12 @@ Neither & 40.88 (1.19) & 23.56 (.27)\\
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}lrr@{}}
 \toprule
-Comparison / LR & NFT 300 & NFT 600\\\midrule
+Comparison / control & NFT 300 & NFT 600\\\midrule
 Full NFT & \textbf{41.94 (.94)} & \textbf{42.42 (.63)}\\
-Matched updates / .002 & 39.03 (.29) & 39.31 (.26)\\
-Matched updates / .0001 & 38.50 (.77) & 38.23 (.70)\\
-Greater-compute / .002 & 39.95 (1.07) & 40.03 (.73)\\
-Greater-compute / .0001 & 37.76 (.66) & 37.68 (.49)\\
+Matched / Standard & 39.03 (.29) & 39.31 (.26)\\
+Matched / NFT-like & 38.50 (.77) & 38.23 (.70)\\
+Greater / Standard & 39.95 (1.07) & 40.03 (.73)\\
+Greater / NFT-like & 37.76 (.66) & 37.68 (.49)\\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1752,10 +1752,10 @@ In the no-gold variants, gold solutions are omitted throughout the NFT update. G
 Table~\ref{tab:nftablations} uses ODE64, async $(2.5,2,1.5)$, CFG1/SCCFG2, full GSM8K coverage, and backbone/prompt EMA $.99/.99$. All component and supervised-continuation comparisons use the same four generation seeds, 42/123/456/789, at both updates. Parentheses report sample SD over generation seeds.
 
 \subsection{Supervised continuation and compute}
-Both supervised controls use the original mixed flow/decoder-CE objective, effective batch 512, and joint prompt/backbone updates. Standard continuation retains LR $.002$, raw epoch-18 weights, and optimizer states. Fresh continuation uses LR $.0001$, the same selected starting weights as NFT, and fresh optimizers. Evaluation selects backbone/prompt EMA $.9999/.9999$. The compute estimates include rollout collection (including discarded candidates), current/old/reference updates, prompt computation, and optimizer matrix operations; common pretraining and representation preparation are excluded.
+Both supervised controls use the original mixed flow/decoder-CE objective, effective batch 512, and joint prompt/backbone updates. Standard continuation retains LR $.002$, raw epoch-18 weights, and optimizer states. NFT-like continuation uses LR $.0001$, the same selected starting weights as NFT, and fresh optimizers. Evaluation selects backbone/prompt EMA $.9999/.9999$. The compute estimates include rollout collection (including discarded candidates), current/old/reference updates, prompt computation, and optimizer matrix operations; common pretraining and representation preparation are excluded.
 
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Post-training compute and ODE64 accuracy. Gold-only supervised-continuation accuracy is shown for LR $.002$ / $.0001$, respectively; mean (generation-seed SD), \%, four seeds. The 6,000- and 8,000-update controls receive more estimated compute than NFT at 300 and 600 updates.}
+\caption{Post-training compute and ODE64 accuracy. Gold-only accuracy is shown for standard / NFT-like continuation, respectively; mean (generation-seed SD), \%, four seeds. The 6,000- and 8,000-update controls receive more estimated compute than NFT at 300 and 600 updates.}
 \label{tab:nftcontrolcompute}
 \begin{tabular}{@{}llrr@{}}\toprule
 Method & Updates & Estimated EFLOPs & Accuracy\\\midrule
@@ -1768,7 +1768,7 @@ Supervised continuation & 8,000 & 5.0381 & 40.03 (0.73) / 37.68 (0.49)\\\bottomr
 \end{tabular}
 \end{table}
 
-At 600 NFT updates, the paired differences from no correction, no gold, standard supervised continuation at 8,000 updates, and fresh supervised continuation at 8,000 updates are respectively $+2.98$, $+0.82$, $+2.39$, and $+4.74$ points. Their paired 95\% problem-bootstrap intervals are $[1.84,4.15]$, $[-0.08,1.74]$, $[1.25,3.54]$, and $[3.54,5.91]$, using 4,000 replicates and seed 20260918. Gold without correction exceeds neither component by $15.88$ points, interval $[14.35,17.38]$.
+At 600 NFT updates, the paired differences from no correction, no gold, standard supervised continuation at 8,000 updates, and NFT-like supervised continuation at 8,000 updates are respectively $+2.98$, $+0.82$, $+2.39$, and $+4.74$ points. Their paired 95\% problem-bootstrap intervals are $[1.84,4.15]$, $[-0.08,1.74]$, $[1.25,3.54]$, and $[3.54,5.91]$, using 4,000 replicates and seed 20260918. Gold without correction exceeds neither component by $15.88$ points, interval $[14.35,17.38]$.
 
 \end{revision}
 
