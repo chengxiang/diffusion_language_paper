@@ -1793,11 +1793,11 @@ Both samplers use $\tau_r=\operatorname{sigmoid}(-1.5+0.8\Phi^{-1}(r/S))$ for in
 \caption{ODE and DMD2-style sampling: 64 denoising calls for math and 128 for code, async $(2.5,2,1.5)$, eight seeds, and CFG1. SCCFG is 2 for GSM8K and 3 for MATH500/code. Values are mean pass@1 (generation-seed SD), \%. Supervised weights use ELF/prompt EMA $.9999/.9999$; NFT uses $.99/.99$ for math and $.9/.9$ for code. Coding uses the submitted epoch-13/NFT100 checkpoints and standard EvalPlus scoring without function-name repair; HE/HE+ contain 164 problems, and both MBPP metrics contain 378.}
 \label{tab:headlinesamplers}
 \begin{tabular}{@{}llrr@{}}\toprule
-Dataset / model & Stage & ODE & DMD2\\\midrule
+Dataset / model & Stage (ODE / DMD2) & ODE & DMD2\\\midrule
 GSM8K / LFRM-B & Epoch 18 & 39.17 (0.63) & 47.62 (0.90)\\
 GSM8K / LFRM-B & NFT 300 & 42.16 (0.88) & 47.00 (0.98)\\
 GSM8K / LFRM-L & Epoch 21 & 58.67 (0.69) & 67.13 (0.58)\\
-GSM8K / LFRM-L & NFT 600 & 63.74 (0.83) & 68.97 (0.50)\\
+GSM8K / LFRM-L & NFT 500 / 600 & 63.74 (0.83) & 68.97 (0.50)\\
 MATH500 / LFRM-L & Epoch 21 & 21.18 (0.70) & 28.58 (0.90)\\
 MATH500 / LFRM-L & NFT 600 & 24.68 (1.27) & 32.40 (1.17)\\\midrule
 \multicolumn{4}{@{}l}{\textit{Coding / LFRM-L, 128 NFE, standard scoring}}\\
@@ -1831,7 +1831,7 @@ MATH500 & 17.35 & 17.45 & +0.10 (0.48) & [$-0.85$, 1.05]\\\bottomrule
 \label{tab:additionalschedule4}
 \begin{tabular}{@{}llrrrr@{}}\toprule
 Dataset & Sampler & Sync & Async & Difference & Paired 95\% interval\\\midrule
-GSM8K & ODE & 59.67 (1.01) & 59.46 (0.84) & $-0.21$ & [$-0.85$, 0.44]\\
+GSM8K & ODE & 57.39 (0.51) & 58.53 (0.93) & +1.14 & [0.45, 1.82]\\
 GSM8K & DMD2 & 65.24 (0.47) & 66.39 (0.38) & +1.16 & [0.30, 2.05]\\
 MATH500 & ODE & 19.25 (0.72) & 19.65 (0.85) & +0.40 & [$-1.05$, 1.80]\\
 MATH500 & DMD2 & 24.10 (1.67) & 26.70 (1.89) & +2.60 & [0.80, 4.40]\\\bottomrule
