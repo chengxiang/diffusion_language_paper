@@ -57,7 +57,7 @@ Code will be available at: \url{https://anonymous.4open.science/r/LFRM-98B5/}.
 
 \revp{Autoregressive language models have made substantial progress on mathematical reasoning \citep{minerva,deepseekr1}. Continuous diffusion offers a complementary approach: it generates complete solutions through iterative refinement in a continuous latent space. Our objective is to understand how continuous latent diffusion performs on challenging reasoning tasks. A key design choice is the latent representation: it must capture the complex semantics and dependencies of reasoning solutions while remaining amenable to generation through continuous denoising.}
 
-\revp{An important consideration is where the model obtains its understanding of the prompt. Contextual latent-diffusion approaches commonly obtain prompt representations from an external pretrained network at inference time: ELF uses T5, while ELF-REG uses Qwen \citep{elf,scalingdlm}. These encoders can supply powerful semantic features, making the external encoder an important contributor to the resulting system's capabilities. This motivates a further scientific question: how competitive can latent diffusion reasoning become when prompt conditioning is learned within the model itself?}
+\revp{Another important consideration is where the model obtains its understanding of the input context (prompt). Contextual latent-diffusion approaches commonly obtain prompt representations from an \emph{external pretrained network at inference time}: ELF uses T5, while ELF-REG uses Qwen \citep{elf,scalingdlm}. These encoders can supply powerful semantic features, making the external encoder an important contributor to the resulting system's capabilities. This motivates a further scientific question: how competitive can latent diffusion reasoning become when prompt conditioning is learned within the model itself?}
 
 \revp{FMLM+, MLFM, and $\mathbb S$-FLM already process prompts without a separate external contextual encoder \citep{posterior,mlfm,hyperspherical}. To compare latent diffusion with these approaches under the same inference-time independence from an external encoder, we seek strong reasoning performance while replacing the teacher's contextual computation with a compact learned prompt encoder.}
 
@@ -293,7 +293,9 @@ $(2.5,2,1.5)$ & \textbf{59.25} {\scriptsize($\pm 0.16$)} & \textbf{17.90} {\scri
 % END inlined tables/inference_clocks.tex
 
 \textbf{Schedule choice and reasoning accuracy.}
-Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the reported MATH validation comparison (Appendix~\ref{app:inferenceclocks}). \rev{The shared-square clock improves on the identity clock in Table~\ref{tab:inferenceclocks}. With four seeds, the async-minus-shared-square difference is $+1.14$ points on GSM8K and $+0.10$ on MATH500 in the submitted ODE/SCCFG2 setting. Additional stochastic-sampling comparisons give larger gains; Appendix~\ref{app:stochasticsampling} separates sampler and clock choices, supplies the DMD2-style update \citep{dmd2}, and reports the expanded comparisons.}
+Our headline results use $(\gamma_{16},\gamma_{24},\gamma_{32})=(2.5,2,1.5)$, consistent with the highest observed accuracy in the reported MATH validation comparison (Appendix~\ref{app:inferenceclocks}). \rev{The shared-square clock improves on the identity clock in
+Table~\ref{tab:inferenceclocks}. With four seeds, the async-minus-shared-square difference is $+1.14$ percentage points on GSM8K and $+0.10$ on MATH500 in the submitted ODE/SCCFG2
+setting. DMD2-style stochastic sampling \citep{dmd2} improves pass@1 at headline budgets across mathematical and coding benchmarks, and shows larger gains from asynchronous clocks in matched sampler comparisons. Appendix~\ref{app:stochasticsampling} provides the sampling algorithm and detailed comparisons across sampler choices and clock choices.}
 
 Reconstruction probes reveal distinct sensitivities across layer groups, with weaker contrasts under random coordinate grouping (Figure~\ref{fig:layerreconstruction}). These findings motivate studying coordinated denoising across representations, but do not establish the mechanism behind the sampling gains.
 
@@ -411,18 +413,18 @@ ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96
 \cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-13}
 Method / NFE & 8 & 16 & 32 & 64 & 8 & 16 & 32 & 64 & 8 & 16 & 32 & 64\\
 \midrule
-FMLM+ Init & 15.10 & 26.10 & 31.80 & 33.60 & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A}\\
+FMLM+ Init & 15.10 & 26.10 & 31.80 & 33.60 & \rev{N/T} & \rev{N/T} & \rev{N/T} & \rev{N/T} & \rev{N/T} & \rev{N/T} & \rev{N/T} & \rev{N/T}\\
 ELF-REG & $^{*}$26.20 & $^{*}$34.42 & $^{*}$37.15 & $^{*}$38.11 & $^{*}$47.34 & $^{*}$52.89 & $^{*}$55.04 & $^{*}$55.96 & $^{*}$9.76 & $^{*}$11.53 & $^{*}$12.40 & $^{*}$13.31\\
 LFRM, pre-NFT & \underline{26.40} & \underline{34.48} & \underline{37.80} & \underline{39.17} & \underline{49.41} & \underline{55.33} & \underline{57.88} & \underline{58.67} & \underline{15.23} & \underline{17.93} & \underline{19.65} & \underline{21.18}\\
 LFRM, post-NFT & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.16} & \textbf{54.84} & \textbf{60.55} & \textbf{62.47} & \textbf{63.74} & \textbf{17.45} & \textbf{20.93} & \textbf{22.60} & \textbf{24.68}\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
-\parbox{\linewidth}{\footnotesize \rev{N/A: FMLM+ reports only the $\sim$100M GSM-trained model, with no $\sim$650M or MATH-trained counterpart.} Our checkpoints are fixed across columns, with SCCFG 2 for GSM8K and 3 for MATH500. Sampling-seed counts and SDs: Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability}.}
+\parbox{\linewidth}{\footnotesize \rev{N/T: FMLM+ reports only the $\sim$100M GSM-trained model, with no $\sim$650M or MATH-trained counterpart.} Our checkpoints are fixed across columns, with SCCFG 2 for GSM8K and 3 for MATH500. Sampling-seed counts and SDs: Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability}.}
 \end{table}
 % END inlined tables/headline_low_nfe.tex
 
-\revp{This advantage persists across the reported 8--64-NFE operating points (Table~\ref{tab:headlinelownfe}). At eight steps, supervised MATH500 accuracy reaches 15.23\%, exceeding ELF-REG-L's 13.39\% at 127 calls. No separately trained few-step student is required. The MATH500 headline tables use SCCFG3; inference-allocation curves retain SCCFG2.}
+\revp{This advantage persists across the reported 8--64-NFE operating points (Table~\ref{tab:headlinelownfe}). At eight steps, supervised MATH500 accuracy reaches 15.23\%, exceeding ELF-REG-L's 13.39\% at 127 calls. No separately trained few-step student is required.}
 
 \textbf{Refining an answer or drawing more answers.}
 \label{sec:headlinebudget}
