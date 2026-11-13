@@ -43,6 +43,8 @@
 % Keep the official anonymous submission mode for this draft.
 
 \begin{document}
+% The contents page below lists only appendix sections and subsections.
+\addtocontents{toc}{\protect\setcounter{tocdepth}{-1}}
 \maketitle
 
 \begin{abstract}
@@ -123,7 +125,7 @@ At inference, let $\tau\in[0,1]$ be solver time and $t=f(\tau)$ an increasing di
 \label{sec:methodology}
 \label{sec:methodflow}
 
-For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding $c=c(q)$, LFRM follows ELF's denoising and token-decoding formulation~\citep{elf} (Figure~\ref{fig:pipelineoverview}). We use canvas length $L=1024$, latent width $d=1024$, and noise scale $\sigma=2$.
+For a general, fixed answer representation $\mathcal E(q,a)$ and prompt encoding $c=c(q)$, LFRM follows ELF's denoising and token-decoding formulation~\citep{elf} (Figure~\ref{fig:pipelineoverview}). We use canvas length $L=1024$, latent width $d=1024$, and noise scale $\sigma=2$. \rev{We first introduce this shared framework, then describe the answer representation (Section~\ref{sec:representation}), prompt conditioning (Section~\ref{sec:conditionalencoding}), and inference clocks (Section~\ref{sec:clocks}); Section~\ref{sec:nft} introduces reinforcement learning.}
 
 % BEGIN inlined figures/pipeline_overview_v1.tex
 \begin{figure}[t]
@@ -178,17 +180,17 @@ Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}
 
 \revp{Figure~\ref{fig:representationcomparison} compares 1,024-dimensional whitened representations under matched six-epoch LFRM-B training; Table~\ref{tab:representationcontrols} gives the four-seed endpoints. Prompt and answer use the same representation in these controls. A separate comparison holds prompt tensors identical while changing the answer representation (Appendix~\ref{app:fixedprompt}).}
 
-\textbf{Decodability and representation choice.}
+\leavevmode\rev{\textbf{Accurate decoding alone does not ensure strong reasoning.}}
 \label{sec:representationablations}
 The fixed 1,024-dimensional layer-32 PCA representation supports \textbf{99.24\%} held-out same-position token recovery after two epochs of training a separate decoder (Appendix~\ref{app:representationdiagnostics}). Yet LFRM-B using this same representation achieves only \textbf{11.20\%} GSM8K accuracy after six epochs. Accurate clean-token recovery alone is therefore an insufficient criterion for choosing a denoising representation.
 
-\textbf{Layer selection.}
+\leavevmode\rev{\textbf{Combining layers improves reasoning accuracy.}}
 We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationcka} gives the analysis. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy to \textbf{28.43\%} (Figure~\ref{fig:representationcomparison}). \rev{Learning a layer-32 projector gives only $11.54\%$ (SD $0.61$), versus $30.76\%$ ($0.39$) for learned multilayer features. Thus learning alone does not close the single-layer gap. The layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).}
 
-\textbf{Learned versus PCA.}
+\leavevmode\rev{\textbf{Learning projections improves over PCA.}}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
 
-\revp{\textbf{Holding prompt encoding fixed.} With identical learned-multilayer Qwen prompt features, learned-multilayer answers achieve \textbf{30.76\%}, versus \textbf{28.58\%} for multilayer PCA and \textbf{14.06\%} for layer-32 PCA (Appendix~\ref{app:fixedprompt}). Compared with shared prompt/answer encoding, multilayer PCA remains close to \textbf{28.43\%}, while layer-32 PCA improves from \textbf{11.20\%}. The representation ordering persists. Thus the answer representation contributes beyond changes in prompt conditioning.}
+\revp{\textbf{The representation advantage persists with fixed conditioning.} With identical learned-multilayer Qwen prompt features, learned-multilayer answers achieve \textbf{30.76\%}, versus \textbf{28.58\%} for multilayer PCA and \textbf{14.06\%} for layer-32 PCA (Appendix~\ref{app:fixedprompt}). Compared with shared prompt/answer encoding, multilayer PCA remains close to \textbf{28.43\%}, while layer-32 PCA improves from \textbf{11.20\%}. The representation ordering persists. Thus the answer representation contributes beyond changes in prompt conditioning.}
 
 \revp{\textbf{Teacher choice.} Replacing Qwen3-4B with Qwen3-0.6B in the matched learned-multilayer recipe yields $25.53\%$ ($0.70$) at epoch six, versus $30.76\%$ ($0.39$). The recipe remains effective with the smaller teacher, while the stronger teacher improves reasoning (Appendix~\ref{app:teachertransfer}).}
 
@@ -228,7 +230,7 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 \vspace{-\baselineskip}
 \centering
 \includegraphics[width=\linewidth]{figures/prompt_curriculum_training.pdf}
-\caption{\small\textbf{From teacher conditioning to learned prompts.} Top: GSM8K; bottom: MATH500. Circles/squares denote LFRM-B/L; open/filled markers denote Qwen/learned prompt encoding. Red line: epoch-12 switch; arrows: immediate MSE-swap loss. Values and settings: Appendix~\ref{app:promptcurves}.}
+\caption{\rev{\small\textbf{From teacher conditioning to learned prompts.} Frozen Qwen denotes question encoding by the fixed teacher Transformer; LFRM generates the answer (Section~\ref{sec:conditionalencoding}). The red line marks replacement by the MSE-trained prompt encoder at epoch 12; arrows show the immediate accuracy loss. Subsequent training updates both networks. Top/bottom: GSM8K/MATH500; circles/squares: LFRM-B/L; open/filled: Qwen/learned encoding. Evaluation uses 32-step ODE sampling with async $(2.5,2,1.5)$. Values and settings: Appendix~\ref{app:promptcurves}.}}
 \label{fig:promptcurriculum}
 \vspace{-\baselineskip}
 \end{wrapfigure}
@@ -240,7 +242,7 @@ The encoder need not reproduce the teacher's coordinates: it must preserve the i
 
 Replacing Qwen with the MSE-trained encoder immediately reduces accuracy, despite unchanged flow-model weights (Figure~\ref{fig:promptcurriculum}). Subsequent joint training recovers much of this loss on GSM8K and exceeds the original teacher-conditioned checkpoint on MATH500. This recovery reflects adaptation of \emph{both} networks, showing the value of learning the conditioning interface through the generative objective.
 
-\textbf{Importance of fixing initial conditioning.}
+\leavevmode\rev{\textbf{Stable initial conditioning enables effective joint adaptation.}}
 \label{sec:conditioningcurriculum}
 Joint learning from initialization makes the conditioning interface change while the flow model is still learning to interpret it. Under the matched six-epoch comparison, this approach reaches only \textbf{8.70\%} GSM8K accuracy, versus \textbf{30.76\%} with frozen teacher conditioning (Figure~\ref{fig:representationcomparison}). This motivates stabilizing the condition during early learning and adapting it afterward.
 
@@ -534,6 +536,13 @@ We used generative AI tools for literature search, planning, executing and loggi
 
 \clearpage
 \appendix
+\addtocontents{toc}{\protect\setcounter{tocdepth}{2}}
+\begingroup
+\small\color{blue}
+\renewcommand{\contentsname}{Appendix contents}
+\tableofcontents
+\endgroup
+\clearpage
 \section{Training recipe and model architectures}
 \label{app:training}
 
@@ -1736,7 +1745,7 @@ All four NFT variants start from the same supervised GSM8K-B epoch-18 initializa
 
 In the no-gold variants, gold solutions are omitted throughout the NFT update. Generated endpoints retain their original random-number slots; the unused gold storage slot contributes neither to reward statistics nor to optimization. Normalization then operates on generated endpoints.
 
-\textbf{Handling all-incorrect groups: } An all-incorrect no-gold group has zero centered advantages and coefficient $\rho=.5$. Old-field regression and reference regularization can still contribute gradients. The unchanged whole-round safeguard stops before an update if all 360 generated solutions in a collection round are incorrect.
+\textbf{Handling all-incorrect groups: } An all-incorrect no-gold group has zero centered advantages and coefficient $\rho=.5$. Old-field regression and reference regularization can still contribute gradients.
 
 \textbf{No-guidance-correction setup: } Without guidance correction, the current, old, and reference NFT losses use the guided main-pass velocity $v_p^{\mathrm{main}}$ in place of $\widetilde v_p$ in Eq.~\eqref{eq:nftcorrectedfield}. Guided rollout collection, recurrent self-conditioning, reward scoring, and evaluation guidance remain enabled. Thus the factorial removes gold anchoring and field correction independently.
 
