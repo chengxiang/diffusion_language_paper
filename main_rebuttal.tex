@@ -1753,6 +1753,7 @@ Table~\ref{tab:nftablations} uses ODE64, async $(2.5,2,1.5)$, CFG1/SCCFG2, full 
 
 \subsection{Supervised continuation and compute}
 Both supervised controls use the original mixed flow/decoder-CE objective, effective batch 512, and joint prompt/backbone updates. Standard continuation retains LR $.002$, raw epoch-18 weights, and optimizer states. Fresh continuation uses LR $.0001$, the same selected starting weights as NFT, and fresh optimizers. Evaluation selects backbone/prompt EMA $.9999/.9999$. The compute estimates include rollout collection (including discarded candidates), current/old/reference updates, prompt computation, and optimizer matrix operations; common pretraining and representation preparation are excluded.
+
 \begin{table}[htbp]\color{blue}\centering\small
 \caption{Post-training compute and ODE64 accuracy. Gold-only supervised-continuation accuracy is shown for LR $.002$ / $.0001$, respectively; mean (generation-seed SD), \%, four seeds. The 6,000- and 8,000-update controls receive more estimated compute than NFT at 300 and 600 updates.}
 \label{tab:nftcontrolcompute}
@@ -1766,21 +1767,9 @@ Supervised continuation & 6,000 & 3.7786 & 39.95 (1.07) / 37.76 (0.66)\\
 Supervised continuation & 8,000 & 5.0381 & 40.03 (0.73) / 37.68 (0.49)\\\bottomrule
 \end{tabular}
 \end{table}
+
 At 600 NFT updates, the paired differences from no correction, no gold, standard supervised continuation at 8,000 updates, and fresh supervised continuation at 8,000 updates are respectively $+2.98$, $+0.82$, $+2.39$, and $+4.74$ points. Their paired 95\% problem-bootstrap intervals are $[1.84,4.15]$, $[-0.08,1.74]$, $[1.25,3.54]$, and $[3.54,5.91]$, using 4,000 replicates and seed 20260918. Gold without correction exceeds neither component by $15.88$ points, interval $[14.35,17.38]$.
 
-\subsection{Supporting ODE32 evaluations}
-\begin{table}[htbp]\color{blue}\centering\small
-\caption{NFT controls at ODE32, with the same models, clocks, and guidance as Table~\ref{tab:nftablations}. Update 300 uses two seeds and update 600 four; mean pass@1 (seed SD), \%.}
-\label{tab:nftcontrol32}
-\begin{tabular}{@{}lrr@{}}\toprule
-NFT components & Update 300 & Update 600\\\midrule
-Gold + correction & 41.28 (0.70) & 41.30 (0.27)\\
-Correction only & 41.62 (0.75) & 40.60 (0.24)\\
-Gold only & 40.98 (1.23) & 38.91 (1.00)\\
-Neither & 39.99 (0.80) & 25.00 (1.27)\\\bottomrule
-\end{tabular}
-\end{table}
-Under ODE32, standard supervised continuation at 6,000/8,000 updates reaches $38.97$ ($0.32$)/$38.86$ ($0.46$), with two/four seeds respectively. Fresh supervised continuation at 300/6,000 updates reaches $37.68$ ($0.00$)/$35.82$ ($1.06$), with two/four seeds. These use the same supervised-continuation EMA selectors as ODE64.
 \end{revision}
 
 \clearpage
