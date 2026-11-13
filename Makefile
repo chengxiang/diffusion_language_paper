@@ -1,7 +1,10 @@
-.PHONY: pdf arxiv arxiv-source tectonic clean
+.PHONY: pdf rebuttal arxiv arxiv-source tectonic clean
 
 pdf:
 	bash build-paper.sh
+
+rebuttal:
+	bash build-paper.sh main_rebuttal.tex
 
 arxiv:
 	bash build-paper.sh main_arxiv.tex

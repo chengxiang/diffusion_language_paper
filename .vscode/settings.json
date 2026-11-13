@@ -16,6 +16,6 @@
         }
     ],
     "latex-workshop.latex.outDir": "%WORKSPACE_FOLDER%/build/%RELATIVE_DIR%",
-    "latex-workshop.latex.search.rootFiles.include": ["main.tex", "main_arxiv.tex", "build/arxiv_submission/main_arxiv.tex"],
+    "latex-workshop.latex.search.rootFiles.include": ["main.tex", "main_rebuttal.tex", "main_arxiv.tex", "build/arxiv_submission/main_arxiv.tex"],
     "latex-workshop.latex.clean.method": "glob"
 }
