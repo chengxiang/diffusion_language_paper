@@ -1955,23 +1955,23 @@ PlaidQ's inference-code repository was unavailable at our evaluation audit, so i
 \subsection{End-to-end inference at comparable backbone sizes}
 We measure a fixed 32-question GSM8K panel on one NVIDIA H200, using three warmed repeats of native, uncompiled inference. Timing includes tokenization, transfers, live prompt encoding, denoising, terminal prediction, and text decoding; loading and correctness scoring are excluded. Batch-one latency and batch-32 throughput are reported separately. FMLM+/$\mathbb S$-FLM retain 512-token canvases; LFRM/ELF-REG use 1,024. Table~\ref{tab:latencyb} and Table~\ref{tab:latencyl} group comparable denoising-backbone scales. Parentheses here measure timing-repeat SD, rather than generation-seed variation.
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{B-scale backbones: batch-one latency (repeat SD), batch-32 throughput, and peak allocated memory at batches 1/32.}
+\caption{B-scale backbones: batch-one latency (repeat SD) and batch-32 throughput.}
 \label{tab:latencyb}
-\begin{tabular}{@{}lrrrr@{}}\toprule
-Model & NFE / calls & Latency (ms) & Problems/s & Memory (GiB)\\\midrule
-LFRM-B & 64 / 65 & 501.6 (2.0) & 9.77 & 3.05 / 39.85\\
-FMLM+ Init & 64 / 64 & 829.6 (3.0) & 8.19 & 1.60 / 30.66\\
-S-FLM & 64 / 64 & 922.9 (0.8) & 7.27 & 1.25 / 12.73\\
-ELF-REG-B & 63 / 64 & 530.5 (0.8) & 9.57 & 3.95 / 40.88\\
+\begin{tabular}{@{}lrrr@{}}\toprule
+Model & NFE / calls & Latency (ms) & Problems/s\\\midrule
+LFRM-B & 64 / 65 & 501.6 (2.0) & 9.77\\
+FMLM+ Init & 64 / 64 & 829.6 (3.0) & 8.19\\
+S-FLM & 64 / 64 & 922.9 (0.8) & 7.27\\
+ELF-REG-B & 63 / 64 & 530.5 (0.8) & 9.57\\
 \bottomrule\end{tabular}
 \end{table}
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{L-scale backbones: batch-one latency (repeat SD), batch-32 throughput, and peak allocated memory at batches 1/32.}
+\caption{L-scale backbones: batch-one latency (repeat SD) and batch-32 throughput.}
 \label{tab:latencyl}
-\begin{tabular}{@{}lrrrr@{}}\toprule
-Model & NFE / calls & Latency (ms) & Problems/s & Memory (GiB)\\\midrule
-LFRM-L & 64 / 65 & 1255.5 (0.2) & 1.48 & 5.43 / 42.32\\
-ELF-REG-L & 63 / 64 & 1285.9 (7.5) & 1.49 & 6.01 / 43.01\\
+\begin{tabular}{@{}lrrr@{}}\toprule
+Model & NFE / calls & Latency (ms) & Problems/s\\\midrule
+LFRM-L & 64 / 65 & 1255.5 (0.2) & 1.48\\
+ELF-REG-L & 63 / 64 & 1285.9 (7.5) & 1.49\\
 \bottomrule\end{tabular}
 \end{table}
 The one-time prompt encoding is a small fraction of total generation latency. At fixed NFE, asynchronous and synchronous clocks use the same backbone calls and terminal decoder. NFE excludes the final decoding call, whose contribution is included in these end-to-end measurements.
