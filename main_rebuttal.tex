@@ -186,6 +186,8 @@ We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citeal
 \textbf{Learned versus PCA.}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
 
+\revp{\textbf{Holding prompt encoding fixed.} With identical learned-multilayer Qwen prompt features, learned-multilayer answers achieve \textbf{30.76\%}, versus \textbf{28.58\%} for multilayer PCA and \textbf{14.06\%} for layer-32 PCA (Appendix~\ref{app:fixedprompt}). Compared with shared prompt/answer encoding, multilayer PCA remains close to \textbf{28.43\%}, while layer-32 PCA improves from \textbf{11.20\%}. The representation ordering persists. Thus the answer representation contributes beyond changes in prompt conditioning.}
+
 \revp{\textbf{Teacher choice.} Replacing Qwen3-4B with Qwen3-0.6B in the matched learned-multilayer recipe yields $25.53\%$ ($0.70$) at epoch six, versus $30.76\%$ ($0.39$). The recipe remains effective with the smaller teacher, while the stronger teacher improves reasoning (Appendix~\ref{app:teachertransfer}).}
 
 % END inlined sections/representation.tex
@@ -366,18 +368,18 @@ We evaluate mathematical reasoning on GSM8K and MATH500 \citep{gsm8k,math,math50
 Model & \shortstack{Embedding\\Params (M)} & \shortstack{Other\\Params (M)} & NFE & GSM8K & MATH500\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Autoregressive}}\\
-Qwen3-0.6B-Base \citep{qwen3} & 156 & 440 & --- & 59.59 & \rev{22.40$^\ddagger$}\\
-Qwen3-0.6B, thinking \citep{qwen3} & 156 & 440 & --- & \rev{79.23$^\ddagger$} & 77.60\\
+Qwen3-0.6B-Base \citep{qwen3} & 156 & 440 & \rev{N/A} & 59.59 & \rev{22.40$^\ddagger$}\\
+Qwen3-0.6B, thinking \citep{qwen3} & 156 & 440 & \rev{N/A} & \rev{79.23$^\ddagger$} & 77.60\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Discrete diffusion / blockwise diffusion}}\\
 SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
-$\mathbb S$-FLM (top-1) \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
-FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
-ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
-\textbf{LFRM-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & ---\\
-\textbf{LFRM-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{42.16} & ---\\
+$\mathbb S$-FLM (top-1) \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & \rev{N/T}\\
+FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & \rev{N/T}\\
+ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & \rev{N/T}\\
+\textbf{LFRM-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & \rev{N/T}\\
+\textbf{LFRM-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{42.16} & \rev{N/T}\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone 200M--1B}}\\
 ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96 & 13.39\\
@@ -385,6 +387,8 @@ ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96
 \textbf{LFRM-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{63.74} & \textbf{24.68}\\
 \bottomrule
 \end{tabular}
+\vspace{3pt}
+\parbox{\linewidth}{\footnotesize\rev{N/T: the listed checkpoint was not trained for MATH500; our MATH experiments use LFRM-L. N/A: denoising NFE does not apply to autoregressive models.}}
 \end{table}
 % END inlined tables/headline_comparison.tex
 
@@ -405,14 +409,14 @@ ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96
 \cmidrule(lr){2-5}\cmidrule(lr){6-9}\cmidrule(lr){10-13}
 Method / NFE & 8 & 16 & 32 & 64 & 8 & 16 & 32 & 64 & 8 & 16 & 32 & 64\\
 \midrule
-FMLM+ Init & 15.10 & 26.10 & 31.80 & 33.60 & --- & --- & --- & --- & --- & --- & --- & ---\\
+FMLM+ Init & 15.10 & 26.10 & 31.80 & 33.60 & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A} & \rev{N/A}\\
 ELF-REG & $^{*}$26.20 & $^{*}$34.42 & $^{*}$37.15 & $^{*}$38.11 & $^{*}$47.34 & $^{*}$52.89 & $^{*}$55.04 & $^{*}$55.96 & $^{*}$9.76 & $^{*}$11.53 & $^{*}$12.40 & $^{*}$13.31\\
 LFRM, pre-NFT & \underline{26.40} & \underline{34.48} & \underline{37.80} & \underline{39.17} & \underline{49.41} & \underline{55.33} & \underline{57.88} & \underline{58.67} & \underline{15.23} & \underline{17.93} & \underline{19.65} & \underline{21.18}\\
 LFRM, post-NFT & \textbf{30.08} & \textbf{37.77} & \textbf{41.13} & \textbf{42.16} & \textbf{54.84} & \textbf{60.55} & \textbf{62.47} & \textbf{63.74} & \textbf{17.45} & \textbf{20.93} & \textbf{22.60} & \textbf{24.68}\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
-\parbox{\linewidth}{\footnotesize Our checkpoints are fixed across columns, with SCCFG 2 for GSM8K and 3 for MATH500. Sampling-seed counts and SDs: Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability}.}
+\parbox{\linewidth}{\footnotesize \rev{N/A: FMLM+ reports only the $\sim$100M GSM-trained model, with no $\sim$650M or MATH-trained counterpart.} Our checkpoints are fixed across columns, with SCCFG 2 for GSM8K and 3 for MATH500. Sampling-seed counts and SDs: Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability}.}
 \end{table}
 % END inlined tables/headline_low_nfe.tex
 
@@ -503,7 +507,7 @@ Pre- and post-NFT LFRM exceed reported PlaidQ results on HumanEval(+), but trail
 \subsection{\rev{Mixed-task adaptation}}
 \label{sec:mixedtask}
 
-\revp{Three epochs of joint fine-tuning on a fixed 200k GSM8K/200k MATH mixture require 9.29 H200-hours. At ODE64, GSM8K improves from $22.86\%$ to $33.49\%$, with MATH500 changing from $21.45\%$ to $19.25\%$. DMD2-style sampling reaches $49.66\%$ and $28.70\%$, respectively, maintaining its initial MATH500 accuracy. Appendix~\ref{app:teachertransfer} gives both sampler curves and evaluation settings.}
+\revp{Three epochs of joint fine-tuning on a fixed 200k GSM8K/200k MATH mixture require $\approx9.3$ EFLOPs. At ODE64, GSM8K improves from $22.86\%$ to $33.49\%$, with MATH500 changing from $21.45\%$ to $19.25\%$. DMD2-style sampling reaches $49.66\%$ and $28.70\%$, respectively, maintaining its initial MATH500 accuracy. Appendix~\ref{app:teachertransfer} gives both sampler curves and evaluation settings.}
 
 
 % END inlined sections/headline_results.tex
@@ -1245,20 +1249,20 @@ This section collects the expanded mathematical-reasoning comparison, sampling-s
 Model & \shortstack{Embedding\\Params (M)} & \shortstack{Other\\Params (M)} & NFE & GSM8K & MATH500\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Autoregressive}}\\
-Qwen3-0.6B-Base \citep{qwen3} & 156 & 440 & --- & 59.59 & \rev{22.40$^\ddagger$}\\
-Qwen3-0.6B, thinking \citep{qwen3} & 156 & 440 & --- & \rev{79.23$^\ddagger$} & 77.60\\
+Qwen3-0.6B-Base \citep{qwen3} & 156 & 440 & \rev{N/A} & 59.59 & \rev{22.40$^\ddagger$}\\
+Qwen3-0.6B, thinking \citep{qwen3} & 156 & 440 & \rev{N/A} & \rev{79.23$^\ddagger$} & 77.60\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Discrete diffusion / blockwise diffusion}}\\
-LLaDA-8B-Base \citep{llada} & 1,040 & 6,980 & 1,024 & 70.30 & ---\\
-Dream-v0-Base-7B \citep{dream} & 1,090 & 6,530 & 256 & 77.20 & ---\\
+LLaDA-8B-Base \citep{llada} & 1,040 & 6,980 & 1,024 & 70.30 & \rev{N/R}\\
+Dream-v0-Base-7B \citep{dream} & 1,090 & 6,530 & 256 & 77.20 & \rev{N/R}\\
 SDAR-1.7B-Chat \citep{sdar} & 622 & 1,410 & 4/block & 80.10 & 63.20\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone below 200M}}\\
-$\mathbb S$-FLM (top-1) \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & ---\\
-FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & ---\\
-ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & ---\\
-\textbf{LFRM-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & ---\\
-\textbf{LFRM-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{42.16} & ---\\
+$\mathbb S$-FLM (top-1) \citep{hyperspherical} & 75.5 & 87.5 & 1,024 & 18.00$^\dagger$ & \rev{N/T}\\
+FMLM+ Init \citep{posterior} & 75.5 & 92 & 64 & 33.60$^\dagger$ & \rev{N/T}\\
+ELF-REG-B \citep{scalingdlm} & 311 & 104 $(+441)$ & $^{*}64$ & 38.11 & \rev{N/T}\\
+\textbf{LFRM-B, pre-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \underline{39.17} & \rev{N/T}\\
+\textbf{LFRM-B, post-NFT (ours)} & 545 & 90.4 $(+45.8)$ & 64 & \textbf{42.16} & \rev{N/T}\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: denoising backbone 200M--1B}}\\
 ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96 & 13.39\\
@@ -1266,12 +1270,12 @@ ELF-REG-L \citep{scalingdlm} & 311 & 652 $(+442)$ & $^{*}64$ / $^{*}128$ & 55.96
 \textbf{LFRM-L, post-NFT (ours)} & 545 & 638 $(+123)$ & 64 & \textbf{63.74} & \textbf{24.68}\\
 \midrule
 \multicolumn{6}{@{}l}{\textit{Continuous diffusion / flow: larger backbones (reference)}}\\
-MLFM \citep{mlfm} & 123 & 1,220 & NR$^\S$ & 31.24 & ---\\
-TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & $\approx68.9^\ddagger$ & ---\\
+MLFM \citep{mlfm} & 123 & 1,220 & NR$^\S$ & 31.24 & \rev{N/R}\\
+TESS 2, GSM8K FT \citep{tess2} & 262 & 6,740 & 1,000 & $\approx68.9^\ddagger$ & \rev{N/R}\\
 \bottomrule
 \end{tabular}
 \vspace{3pt}
-\parbox{\linewidth}{\footnotesize External results are author-reported; $^\dagger$Python scoring, $^\ddagger$Approximate accuracy read from TESS 2 Figure 3b. $^\S$MLFM reports 256 sampling steps with guidance and online token promotion; the corresponding NFE is not established (NR). Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
+\parbox{\linewidth}{\footnotesize \rev{N/T: no MATH-trained checkpoint; N/R: full-benchmark accuracy unavailable; N/A: autoregressive NFE. The MLFM subset pilot is reported separately in Appendix~\ref{app:baselinefollowups}.} External results are author-reported; $^\dagger$Python scoring, $^\ddagger$Approximate accuracy read from TESS 2 Figure 3b. $^\S$MLFM reports 256 sampling steps with guidance and online token promotion; the corresponding NFE is not established (NR). Slashes separate GSM8K/MATH500 budgets. Appendix~\ref{app:experimentdetails} details prompting and parameter accounting; Table~\ref{tab:headlineseedsd} in Appendix~\ref{app:seedvariability} gives our seed SDs.}
 \end{table}
 
 \clearpage
@@ -1721,9 +1725,11 @@ Light blue marks exact token-ID equality at the same position in the final answe
 \subsection{Gold anchoring and guidance correction}
 All four NFT variants start from the same supervised GSM8K-B epoch-18 initialization: backbone EMA $.9999$ and prompt EMA $.999$, with fresh optimizers. They jointly train both networks with the same optimizer settings, synchronous rollout clocks, 32 rollout steps, and recurrent self-conditioning with SCCFG2. Each collection uses 24 prompt groups with 15 generated solutions per group; gold-enabled variants add one gold endpoint per retained group. Correct generated solutions receive reward $.75$, incorrect generations receive $0$, and gold receives $1$. All-correct rollout groups are filtered as in the full method.
 
-In the no-gold variants, gold solutions are omitted throughout the NFT update: gold endpoints are excluded from reward statistics, the training endpoint mask, and the valid-token loss denominator. Generated endpoints retain their original random-number slots; the unused gold storage slot contributes neither to reward statistics nor to optimization. Normalization then operates on generated endpoints. An all-incorrect no-gold group has zero centered advantages and coefficient $\rho=.5$. Old-field regression and reference regularization can still contribute gradients. The unchanged whole-round safeguard stops before an update if all 360 generated solutions in a collection round are incorrect.
+In the no-gold variants, gold solutions are omitted throughout the NFT update. Generated endpoints retain their original random-number slots; the unused gold storage slot contributes neither to reward statistics nor to optimization. Normalization then operates on generated endpoints.
 
-Without guidance correction, the current, old, and reference NFT losses use the guided main-pass velocity $v_p^{\mathrm{main}}$ in place of $\widetilde v_p$ in Eq.~\eqref{eq:nftcorrectedfield}. Guided rollout collection, recurrent self-conditioning, reward scoring, and evaluation guidance remain enabled. Thus the factorial removes gold anchoring and field correction independently.
+\textbf{Handling all-incorrect groups: } An all-incorrect no-gold group has zero centered advantages and coefficient $\rho=.5$. Old-field regression and reference regularization can still contribute gradients. The unchanged whole-round safeguard stops before an update if all 360 generated solutions in a collection round are incorrect.
+
+\textbf{No-guidance-correction setup: } Without guidance correction, the current, old, and reference NFT losses use the guided main-pass velocity $v_p^{\mathrm{main}}$ in place of $\widetilde v_p$ in Eq.~\eqref{eq:nftcorrectedfield}. Guided rollout collection, recurrent self-conditioning, reward scoring, and evaluation guidance remain enabled. Thus the factorial removes gold anchoring and field correction independently.
 
 Table~\ref{tab:nftablations} uses ODE64, async $(2.5,2,1.5)$, CFG1/SCCFG2, full GSM8K coverage, and backbone/prompt EMA $.99/.99$. The four-variant update-300 comparison uses common seeds 42/123; update 600 uses 42/123/456/789. The full-NFT comparison against SFT uses all four seeds at both updates. Parentheses report sample SD over generation seeds.
 
@@ -1783,17 +1789,17 @@ Both samplers use $\tau_r=\operatorname{sigmoid}(-1.5+0.8\Phi^{-1}(r/S))$ for in
 Dataset / model & Stage & ODE & DMD2\\\midrule
 GSM8K / LFRM-B & Epoch 18 & 39.17 (0.63) & 47.62 (0.90)\\
 GSM8K / LFRM-B & NFT 300 & 42.16 (0.88) & 47.00 (0.98)\\
-GSM8K / LFRM-L & Epoch 21 & 60.81 (0.67) & 67.13 (0.58)\\
-GSM8K / LFRM-L & NFT 600 & 65.03 (0.57) & 68.97 (0.50)\\
+GSM8K / LFRM-L & Epoch 21 & 58.67 (0.69) & 67.13 (0.58)\\
+GSM8K / LFRM-L & NFT 600 & 63.74 (0.83) & 68.97 (0.50)\\
 MATH500 / LFRM-L & Epoch 21 & 21.18 (0.70) & 28.58 (0.90)\\
 MATH500 / LFRM-L & NFT 600 & 24.68 (1.27) & 32.40 (1.17)\\\bottomrule
 \end{tabular}
 \end{table}
-\revtodo{Explain the LFRM-L checkpoint comparison between the submitted ODE results and the additional DMD2 results.}
 Table~\ref{tab:headlinesamplers} reports higher pass@1 under DMD2 at each displayed endpoint. NFT's effect depends on the sampler: the GSM8K-B supervised DMD2 result exceeds its NFT300 result, whereas the submitted ODE comparison improves after NFT.
 
 \subsection{Four-seed synchronous and asynchronous clocks}
 All comparisons below use LFRM-L epoch 21, ELF/prompt EMA $.9999/.9999$, 32 NFE, and seeds 42/123/456/789. Synchronous denotes $(2,2,2)$ and asynchronous denotes $(2.5,2,1.5)$. Table~\ref{tab:submittedschedule4} expands the submitted ODE/SCCFG2 comparison; Table~\ref{tab:additionalschedule4} reports additional ODE/DMD2 evaluations at SCCFG2 for GSM8K and SCCFG3 for MATH500. Each within-setting clock comparison holds the model weights fixed.
+
 \begin{table}[htbp]\color{blue}\centering\small
 \caption{Submitted ODE/SCCFG2 setting, four seeds: mean pass@1 and paired async-minus-sync difference, \%. Difference SD is across paired seed accuracies; intervals resample problems 4,000 times.}
 \label{tab:submittedschedule4}
@@ -1814,7 +1820,6 @@ MATH500 & ODE & 19.25 (0.72) & 19.65 (0.85) & +0.40 & [$-1.05$, 1.80]\\
 MATH500 & DMD2 & 24.10 (1.67) & 26.70 (1.89) & +2.60 & [0.80, 4.40]\\\bottomrule
 \end{tabular}
 \end{table}
-\revtodo{Add the LFRM-L checkpoint context for the submitted and additional schedule comparisons.}
 Asynchronous clocks improve DMD2 accuracy on both benchmarks in this comparison, while the ODE differences are smaller. At fixed NFE, both clocks use the same dense backbone, canvas, and terminal decoder; the inference option incurs no additional model calls.
 \end{revision}
 
@@ -1848,7 +1853,7 @@ Learned prompt & 39.35 (0.59) & 50.16 & 59.89\\\bottomrule
 The paired teacher-minus-learned difference is 1.71 points, with 95\% interval $[0.02,3.39]$. On coding, the fixed-backbone Qwen-to-MSE-prompt substitution reduces HumanEval+ from 30.87\% to 25.30\% and MBPP+ from 33.99\% to 16.96\%. Joint training and NFT recover HumanEval+ to 30.18\%, while MBPP+ remains at 19.61\%. These eight-seed ODE128 results expose a larger residual conditioning gap on MBPP. The longer average coding prompts (233 tokens, versus 84/89 for GSM8K/MATH) provide a plausible explanation for the greater conditioning demands, without isolating prompt length experimentally.
 
 \subsection{One model for GSM8K and MATH500}
-We initialize from supervised MATH epoch 21, selecting backbone/prompt EMA $.9999/.9999$, and jointly fine-tune both networks with fresh optimizers at LR $.002$. The fixed 400k-row mixture contains 200k GSM8K and 200k MATH training examples. Projectors, whitening, and token embeddings remain frozen; synchronous mixed flow/decoder training uses effective batch 512 and no prompt-MSE loss. Three epochs comprise 2,343 optimizer updates and 9.29 H200-hours. Fine-tuned checkpoints select backbone/prompt EMA $.999/.999$.
+We initialize from supervised MATH epoch 21, selecting backbone/prompt EMA $.9999/.9999$, and jointly fine-tune both networks with fresh optimizers at LR $.002$. The fixed 400k-row mixture contains 200k GSM8K and 200k MATH training examples. Projectors, whitening, and token embeddings remain frozen; synchronous mixed flow/decoder training uses effective batch 512 and no prompt-MSE loss. Three epochs comprise 2,343 optimizer updates and $\approx9.3$ EFLOPs. Fine-tuned checkpoints select backbone/prompt EMA $.999/.999$.
 
 Each checkpoint is evaluated on both full benchmarks at 64 NFE with async $(2.5,2,1.5)$, CFG1, SCCFG2 for GSM8K and SCCFG3 for MATH500, and seeds 42/123/456/789. GSM8K uses numerical-answer scoring and MATH500 uses Math-Verify. Table~\ref{tab:mixedtaskcurve} gives the full curve. The same checkpoint serves both tasks at every epoch.
 \begin{table}[htbp]\color{blue}\centering\small
@@ -1900,7 +1905,7 @@ Table~\ref{tab:matchedcodebaselines} reports the same two-seed native-prompt gen
 \caption{Native-prompt coding comparisons with identical tests and execution limits: mean pass@1 (seed SD), \%, seeds 42/123. LFRM uses 128 denoising calls and ELF-REG 127, each followed by terminal decoding. All models are supervised. LFRM frozen-Qwen is epoch 12; learned conditioning is joint epoch 13, with ELF/prompt EMA $.9999/.9999$.}
 \label{tab:matchedcodebaselines}
 \begin{tabular}{@{}lrrrr@{}}\toprule
-Model / conditioning & HumanEval & HumanEval+ & MBPP-378 base & MBPP+ extended\\\midrule
+Model / prompt-encoder & HumanEval & HumanEval+ & MBPP-378 base & MBPP+ extended\\\midrule
 \multicolumn{5}{@{}l}{Standard function names}\\
 ELF-REG-L / Qwen-0.6B & 24.09 (.43) & 23.17 (.00) & 24.60 (1.87) & 21.43 (1.12)\\
 LFRM-L / Qwen-4B & 35.06 (.43) & 32.62 (.43) & 39.81 (.94) & 34.26 (.19)\\
@@ -1976,54 +1981,53 @@ Compact MSE encoder & 2.540 (.002) & 5.40 & 41.885 (.055) & 42.22\\\bottomrule
 The compact encoder reduces memory substantially while changing total latency modestly. Its scientific purpose is inference without calling the external contextual teacher; the accompanying accuracy comparisons in Appendix~\ref{app:teachertransfer} quantify the cost of that replacement.
 
 \subsection{Teacher-conditioned and learned-prompt training budgets}
-Table~\ref{tab:trainingbudgets} separates teacher-conditioned epoch 12 from the final supervised checkpoint, including prompt imitation and joint adaptation. LFRM costs are estimated from recorded training windows and measured stage costs; ELF-REG costs are author-reported \citep[Table 7]{scalingdlm}, including its GSM8K initialization for MATH. Epoch 12 provides the teacher-conditioned comparison, while the subsequent LFRM stages pursue the additional objective of replacing the external prompt teacher.
+We report model-training arithmetic in EFLOPs ($10^{18}$ floating-point operations; a multiply-add counts as two). Table~\ref{tab:trainingbudgets} separates teacher-conditioned epoch 12 from the final supervised checkpoint, including prompt imitation and joint adaptation. Estimates combine profiled training operations with the executed example/update counts; ELF-REG uses its released training implementation and reported populations/epochs \citep[Appendix B.2]{scalingdlm}. Its MATH total includes GSM8K initialization. Epoch 12 provides the teacher-conditioned comparison, while subsequent LFRM stages pursue the additional objective of replacing the external prompt teacher.
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Model-training GPU-hours on H200, excluding preparation and inherited foundation-model pretraining. LFRM values are approximate; final totals include compact-prompt adaptation and exclude NFT.}
+\caption{Estimated model-training EFLOPs, excluding representation preparation and inherited foundation-model pretraining. Final LFRM totals include compact-prompt adaptation and exclude NFT.}
 \label{tab:trainingbudgets}
 \begin{tabular}{@{}lrrr@{}}\toprule
-Dataset / model scale & LFRM epoch 12 & LFRM final supervised & ELF-REG reported\\\midrule
-GSM8K / B & 42.1 & 63.7 (epoch 18) & 156.5\\
-GSM8K / L & 200.4 & 352.0 (epoch 21) & 333.9\\
-MATH / L & 330.5 & 594.6 (epoch 21) & 563.1\\
-Code / L & 404.5 & 478.4 (epoch 13) & 407.9\\\bottomrule
+Dataset / model scale & LFRM epoch 12 & LFRM final supervised & ELF-REG\\\midrule
+GSM8K / B & 34.48 & 53.75 (epoch 18) & 123.38\\
+GSM8K / L & 222.40 & 393.65 (epoch 21) & 303.63\\
+MATH / L & 364.44 & 642.93 (epoch 21) & 490.57\\
+Code / L & 447.81 & 510.47 (epoch 13) & 345.38\\\bottomrule
 \end{tabular}
 \end{table}
-The teacher-conditioned epoch-12 LFRM evaluations outperform ELF-REG across the mathematical and coding tasks at lower model-training cost (Appendix~\ref{app:baselinefollowups}). Coding holds under both standard scoring and name aliasing. Final learned-prompt checkpoints additionally remove the external contextual teacher from inference.
+At epoch 12, teacher-conditioned LFRM outperforms ELF-REG across the evaluated mathematical and coding tasks (Appendix~\ref{app:baselinefollowups}), using less estimated model-training compute on the mathematical tasks. Coding achieves higher accuracy at a larger estimated training budget, under both standard scoring and name aliasing. Final learned-prompt checkpoints additionally remove the external contextual teacher from inference.
+
+The operation counts include forward/backward matrix products, attention, and counted optimizer matrix operations. ELF-REG includes the teacher computations in its native training path. Elementwise kernels, communication, and input/output are not converted from elapsed time into FLOPs. These are arithmetic estimates, not accelerator-peak-throughput conversions; representative sequence geometry and objective frequencies are extrapolated over each training stage.
 
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Final supervised LFRM versus other continuous baselines: training scope, reported or estimated GPU-hours, and estimated training EFLOPs where available. Inherited foundation-model pretraining is excluded; FMLM+ Init/Distill include their MDM pretraining.}
+\caption{Final supervised LFRM versus other continuous baselines, in estimated training EFLOPs. $^\dagger$Analytical estimates from released architecture and reported training volume; other values use profiled training operations. Inherited foundation-model pretraining is excluded; FMLM+ Init/Distill include their MDM training stage. N/E: insufficient information for a reliable estimate.}
 \label{tab:othertrainingbudgets}
-\begin{tabular}{@{}llrr@{}}\toprule
-Model & Training scope & GPU-hours & EFLOPs\\\midrule
-LFRM-B, epoch 18 & GSM8K & $\approx63.7$ H200 & 53.75\\
-FMLM+ Base & TinyGSM & --- & 87.97\\
-FMLM+ Init & TinyGSM & --- & 139.93\\
-FMLM+ Distill & TinyGSM & --- & 138.42\\
-$\mathbb S$-FLM, enhanced & TinyGSM & 214 H100 & ---\\
-LFRM-L, epoch 21 & GSM8K & $\approx352.0$ H200 & 393.65\\
-MLFM & General, then mixed SFT & 1,440 GH200 & ---\\
-PlaidQ & Mixed text/math/code & --- & ---\\\bottomrule
+\begin{tabular}{@{}llr@{}}\toprule
+Model & Training scope & EFLOPs\\\midrule
+LFRM-B, epoch 18 & GSM8K & 53.75\\
+FMLM+ Base & TinyGSM & 87.97\\
+FMLM+ Init & TinyGSM & 139.93\\
+FMLM+ Distill & TinyGSM & 138.42\\
+$\mathbb S$-FLM, enhanced & TinyGSM & $\approx52^\dagger$\\
+LFRM-L, epoch 21 & GSM8K & 393.65\\
+MLFM & General, then mixed SFT & $\approx710^\dagger$\\
+PlaidQ & Mixed text/math/code & N/E\\\bottomrule
 \end{tabular}
 \end{table}
-MLFM reports three days on 16 GH200s for adaptation (1,152 GPU-hours) and 18 hours on 16 GH200s for SFT (288 GPU-hours), excluding inherited SMDM pretraining \citep[Sections 5.1.2--5.1.3]{mlfm}. FMLM+ reports 250,000 updates on four H100s without elapsed time \citep[Appendix B]{posterior}; its FLOPs are reconstructed from its released architecture and training settings. PlaidQ reports 82.14 elapsed hours without GPU count or model \citep[Appendix B.1]{plaidq}, so GPU-hours are unavailable. Hardware types are retained explicitly rather than converting GPU-hours across accelerators.
+FMLM+ and $\mathbb S$-FLM report 250,000 updates with batch size 512 and a 512-token canvas \citep{posterior,hyperspherical}. For $\mathbb S$-FLM, we count the released 12-block, width-768 backbone, vocabulary head, and full attention in forward/backward computation. MLFM reports approximately 100B adaptation positions and 15B SFT positions \citep[Sections 5.1.2--5.1.3]{mlfm}. Its estimate includes forward and input-gradient computation through frozen matrices, trainable rank-256 adapters, timestep conditioning, full attention, and the probability-to-embedding map. This gives approximately 622 EFLOPs for adaptation and 90--93 for SFT, depending on sequence-length assumptions; inherited SMDM pretraining is excluded. These analytical estimates omit elementwise and optimizer work. PlaidQ's elapsed time lacks hardware/utilization information, and its complete training-operation count has not been reconstructed, so we leave its EFLOPs unestimated \citep[Appendix B.1]{plaidq}.
 
 \subsection{Representation preparation and dataset building}
-We reuse released solution corpora; upstream synthetic-data generation and foundation-model training are inherited resources. Our preparation consists of teacher feature extraction, covariance accumulation, projector learning, and reusable prompt/answer caches. Preparation is reported separately from model training, and excludes tuning/debugging runs and later cache copies.
+We reuse released solution corpora; upstream synthetic-data generation and foundation-model training are inherited resources. Preparation consists of teacher feature extraction, covariance accumulation, projector learning, and reusable prompt/answer caches. Table~\ref{tab:preparationcosts} reports the components for which operation counts can be recovered, separately from model training.
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Core representation-preparation H200-hours. The GSM8K-B covariance component is estimated; remaining entries use recorded production allocations or update windows.}
+\caption{Available preparation-component estimates, in EFLOPs. These are partial costs, not complete pipeline totals. The capture range varies padding assumptions; the projector estimate uses a representative packed-update shape.}
 \label{tab:preparationcosts}
-\begin{tabular}{@{}lrrr@{}}\toprule
-Preparation stage & GSM8K-B & MATH-L & Code-L\\\midrule
-Teacher capture and covariance & 3.41--15.11 & 11.62 & 15.11\\
-Native projector-training cache & 2.87 & 7.40 & 3.09\\
-Projector learning & 13.13 & 26.82 & 33.61\\
-Projected answer/prompt caches & 14.71 & 14.58 & 24.03\\\midrule
-Total & 34.1--45.8 & 60.42 & 75.83\\\bottomrule
+\begin{tabular}{@{}llr@{}}\toprule
+Pipeline & Component & EFLOPs\\\midrule
+GSM8K-B & Teacher capture and covariance & 4.56--19.64\\
+GSM8K-B & Projector learning (shape proxy) & $\approx11.50$\\
+GSM8K-B & Projected answer cache & 17.45\\
+MATH-L & Covariance outer products only & 0.026\\\bottomrule
 \end{tabular}
 \end{table}
-CPU preparation allocations total 779.01 core-hours for the recorded MATH tokenization, packing, and verification stages, and 43.95 core-hours for recorded coding cache preparation/finalization. These sum allocation duration times CPUs, separately from H200-hours; incomplete historical CPU timers are left unreported.
-
-The GSM8K-B range reflects measured throughput under different padding/packing assumptions for the historical feature capture. Complete preparation timers for GSM8K-L are unavailable. These caches are reused across epochs; the main mixed-task comparison reports its actual additional model-training time separately.
+The GSM8K capture range spans tight token packing and full 1,024-token padding. The projector proxy follows the historical active-layer phases at 131,072 padded tokens per update; native packing and scored-token density vary. Complete MATH/code preparation totals and the original GSM8K-L preparation FLOPs remain unestimated: allocation durations include loading and input/output, and do not determine arithmetic counts. CPU tokenization, packing, and verification are likewise kept outside this FLOP accounting. Historical resource-time receipts remain archived. Caches are reused across epochs; the mixed-task comparison adds approximately 9.3 EFLOPs of model training.
 \end{revision}
 
 \end{document}
