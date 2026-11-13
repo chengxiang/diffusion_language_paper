@@ -488,23 +488,25 @@ On OpenCodeInstruct \citep{opencodeinstruct}, LFRM-L uses 12 epochs of frozen-Qw
 
 \begin{table}[!htb]
 \centering\small
-\setlength{\tabcolsep}{4pt}
-\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%). HE/HE+ use base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's ``MBPP+'' uses base tests. \rev{ELF-REG uses its native prompt and two seeds; LFRM uses eight. Frozen Qwen denotes teacher conditioning at epoch 12; pre-NFT is joint epoch 13; post-NFT is update 100.} NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. Protocols: Appendix~\ref{app:codingdetails}; seed SDs: Table~\ref{tab:codingstandarddetail} \rev{and Appendix~\ref{app:baselinefollowups}}.}
+\setlength{\tabcolsep}{3pt}
+\caption{\textbf{Code generation without function-name repair.} Mean pass@1 (\%)\rev{, with generation-seed SD in parentheses for our evaluations}. HE/HE+ use base/full extended tests; both MBPP columns use 378 tasks. PlaidQ's ``MBPP+'' uses base tests. \rev{ELF-REG uses its native prompt and two seeds; LFRM uses eight. Frozen Qwen denotes teacher conditioning at epoch 12; pre-NFT is joint epoch 13; post-NFT is update 100.} NFE excludes terminal decoding; PlaidQ+CFG uses two calls per step. \rev{Protocols and detailed results: Appendices~\ref{app:codingdetails} and~\ref{app:baselinefollowups}.}}
 \label{tab:codingcomparison}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
 Model / setting & \shortstack{Denoising\\NFE} & HE & HE+ & \shortstack{MBPP-378\\base} & \shortstack{MBPP+\\full} \\
 \midrule
-PlaidQ \citep{plaidq} & 128 & 19.02 & 18.05 & 22.18 & ---\\
-PlaidQ+CFG \citep{plaidq} & 256 & 22.04 & 19.70 & 24.58 & ---\\
-\rev{ELF-REG-L (our eval.)} & \rev{127} & \rev{24.09} & \rev{23.17} & \rev{24.60} & \rev{21.43}\\
+PlaidQ \citep{plaidq} & 128 & 19.02 & 18.05 & 22.18 & \rev{N/A}\\
+PlaidQ+CFG \citep{plaidq} & 256 & 22.04 & 19.70 & 24.58 & \rev{N/A}\\
+\rev{ELF-REG-L (our eval.)} & \rev{127} & \rev{24.09 {\scriptsize (0.43)}} & \rev{23.17 {\scriptsize (0.00)}} & \rev{24.60 {\scriptsize (1.87)}} & \rev{21.43 {\scriptsize (1.12)}}\\
 \midrule
-LFRM-L / frozen Qwen & 128 & 33.69 & 30.87 & 38.72 & 33.99\\
+LFRM-L / frozen Qwen & 128 & 33.69 \rev{\scriptsize (2.11)} & 30.87 \rev{\scriptsize (2.09)} & 38.72 \rev{\scriptsize (1.37)} & 33.99 \rev{\scriptsize (1.62)}\\
 \midrule
-LFRM-L, pre-NFT (ours) & 128 & 29.57 & 26.91 & 18.45 & 16.40\\
-LFRM-L, post-NFT (ours) & 128 & 32.85 & 30.18 & 22.26 & 19.61\\
+LFRM-L, pre-NFT (ours) & 128 & 29.57 \rev{\scriptsize (2.33)} & 26.91 \rev{\scriptsize (1.99)} & 18.45 \rev{\scriptsize (1.23)} & 16.40 \rev{\scriptsize (1.30)}\\
+LFRM-L, post-NFT (ours) & 128 & 32.85 \rev{\scriptsize (1.91)} & 30.18 \rev{\scriptsize (1.79)} & 22.26 \rev{\scriptsize (1.50)} & 19.61 \rev{\scriptsize (1.36)}\\
 \bottomrule
 \end{tabular}
+\par\smallskip
+\parbox{\linewidth}{\footnotesize \rev{N/A: PlaidQ does not report full extended MBPP+ results. Its GitHub inference code is no longer publicly available, so we could not evaluate the missing metric.}}
 \end{table}
 
 Pre- and post-NFT LFRM exceed reported PlaidQ results on HumanEval(+), but trail guided PlaidQ on MBPP-378 base. \rev{Our standard-scoring ELF-REG evaluation confirms a HumanEval(+) advantage and a remaining MBPP gap with learned conditioning. Under matched function-name aliasing, supervised LFRM also exceeds ELF-REG-L (Appendix~\ref{app:baselinefollowups}).} NFT raises pass@1 on all four coding metrics, including HumanEval+ by $3.28$ points and MBPP+ by $3.21$. HumanEval(+) approaches frozen-Qwen conditioning, while a substantial MBPP gap remains. Higher-pass oracle gains are smaller, as in mathematics; paired comparisons appear in Appendix~\ref{app:codingdetails}.
@@ -512,7 +514,7 @@ Pre- and post-NFT LFRM exceed reported PlaidQ results on HumanEval(+), but trail
 \subsection{\rev{Mixed-task adaptation}}
 \label{sec:mixedtask}
 
-\revp{Three epochs of joint fine-tuning on a fixed 200k GSM8K/200k MATH mixture require 9.29 H200-hours. At ODE64, GSM8K improves from $22.86\%$ to $33.49\%$, with MATH500 changing from $21.45\%$ to $19.25\%$. DMD2-style sampling reaches $49.66\%$ and $28.70\%$, respectively, maintaining its initial MATH500 accuracy. Appendix~\ref{app:teachertransfer} gives both sampler curves and evaluation settings.}
+\revp{We test whether one latent-diffusion checkpoint can adapt to another reasoning task while retaining its original-task performance. We start from the supervised MATH-trained LFRM-L checkpoint at epoch 21, before NFT, and jointly fine-tune its backbone and learned prompt encoder for three epochs on a balanced mixture of 200k GSM8K and 200k MATH training examples. We evaluate the same adapted checkpoint on both full benchmarks, using four seeds and 64 denoising steps. With ODE sampling, GSM8K improves from $22.86\%$ to $33.49\%$, while MATH500 decreases from $21.45\%$ to $19.25\%$. With DMD2-style sampling, GSM8K improves from $36.22\%$ to $49.66\%$ and MATH500 is retained ($28.65\%$ to $28.70\%$). Thus one adapted checkpoint can serve both task families: it gains GSM8K accuracy under both samplers, with a modest MATH retention cost under ODE and preserved MATH accuracy under DMD2. Appendix~\ref{app:teachertransfer} gives the full training curves and evaluation settings.}
 
 
 % END inlined sections/headline_results.tex
