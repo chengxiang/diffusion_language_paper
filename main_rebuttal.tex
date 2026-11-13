@@ -443,12 +443,15 @@ Figure~\ref{fig:headlinestages} shows that oracle selection generally favors mor
 
 \begin{revision}
 \textbf{Which post-training components matter?}
-From the same supervised GSM8K-B checkpoint, we independently remove gold anchoring and guidance correction, retaining guided rollouts and joint prompt/backbone updates. At update 600, correction improves the full method by 2.98 points relative to the uncorrected variant; gold anchoring substantially buffers deterioration without correction (Table~\ref{tab:nftablations}). Full NFT leads at update 600, while correction alone leads at update 300. Both standard supervised continuation and fresh NFT-initialized SFT remain below NFT at equal updates and at greater compute. Thus continued gold supervision alone does not explain the improvement. Appendix~\ref{app:nftcontrols} gives implementation details, compute accounting, and paired comparisons.
+We ablate gold anchoring and guidance correction from the same GSM8K-B checkpoint, retaining guided rollouts and joint prompt/backbone updates. At update 600, correction adds 2.98 points; gold anchoring buffers deterioration without correction (Table~\ref{tab:nftablations}). Full NFT leads at 600, while correction alone leads at 300.
+
+\textbf{NFT outperforms supervised continuation.}
+Gold-only supervised continuation at both learning rates remains below NFT with matched updates (300/600) and greater compute (6,000/8,000 updates; Table~\ref{tab:nftablations}). Continued gold supervision alone therefore does not explain the improvement. Appendix~\ref{app:nftcontrols} gives implementation, compute accounting, and paired comparisons.
 \end{revision}
 \begin{table}[!htb]\color{blue}
 \centering\small
 \begin{revision}
-\caption{\textbf{NFT component ablations and supervised-continuation controls.} GSM8K-B, ODE64, async $(2.5,2,1.5)$; mean pass@1 (seed SD), \%. Left: two seeds at update 300 and four at 600. Right: four seeds throughout; matched-update SFT uses 300/600 updates, and greater-compute SFT uses 6,000/8,000. NFT EMA is $.99/.99$; SFT EMA is $.9999/.9999$.}
+\caption{\textbf{NFT component ablations and supervised-continuation controls.} GSM8K-B, ODE64, async $(2.5,2,1.5)$; mean pass@1 (seed SD), \%. Left: two seeds at update 300 and four at 600. Right: four-seed supervised continuation; matched updates: 300/600, greater-compute: 6,000/8,000, versus NFT at 300/600. ELF/prompt EMAs: $.99/.99$ for NFT, $.9999/.9999$ for supervised continuation.}
 \label{tab:nftablations}
 \begin{minipage}[t]{.46\linewidth}\centering
 \setlength{\tabcolsep}{3pt}
@@ -466,12 +469,12 @@ Neither & 40.83 (1.98) & 23.56 (.27)\\
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}lrr@{}}
 \toprule
-Continuation / LR & 300 budget & 600 budget\\\midrule
+Comparison / LR & NFT 300 & NFT 600\\\midrule
 Full NFT & \textbf{41.94 (.94)} & \textbf{42.42 (.63)}\\
-SFT matched / .002 & 39.03 (.29) & 39.31 (.26)\\
-SFT matched / .0001 & 38.50 (.77) & 38.23 (.70)\\
-SFT greater / .002 & 39.95 (1.07) & 40.03 (.73)\\
-SFT greater / .0001 & 37.76 (.66) & 37.68 (.49)\\
+Matched updates / .002 & 39.03 (.29) & 39.31 (.26)\\
+Matched updates / .0001 & 38.50 (.77) & 38.23 (.70)\\
+Greater-compute / .002 & 39.95 (1.07) & 40.03 (.73)\\
+Greater-compute / .0001 & 37.76 (.66) & 37.68 (.49)\\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -1733,24 +1736,24 @@ In the no-gold variants, gold solutions are omitted throughout the NFT update. G
 
 \textbf{No-guidance-correction setup: } Without guidance correction, the current, old, and reference NFT losses use the guided main-pass velocity $v_p^{\mathrm{main}}$ in place of $\widetilde v_p$ in Eq.~\eqref{eq:nftcorrectedfield}. Guided rollout collection, recurrent self-conditioning, reward scoring, and evaluation guidance remain enabled. Thus the factorial removes gold anchoring and field correction independently.
 
-Table~\ref{tab:nftablations} uses ODE64, async $(2.5,2,1.5)$, CFG1/SCCFG2, full GSM8K coverage, and backbone/prompt EMA $.99/.99$. The four-variant update-300 comparison uses common seeds 42/123; update 600 uses 42/123/456/789. The full-NFT comparison against SFT uses all four seeds at both updates. Parentheses report sample SD over generation seeds.
+Table~\ref{tab:nftablations} uses ODE64, async $(2.5,2,1.5)$, CFG1/SCCFG2, full GSM8K coverage, and backbone/prompt EMA $.99/.99$. The four-variant update-300 comparison uses common seeds 42/123; update 600 uses 42/123/456/789. The full-NFT comparison against supervised continuation uses all four seeds at both updates. Parentheses report sample SD over generation seeds.
 
 \subsection{Supervised continuation and compute}
 Both supervised controls use the original mixed flow/decoder-CE objective, effective batch 512, and joint prompt/backbone updates. Standard continuation retains LR $.002$, raw epoch-18 weights, and optimizer states. Fresh continuation uses LR $.0001$, the same selected starting weights as NFT, and fresh optimizers. Evaluation selects backbone/prompt EMA $.9999/.9999$. The compute estimates include rollout collection (including discarded candidates), current/old/reference updates, prompt computation, and optimizer matrix operations; common pretraining and representation preparation are excluded.
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Post-training compute and ODE64 accuracy. SFT accuracy is shown for LR $.002$ / $.0001$, respectively; mean (generation-seed SD), \%, four seeds. The 6,000- and 8,000-update controls receive more estimated compute than NFT at 300 and 600 updates.}
+\caption{Post-training compute and ODE64 accuracy. Gold-only supervised-continuation accuracy is shown for LR $.002$ / $.0001$, respectively; mean (generation-seed SD), \%, four seeds. The 6,000- and 8,000-update controls receive more estimated compute than NFT at 300 and 600 updates.}
 \label{tab:nftcontrolcompute}
 \begin{tabular}{@{}llrr@{}}\toprule
 Method & Updates & Estimated EFLOPs & Accuracy\\\midrule
 Full NFT & 300 & 2.1268 & 41.94 (0.94)\\
 Full NFT & 600 & 4.1477 & 42.42 (0.63)\\
-Gold-only SFT & 300 & 0.1889 & 39.03 (0.29) / 38.50 (0.77)\\
-Gold-only SFT & 600 & 0.3779 & 39.31 (0.26) / 38.23 (0.70)\\
-Gold-only SFT & 6,000 & 3.7786 & 39.95 (1.07) / 37.76 (0.66)\\
-Gold-only SFT & 8,000 & 5.0381 & 40.03 (0.73) / 37.68 (0.49)\\\bottomrule
+Supervised continuation & 300 & 0.1889 & 39.03 (0.29) / 38.50 (0.77)\\
+Supervised continuation & 600 & 0.3779 & 39.31 (0.26) / 38.23 (0.70)\\
+Supervised continuation & 6,000 & 3.7786 & 39.95 (1.07) / 37.76 (0.66)\\
+Supervised continuation & 8,000 & 5.0381 & 40.03 (0.73) / 37.68 (0.49)\\\bottomrule
 \end{tabular}
 \end{table}
-At 600 NFT updates, the paired differences from no correction, no gold, standard SFT8000, and fresh SFT8000 are respectively $+2.98$, $+0.82$, $+2.39$, and $+4.74$ points. Their paired 95\% problem-bootstrap intervals are $[1.84,4.15]$, $[-0.08,1.74]$, $[1.25,3.54]$, and $[3.54,5.91]$, using 4,000 replicates and seed 20260918. Gold without correction exceeds neither component by $15.88$ points, interval $[14.35,17.38]$.
+At 600 NFT updates, the paired differences from no correction, no gold, standard supervised continuation at 8,000 updates, and fresh supervised continuation at 8,000 updates are respectively $+2.98$, $+0.82$, $+2.39$, and $+4.74$ points. Their paired 95\% problem-bootstrap intervals are $[1.84,4.15]$, $[-0.08,1.74]$, $[1.25,3.54]$, and $[3.54,5.91]$, using 4,000 replicates and seed 20260918. Gold without correction exceeds neither component by $15.88$ points, interval $[14.35,17.38]$.
 
 \subsection{Supporting ODE32 evaluations}
 \begin{table}[htbp]\color{blue}\centering\small
@@ -1764,7 +1767,7 @@ Gold only & 40.98 (1.23) & 38.91 (1.00)\\
 Neither & 39.99 (0.80) & 25.00 (1.27)\\\bottomrule
 \end{tabular}
 \end{table}
-Under ODE32, standard SFT6000/8000 reaches $38.97$ ($0.32$)/$38.86$ ($0.46$), with two/four seeds respectively. Fresh SFT300/6000 reaches $37.68$ ($0.00$)/$35.82$ ($1.06$), with two/four seeds. These use the same SFT EMA selectors as ODE64.
+Under ODE32, standard supervised continuation at 6,000/8,000 updates reaches $38.97$ ($0.32$)/$38.86$ ($0.46$), with two/four seeds respectively. Fresh supervised continuation at 300/6,000 updates reaches $37.68$ ($0.00$)/$35.82$ ($1.06$), with two/four seeds. These use the same supervised-continuation EMA selectors as ODE64.
 \end{revision}
 
 \clearpage
