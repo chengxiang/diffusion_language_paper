@@ -48,8 +48,8 @@
 \maketitle
 
 \begin{abstract}
-\revp{We introduce Latent Flow Reasoning Models (LFRMs), a recipe for competitive mathematical reasoning and code generation with continuous latent diffusion, without executing an external pretrained reasoning Transformer at inference. We learn compact multilayer answer representations and use a staged curriculum to train an ELF-based backbone and compact prompt encoder. The decomposable representation supports asynchronous denoising; a guidance-compatible adaptation of DiffusionNFT enables reward-based post-training. Controlled experiments expose important obstacles: accurate token recovery can coexist with weak generation, joint prompt training from initialization performs poorly, and directly applying NFT to the guided field can degrade accuracy. Representation, teacher-substitution, supervised-continuation, and mixed-task experiments test the proposed adaptations. With 90M and 638M denoising backbones, supervised LFRM outperforms reported comparable-scale continuous-diffusion baselines on mathematical reasoning and HumanEval; NFT improves our ODE headline results on math and code.}
-Code will be available at: \url{https://anonymous.4open.science/r/LFRM-98B5/}.
+\revp{We introduce Latent Flow Reasoning Models (LFRMs), a recipe for competitive mathematical reasoning and code generation with continuous latent diffusion, without executing an external pretrained reasoning Transformer at inference. We learn compact multilayer answer representations and use a staged curriculum to train an ELF-based backbone and compact prompt encoder. The decomposable representation supports asynchronous denoising; a guidance-compatible adaptation of DiffusionNFT enables reward-based post-training. \rev{Ablations reveal obstacles:} accurate token recovery can coexist with weak generation, joint prompt training from initialization performs poorly, and directly applying NFT to the guided field can degrade accuracy. Representation, teacher-substitution, supervised-continuation, and mixed-task experiments test the proposed adaptations. With 90M and 638M denoising backbones, supervised LFRM outperforms reported comparable-scale continuous-diffusion baselines on mathematical reasoning and HumanEval; \rev{NFT improves ODE headline accuracy on math and code.}}
+\rev{Code:} \url{https://anonymous.4open.science/r/LFRM-98B5/}.
 \end{abstract}
 % Keep normal paragraph gaps in the main text compact but visible.
 \setlength{\parskip}{4pt}
@@ -57,7 +57,7 @@ Code will be available at: \url{https://anonymous.4open.science/r/LFRM-98B5/}.
 \section{Introduction}
 \label{sec:introduction}
 
-\revp{Autoregressive language models have made substantial progress on mathematical reasoning \citep{minerva,deepseekr1}. Continuous diffusion offers a complementary approach: it generates complete solutions through iterative refinement in a continuous latent space. Our objective is to understand how continuous latent diffusion performs on challenging reasoning tasks. A key design choice is the latent representation: it must capture the complex semantics and dependencies of reasoning solutions while remaining amenable to generation through continuous denoising.}
+\revp{Autoregressive language models have made substantial progress on mathematical reasoning \citep{minerva,deepseekr1}. Continuous diffusion offers a complementary approach: it generates complete solutions through iterative refinement in a continuous latent space. Our objective is to understand how continuous latent diffusion performs on challenging reasoning tasks. A key design choice is the latent representation: it must capture the complex semantics and dependencies of reasoning solutions \rev{while remaining amenable to continuous denoising.}}
 
 \revp{Another important consideration is where the model obtains its understanding of the input context (prompt). Contextual latent-diffusion approaches commonly obtain prompt representations from an \emph{external pretrained network at inference time}: ELF uses T5, while ELF-REG uses Qwen \citep{elf,scalingdlm}. These encoders can supply powerful semantic features, making the external encoder an important contributor to the resulting system's capabilities. This motivates a further scientific question: how competitive can latent diffusion reasoning become when prompt conditioning is learned within the model itself?}
 
@@ -71,7 +71,7 @@ Code will be available at: \url{https://anonymous.4open.science/r/LFRM-98B5/}.
 
 \revp{Our contributions connect a complete reasoning pipeline to the technical obstacles that make straightforward adaptations inadequate:}
 \begin{enumerate}
-    \item \rev{\textbf{Competitive continuous-diffusion reasoning.} LFRM demonstrates strong mathematical and coding performance with compact learned conditioning (Tables~\ref{tab:headlinecomparison}--\ref{tab:codingcomparison}). Our evaluations compare both teacher-conditioned and learned-prompt models with existing systems; a short mixed-task adaptation additionally enables one checkpoint to serve GSM8K and MATH500 (Appendix~\ref{app:teachertransfer}).}
+    \item \rev{\textbf{Competitive continuous-diffusion reasoning.} LFRM demonstrates strong mathematical and coding performance with compact learned conditioning (Tables~\ref{tab:headlinecomparison}--\ref{tab:codingcomparison}). \rev{We compare teacher-conditioned and learned-prompt models with existing systems; short mixed-task adaptation enables} one checkpoint to serve GSM8K and MATH500 (Appendix~\ref{app:teachertransfer}).}
     \item \rev{\textbf{Representation design shapes reasoning accuracy and denoising dynamics.} We study representations for both ease of decoding and ease of generation. Accurate token recovery alone does not ensure strong reasoning: single-layer representations generate poorly even with learned projections. Learning a multilayer Qwen representation using decoding cross-entropy improves generation over PCA (Figure~\ref{fig:representationcomparison}). Its decomposition also enables asynchronous denoising without additional training or denoiser calls (Section~\ref{sec:clocks}). Thus the latent space shapes both what the model learns and how it generates.}
     \item \rev{\textbf{Teacher-free inference via learned prompt encoding.} A staged curriculum replaces the large contextual teacher with a lightweight Transformer. Lemma~\ref{lem:conditionalrepresentation} identifies information preservation, rather than exact teacher-feature matching, as the requirement for recovering the text-conditional score. Establishing the flow model before adapting prompt conditioning avoids the poor behavior of joint training from initialization (Figures~\ref{fig:representationcomparison}--\ref{fig:promptcurriculum}).}
     \item \rev{\textbf{Guidance-compatible diffusion reinforcement learning.} We reconcile DiffusionNFT's CFG-free optimization with ELF's learned self-conditioning guidance by optimizing corrected fields while retaining guided rollouts. Gold solutions supplement generated endpoints, with their anchoring effect characterized in Lemma~\ref{lem:goldanchor}. Component ablations and supervised-continuation controls establish the benefits of these adaptations (Table~\ref{tab:nftablations}).}
@@ -118,7 +118,7 @@ Write $p_t(z\mid q)$ for the forward-path density and $s^\star(z,t\mid q)=\nabla
 Conditioning on $c_\phi(q)$ may merge distinct prompts; Section~\ref{sec:conditionalencoding} characterizes when the encoding preserves the text-conditional score.
 
 \textbf{Sampling under a different clock.}
-At inference, let $\tau\in[0,1]$ be solver time and $t=f(\tau)$ an increasing differentiable clock with $f(0)=0$, $f(1)=1$. Starting from $\bar z_0\sim\mathcal N(0,\sigma^2I)$, sampling obeys $\mathrm d\bar z_\tau/\mathrm d\tau=f'(\tau)v_\Theta(\bar z_\tau,f(\tau);q)$. For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration preserves the endpoint, while finite-step accuracy can change. Section~\ref{sec:clocks} extends this to group-specific clocks.
+At inference, let $\tau\in[0,1]$ be solver time and $t=f(\tau)$ an increasing differentiable clock with $f(0)=0$, $f(1)=1$. Starting from $\bar z_0\sim\mathcal N(0,\sigma^2I)$, sampling obeys $\mathrm d\bar z_\tau/\mathrm d\tau=f'(\tau)v_\Theta(\bar z_\tau,f(\tau);q)$. For $f(\tau)=\tau^2$, the multiplier is $2\tau$. Exact integration preserves the endpoint, while finite-step accuracy can change. \rev{Section~\ref{sec:clocks} introduces local clocks.}
 
 % BEGIN continuous diffusion framework and design choices
 \section{Continuous Diffusion Reasoning}
@@ -178,19 +178,19 @@ Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}
 \end{wrapfigure}
 % END inlined figures/representation_comparison.tex
 
-\revp{Figure~\ref{fig:representationcomparison} compares 1,024-dimensional whitened representations under matched six-epoch LFRM-B training; Table~\ref{tab:representationcontrols} gives the four-seed endpoints. Prompt and answer use the same representation in these controls. A separate comparison holds prompt tensors identical while changing the answer representation (Appendix~\ref{app:fixedprompt}).}
+\revp{Figure~\ref{fig:representationcomparison} compares 1,024-dimensional whitened representations under matched six-epoch LFRM-B training; Table~\ref{tab:representationcontrols} gives the four-seed endpoints. \rev{These controls use the same prompt and answer representation. Separate controls fix prompt tensors while varying answer representations} (Appendix~\ref{app:fixedprompt}).}
 
 \leavevmode\rev{\textbf{Accurate decoding alone does not ensure strong reasoning.}}
 \label{sec:representationablations}
 The fixed 1,024-dimensional layer-32 PCA representation supports \textbf{99.24\%} held-out same-position token recovery after two epochs of training a separate decoder (Appendix~\ref{app:representationdiagnostics}). Yet LFRM-B using this same representation achieves only \textbf{11.20\%} GSM8K accuracy after six epochs. Accurate clean-token recovery alone is therefore an insufficient criterion for choosing a denoising representation.
 
 \leavevmode\rev{\textbf{Combining layers improves reasoning accuracy.}}
-We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationcka} gives the analysis. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy to \textbf{28.43\%} (Figure~\ref{fig:representationcomparison}). \rev{Learning a layer-32 projector gives only $11.54\%$ (SD $0.61$), versus $30.76\%$ ($0.39$) for learned multilayer features. Thus learning alone does not close the single-layer gap. The layer groups also enable distinct denoising clocks (Section~\ref{sec:clocks}).}
+We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationcka} gives the analysis. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy to \textbf{28.43\%} (Figure~\ref{fig:representationcomparison}). \rev{Learning a layer-32 projector gives only $11.54\%$ (SD $0.61$), versus $30.76\%$ ($0.39$) for learned multilayer features. Thus learning alone does not close the single-layer gap. \rev{Layer groups also enable distinct clocks} (Section~\ref{sec:clocks}).}
 
 \leavevmode\rev{\textbf{Learning projections improves over PCA.}}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
 
-\revp{\textbf{The representation advantage persists with fixed conditioning.} With identical learned-multilayer Qwen prompt features, learned-multilayer answers achieve \textbf{30.76\%}, versus \textbf{28.58\%} for multilayer PCA and \textbf{14.06\%} for layer-32 PCA (Appendix~\ref{app:fixedprompt}). Compared with shared prompt/answer encoding, multilayer PCA remains close to \textbf{28.43\%}, while layer-32 PCA improves from \textbf{11.20\%}. The representation ordering persists. Thus the answer representation contributes beyond changes in prompt conditioning.}
+\revp{\textbf{The representation advantage persists with fixed conditioning.} With identical learned-multilayer Qwen prompt features, learned-multilayer answers achieve \textbf{30.76\%}, versus \textbf{28.58\%} for multilayer PCA and \textbf{14.06\%} for layer-32 PCA (Appendix~\ref{app:fixedprompt}). Compared with shared prompt/answer encoding, multilayer PCA remains close to \textbf{28.43\%}, while layer-32 PCA improves from \textbf{11.20\%}. \rev{The ordering persists, showing that answer representations matter beyond prompt conditioning.}}
 
 \revp{\textbf{Teacher choice.} Replacing Qwen3-4B with Qwen3-0.6B in the matched learned-multilayer recipe yields $25.53\%$ ($0.70$) at epoch six, versus $30.76\%$ ($0.39$). The recipe remains effective with the smaller teacher, while the stronger teacher improves reasoning (Appendix~\ref{app:teachertransfer}).}
 
@@ -199,7 +199,7 @@ PCA preserves high-variance directions, which need not preserve the teacher's pr
 \subsection{Learning the conditional encoding in three stages}
 \label{sec:conditionalencoding}
 
-\revp{Answer latents start from noise at inference, but prompts still need contextual encoding. Our objective is to replace this external computation: ELF and ELF-REG retain pretrained prompt encoders \citep{elf,scalingdlm}, whereas LFRM learns a compact encoder and retains only Qwen's frozen token lookup.} For LFRM-L, the contextual network has \textbf{121M parameters}, compared with 3.63B in the full teacher Transformer (both excluding vocabulary input/output maps). The student uses six bidirectional attention blocks and encodes each prompt once; see Appendix~\ref{app:training} for its architecture.
+\revp{Answer latents start from noise at inference, but prompts still need contextual encoding. \rev{We replace this external computation:} ELF and ELF-REG retain pretrained prompt encoders \rev{\citep{elf,scalingdlm}; LFRM learns a compact encoder, retaining only Qwen's frozen token lookup.}} For LFRM-L, the contextual network has \textbf{121M parameters}, compared with 3.63B in the full teacher Transformer (both excluding vocabulary input/output maps). The student uses six bidirectional attention blocks and encodes each prompt once; see Appendix~\ref{app:training} for its architecture.
 
 % Finish the wrap before the full-width lemma, retaining a small gap.
 \par
@@ -209,7 +209,7 @@ PCA preserves high-variance directions, which need not preserve the teacher's pr
 \WFclear
 
 \textbf{The prompt as the condition.}
-The text-conditioned field $v_\Theta$ of Section~\ref{sec:preliminaries} includes self-conditioning and guidance as auxiliary inputs. We jointly optimize $\theta$ and $\phi$, keeping the prompt text, answer representation, and forward corruption fixed. The following lemma characterizes what the encoding must preserve.
+The text-conditioned field $v_\Theta$ of Section~\ref{sec:preliminaries} includes self-conditioning and guidance as auxiliary inputs. We jointly optimize $\theta$ and $\phi$, keeping the prompt text, answer representation, and forward corruption fixed. \rev{The lemma states what the encoding must preserve.}
 
 \begin{lemma}[Preserving the text-conditional score]
 \label{lem:conditionalrepresentation}
@@ -238,13 +238,13 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 
 The encoder need not reproduce the teacher's coordinates: it must preserve the information needed for the posterior mean answer. Appendix~\ref{app:conditioninglemma} proves the lemma and gives an information-preserving encoding with arbitrarily large teacher-imitation MSE. MSE matching supplies a compatible initialization, while downstream training can adapt the encoder and denoiser jointly. We use three stages, keeping answer representations and token embeddings fixed throughout (details in Appendix~\ref{app:training}):
 
-\textbf{1. Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective. \textbf{2. Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE. \textbf{3. Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss, to epoch 18 for LFRM-B or epoch 21 for LFRM-L on the mathematical reasoning tasks.
+\textbf{1. Frozen conditioning.} Train the flow model for 12 epochs using fixed Qwen prompt representations and the flow/decoder objective. \textbf{2. Prompt imitation.} Freeze the flow model and fit the compact encoder to the teacher prompt representations using MSE. \textbf{3. Joint adaptation.} Substitute the learned encoder and optimize both networks through the flow/decoder objective, without an additional prompt-MSE loss, \rev{to epoch 18 for LFRM-B or 21 for LFRM-L on math.}
 
-Replacing Qwen with the MSE-trained encoder immediately reduces accuracy, despite unchanged flow-model weights (Figure~\ref{fig:promptcurriculum}). Subsequent joint training recovers much of this loss on GSM8K and exceeds the original teacher-conditioned checkpoint on MATH500. This recovery reflects adaptation of \emph{both} networks, showing the value of learning the conditioning interface through the generative objective.
+Replacing Qwen with the MSE-trained encoder immediately reduces accuracy, despite unchanged flow-model weights (Figure~\ref{fig:promptcurriculum}). Subsequent joint training recovers much of this loss on GSM8K and exceeds the original teacher-conditioned checkpoint on MATH500. This recovery reflects adaptation of \emph{both} networks, \rev{showing the value of learning conditioning through the generative objective.}
 
 \leavevmode\rev{\textbf{Stable initial conditioning enables effective joint adaptation.}}
 \label{sec:conditioningcurriculum}
-Joint learning from initialization makes the conditioning interface change while the flow model is still learning to interpret it. Under the matched six-epoch comparison, this approach reaches only \textbf{8.70\%} GSM8K accuracy, versus \textbf{30.76\%} with frozen teacher conditioning (Figure~\ref{fig:representationcomparison}). This motivates stabilizing the condition during early learning and adapting it afterward.
+Joint learning from initialization makes the conditioning interface change while the flow model is still learning to interpret it. Under the matched six-epoch comparison, this approach reaches only \textbf{8.70\%} GSM8K accuracy, versus \textbf{30.76\%} with frozen teacher conditioning (Figure~\ref{fig:representationcomparison}). \rev{This motivates stable conditioning during early learning, followed by adaptation.}
 
 \revp{\textbf{What survives removing the teacher?} In an ablation, we continue training LFRM-B from epoch 12 to 18 using the original frozen Qwen prompt encoder instead of the learned encoder. At epoch 18, this achieves $41.05\%$ ($0.53$) GSM8K accuracy, versus $39.35\%$ ($0.59$) after the same number of backbone-training epochs with learned conditioning (four seeds, ODE64). The smaller GSM8K gap contrasts with coding's substantial MBPP gap (Table~\ref{tab:codingcomparison}). This comparison tests the conditioning strategies after equal backbone-training duration; the fixed-backbone swap in Figure~\ref{fig:promptcurriculum} measures the immediate substitution cost. Detailed results and end-to-end memory/latency measurements appear in Appendices~\ref{app:teachertransfer} and~\ref{app:efficiency}.}
 
@@ -254,7 +254,7 @@ Joint learning from initialization makes the conditioning interface change while
 Our multilayer representation allows different feature groups to become clean at different rates, potentially letting one group use cleaner information from another. We extend the shared clock of Section~\ref{sec:preliminaries} to layer-specific clocks $t_\ell=f_\ell(\tau)=\tau^{\gamma_\ell}$ for $\ell\in\{16,24,32\}$ at inference, while retaining synchronous training. Equal exponents recover synchronous inference; unequal exponents give different noise levels within a single denoiser call.
 
 \textbf{Adapting a synchronously trained denoiser.}
-Although training uses a shared time, inference applies the same learned time-embedding function to each local time and averages its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. This needs no retraining and recovers the original embedding when local times agree.
+Although training uses a shared time, inference applies the same learned time-embedding function to each local time and averages its outputs, $\bar e_\theta^{\mathrm{time}}(\bm t)=\frac13\sum_\ell e_\theta^{\mathrm{time}}(t_\ell)$. \rev{This requires no retraining; equal times recover the original embedding.}
 
 % End the curriculum wrap before the full-width sampling equation.
 \par
@@ -329,7 +329,7 @@ For each policy $p\in\{\mathrm{cur},\mathrm{old},\mathrm{ref}\}$, forward-noise 
  \sg\!\left[b_{\mathrm{sc}}(1-g^{-1})(v_p^{\mathrm{main}}-v_p^0)\right],
  \label{eq:nftcorrectedfield}
 \end{equation}
-where $g>0$ is the SCCFG scale. Our update applies Eq.~\eqref{eq:nftquadratic} to $f=\widetilde v_{\mathrm{cur}}$, $h=\sg(\widetilde v_{\mathrm{old}})$, and $u=u_t^{\mathrm{stab}}$ from Section~\ref{sec:methodflow}. We use $\beta=1$ and add a squared-velocity penalty toward the corrected field $\widetilde v_{\mathrm{ref}}$ of the fixed initial reference. With self-conditioning enabled, the corrected value is $v_p^0+(v_p^{\mathrm{main}}-v_p^0)/g$. Detaching the correction preserves the main-pass Jacobian rather than scaling it by $1/g$ (Appendix~\ref{app:nftdetails}).
+where $g>0$ is the SCCFG scale. Our update applies Eq.~\eqref{eq:nftquadratic} to $f=\widetilde v_{\mathrm{cur}}$, $h=\sg(\widetilde v_{\mathrm{old}})$, and $u=u_t^{\mathrm{stab}}$ from Section~\ref{sec:methodflow}. We use $\beta=1$ and add a squared-velocity penalty toward the corrected field $\widetilde v_{\mathrm{ref}}$ of the fixed initial reference. With self-conditioning enabled, the corrected value is $v_p^0+(v_p^{\mathrm{main}}-v_p^0)/g$. \rev{Detachment preserves the main-pass Jacobian without scaling it by $1/g$} (Appendix~\ref{app:nftdetails}).
 
 \textbf{Guided rollouts and forward-process updates.}
 Collection retains recurrent self-conditioning and SCCFG guidance. We reward decoded answers but optimize their saved continuous endpoints, using fresh forward corruption and bootstrap predictions rather than replaying rollout histories. Thus rollouts remain guided while NFT optimizes the corrected fields in Eq.~\eqref{eq:nftcorrectedfield}.
@@ -337,7 +337,7 @@ Collection retains recurrent self-conditioning and SCCFG guidance. We reward dec
 \subsection{Gold-anchored reasoning updates}
 \label{sec:nftgold}
 
-Each question contributes 15 old-policy generations and one gold latent endpoint, with raw rewards 0.75 for correct generated answers, 0 for incorrect answers, and 1 for gold. The gold endpoint supplies a preferred target even when all generated answers are incorrect. We discard groups whose generated answers are all correct, concentrating updates on observed failures; retained rewards are normalized into $\rho$ as described in Appendix~\ref{app:nftdetails}. This recipe uses reference solutions as well as verifiable rewards. Gold raw reward one need not give $\rho_G=1$; the following lemma characterizes its contribution.
+Each question contributes 15 old-policy generations and one gold latent endpoint, with raw rewards 0.75 for correct generated answers, 0 for incorrect answers, and 1 for gold. The gold endpoint supplies a preferred target even when all generated answers are incorrect. We discard groups whose generated answers are all correct, concentrating updates on observed failures; retained rewards are normalized into $\rho$ as described in Appendix~\ref{app:nftdetails}. This recipe uses reference solutions as well as verifiable rewards. \rev{Gold reward one need not give $\rho_G=1$; the lemma characterizes this term.}
 
 \begin{lemma}[Gold endpoints as field anchors]
 \label{lem:goldanchor}
@@ -347,7 +347,7 @@ For a gold endpoint, let $\mathcal H$ contain the noisy state, time, question, c
  =\|f-a_G\|_2^2+C_{\mathcal H},
 \label{eq:nftgoldanchor}
 \end{equation}
-where $C_{\mathcal H}$ is independent of $f$ with the conditioning information and auxiliary fields fixed. Thus the gold term attracts the current field toward a convex combination of the gold posterior target and the old field.
+where $C_{\mathcal H}$ is independent of $f$ with the conditioning information and auxiliary fields fixed. \rev{The gold term attracts the current field toward a convex combination of the gold posterior target and old field.}
 \end{lemma}
 
 At $\rho_G=1$, the gold term directly regresses toward $m_G$. Under an ideal reference model matching that gold posterior target, the anchor interpolates between the reference and old fields; Appendix~\ref{app:nftgoldproof} gives the proof and scope. This gold-induced anchor complements the explicit reference penalty.
@@ -455,7 +455,7 @@ Gold-only supervised continuation at both learning rates remains below NFT with 
 \begin{table}[!htb]\color{blue}
 \centering\small
 \begin{revision}
-\caption{\textbf{NFT component ablations and supervised-continuation controls.} GSM8K-B, ODE64, async $(2.5,2,1.5)$; four generation seeds; mean pass@1 (seed SD), \%. Left: NFT components at updates 300/600. Right: supervised continuation; matched updates: 300/600, greater-compute: 6,000/8,000, versus NFT at 300/600. ELF/prompt EMAs: $.99/.99$ for NFT, $.9999/.9999$ for supervised continuation.}
+\caption{\textbf{NFT component ablations and supervised-continuation controls.} GSM8K-B, ODE64, async $(2.5,2,1.5)$; \rev{four seeds; mean pass@1 (seed SD), \%. Left: NFT at updates 300/600.} Right: supervised continuation; matched updates: 300/600, \rev{greater-compute: 6,000/8,000, versus NFT300/600.} ELF/prompt EMAs: $.99/.99$ for NFT, $.9999/.9999$ for supervised continuation.}
 \label{tab:nftablations}
 \begin{minipage}[t]{.46\linewidth}\centering
 \setlength{\tabcolsep}{3pt}
@@ -518,7 +518,7 @@ Pre- and post-NFT LFRM exceed reported PlaidQ results on HumanEval(+), but trail
 \subsection{\rev{Mixed-task adaptation}}
 \label{sec:mixedtask}
 
-\revp{We test whether one latent-diffusion checkpoint can adapt to another reasoning task while retaining its original-task performance. We start from the supervised MATH-trained LFRM-L checkpoint at epoch 21, before NFT, and jointly fine-tune its backbone and learned prompt encoder for three epochs on a balanced mixture of 200k GSM8K and 200k MATH training examples. We evaluate the same adapted checkpoint on both full benchmarks, using four seeds and 64 denoising steps. With ODE sampling, GSM8K improves from $22.86\%$ to $33.49\%$, while MATH500 decreases from $21.45\%$ to $19.25\%$. With DMD2-style sampling, GSM8K improves from $36.22\%$ to $49.66\%$ and MATH500 is retained ($28.65\%$ to $28.70\%$). Thus one adapted checkpoint can serve both task families: it gains GSM8K accuracy under both samplers, with a modest MATH retention cost under ODE and preserved MATH accuracy under DMD2. Appendix~\ref{app:teachertransfer} gives the full training curves and evaluation settings.}
+\revp{We test whether one latent-diffusion checkpoint can adapt to another reasoning task while retaining its original-task performance. We start from the supervised MATH-trained LFRM-L checkpoint at epoch 21, before NFT, and jointly fine-tune its backbone and learned prompt encoder for three epochs on a balanced mixture of 200k GSM8K and 200k MATH training examples. We evaluate the same adapted checkpoint on both full benchmarks, using four seeds and 64 denoising steps. With ODE sampling, GSM8K improves from $22.86\%$ to $33.49\%$, while MATH500 decreases from $21.45\%$ to $19.25\%$. With DMD2-style sampling, GSM8K improves from $36.22\%$ to $49.66\%$ and MATH500 is retained ($28.65\%$ to $28.70\%$). Thus one adapted checkpoint can serve both task families: it gains GSM8K accuracy under both samplers, with a modest MATH retention cost under ODE and preserved MATH accuracy under DMD2. \rev{Training curves and settings appear in Appendix~\ref{app:teachertransfer}.}}
 
 
 % END inlined sections/headline_results.tex
