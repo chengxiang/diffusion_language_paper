@@ -1790,29 +1790,22 @@ Both samplers use $\tau_r=\operatorname{sigmoid}(-1.5+0.8\Phi^{-1}(r/S))$ for in
 
 \subsection{ODE and DMD2 at headline budgets}
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{ODE and DMD2-style sampling: 64 denoising calls for math and 128 for code, async $(2.5,2,1.5)$, eight seeds, and CFG1. SCCFG is 2 for GSM8K and 3 for MATH500/code. Values are mean pass@1 (generation-seed SD), \%. Supervised weights use ELF/prompt EMA $.9999/.9999$; NFT uses $.99/.99$ for math and $.9/.9$ for code. Coding uses the submitted epoch-13/NFT100 checkpoints and standard EvalPlus scoring without function-name repair; HE/HE+ contain 164 problems, and both MBPP metrics contain 378.}
+\caption{ODE and DMD2-style sampling: 64 denoising calls for math and 128 for code, async $(2.5,2,1.5)$, eight seeds, and CFG1. SCCFG is 2 for GSM8K and 3 for MATH500/code. Values are mean pass@1 (generation-seed SD), \%. Supervised weights use ELF/prompt EMA $.9999/.9999$. Coding uses the submitted epoch-13 checkpoint and standard EvalPlus scoring without function-name repair; HE/HE+ contain 164 problems, and both MBPP metrics contain 378.}
 \label{tab:headlinesamplers}
 \begin{tabular}{@{}llrr@{}}\toprule
-Dataset / model & Stage (ODE / DMD2) & ODE & DMD2\\\midrule
+Dataset / model & Stage & ODE & DMD2\\\midrule
 GSM8K / LFRM-B & Epoch 18 & 39.17 (0.63) & 47.62 (0.90)\\
-GSM8K / LFRM-B & NFT 300 & 42.16 (0.88) & 47.00 (0.98)\\
 GSM8K / LFRM-L & Epoch 21 & 58.67 (0.69) & 67.13 (0.58)\\
-GSM8K / LFRM-L & NFT 500 / 600 & 63.74 (0.83) & 68.97 (0.50)\\
-MATH500 / LFRM-L & Epoch 21 & 21.18 (0.70) & 28.58 (0.90)\\
-MATH500 / LFRM-L & NFT 600 & 24.68 (1.27) & 32.40 (1.17)\\\midrule
+MATH500 / LFRM-L & Epoch 21 & 21.18 (0.70) & 28.58 (0.90)\\\midrule
 \multicolumn{4}{@{}l}{\textit{Coding / LFRM-L, 128 NFE, standard scoring}}\\
 HumanEval & Epoch 13 & 29.57 (2.33) & 39.71 (1.05)\\
-HumanEval & NFT 100 & 32.85 (1.91) & 40.09 (1.87)\\
 HumanEval+ & Epoch 13 & 26.91 (1.99) & 35.75 (1.17)\\
-HumanEval+ & NFT 100 & 30.18 (1.79) & 36.74 (2.32)\\
 MBPP-378 base & Epoch 13 & 18.45 (1.23) & 28.08 (0.59)\\
-MBPP-378 base & NFT 100 & 22.26 (1.50) & 27.94 (0.77)\\
 MBPP+ & Epoch 13 & 16.40 (1.30) & 24.34 (0.40)\\
-MBPP+ & NFT 100 & 19.61 (1.36) & 24.83 (0.94)\\
 \bottomrule
 \end{tabular}
 \end{table}
-Table~\ref{tab:headlinesamplers} reports higher pass@1 under DMD2 at each displayed endpoint. NFT's effect depends on the sampler: the GSM8K-B supervised DMD2 result exceeds its NFT300 result, whereas the submitted ODE comparison improves after NFT. For code, the additional NFT gains are smaller under DMD2: HumanEval, HumanEval+, and MBPP+ improve, while MBPP-378 base accuracy decreases slightly.
+Table~\ref{tab:headlinesamplers} reports higher pass@1 under DMD2 at each displayed endpoint.
 
 \subsection{Four-seed synchronous and asynchronous clocks}
 All comparisons below use LFRM-L epoch 21, ELF/prompt EMA $.9999/.9999$, 32 NFE, and seeds 42/123/456/789. Synchronous denotes $(2,2,2)$ and asynchronous denotes $(2.5,2,1.5)$. Table~\ref{tab:submittedschedule4} expands the submitted ODE/SCCFG2 comparison; Table~\ref{tab:additionalschedule4} reports additional ODE/DMD2 evaluations at SCCFG2 for GSM8K and SCCFG3 for MATH500. Each within-setting clock comparison holds the model weights fixed.
