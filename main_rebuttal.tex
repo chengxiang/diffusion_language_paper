@@ -451,17 +451,17 @@ Gold-only supervised continuation at both learning rates remains below NFT with 
 \begin{table}[!htb]\color{blue}
 \centering\small
 \begin{revision}
-\caption{\textbf{NFT component ablations and supervised-continuation controls.} GSM8K-B, ODE64, async $(2.5,2,1.5)$; mean pass@1 (seed SD), \%. Left: two seeds at update 300 and four at 600. Right: four-seed supervised continuation; matched updates: 300/600, greater-compute: 6,000/8,000, versus NFT at 300/600. ELF/prompt EMAs: $.99/.99$ for NFT, $.9999/.9999$ for supervised continuation.}
+\caption{\textbf{NFT component ablations and supervised-continuation controls.} GSM8K-B, ODE64, async $(2.5,2,1.5)$; four generation seeds; mean pass@1 (seed SD), \%. Left: NFT components at updates 300/600. Right: supervised continuation; matched updates: 300/600, greater-compute: 6,000/8,000, versus NFT at 300/600. ELF/prompt EMAs: $.99/.99$ for NFT, $.9999/.9999$ for supervised continuation.}
 \label{tab:nftablations}
 \begin{minipage}[t]{.46\linewidth}\centering
 \setlength{\tabcolsep}{3pt}
 \begin{tabular}{@{}lrr@{}}
 \toprule
 NFT components & 300 & 600\\\midrule
-Gold + correction & 41.51 (.70) & \textbf{42.42 (.63)}\\
-Correction only & \textbf{42.12 (.05)} & 41.60 (1.06)\\
-Gold only & 41.21 (.70) & 39.44 (.87)\\
-Neither & 40.83 (1.98) & 23.56 (.27)\\
+Gold + correction & 41.94 (.94) & \textbf{42.42 (.63)}\\
+Correction only & \textbf{42.42 (.41)} & 41.60 (1.06)\\
+Gold only & 41.49 (.72) & 39.44 (.87)\\
+Neither & 40.88 (1.19) & 23.56 (.27)\\
 \bottomrule
 \end{tabular}
 \end{minipage}\hfill
@@ -1738,7 +1738,7 @@ In the no-gold variants, gold solutions are omitted throughout the NFT update. G
 
 \textbf{No-guidance-correction setup: } Without guidance correction, the current, old, and reference NFT losses use the guided main-pass velocity $v_p^{\mathrm{main}}$ in place of $\widetilde v_p$ in Eq.~\eqref{eq:nftcorrectedfield}. Guided rollout collection, recurrent self-conditioning, reward scoring, and evaluation guidance remain enabled. Thus the factorial removes gold anchoring and field correction independently.
 
-Table~\ref{tab:nftablations} uses ODE64, async $(2.5,2,1.5)$, CFG1/SCCFG2, full GSM8K coverage, and backbone/prompt EMA $.99/.99$. The four-variant update-300 comparison uses common seeds 42/123; update 600 uses 42/123/456/789. The full-NFT comparison against supervised continuation uses all four seeds at both updates. Parentheses report sample SD over generation seeds.
+Table~\ref{tab:nftablations} uses ODE64, async $(2.5,2,1.5)$, CFG1/SCCFG2, full GSM8K coverage, and backbone/prompt EMA $.99/.99$. All component and supervised-continuation comparisons use the same four generation seeds, 42/123/456/789, at both updates. Parentheses report sample SD over generation seeds.
 
 \subsection{Supervised continuation and compute}
 Both supervised controls use the original mixed flow/decoder-CE objective, effective batch 512, and joint prompt/backbone updates. Standard continuation retains LR $.002$, raw epoch-18 weights, and optimizer states. Fresh continuation uses LR $.0001$, the same selected starting weights as NFT, and fresh optimizers. Evaluation selects backbone/prompt EMA $.9999/.9999$. The compute estimates include rollout collection (including discarded candidates), current/old/reference updates, prompt computation, and optimizer matrix operations; common pretraining and representation preparation are excluded.
@@ -1759,7 +1759,7 @@ At 600 NFT updates, the paired differences from no correction, no gold, standard
 
 \subsection{Supporting ODE32 evaluations}
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{NFT controls at ODE32, matching all other Table~\ref{tab:nftablations} settings. Update 300 uses two seeds and update 600 four; mean pass@1 (seed SD), \%.}
+\caption{NFT controls at ODE32, with the same models, clocks, and guidance as Table~\ref{tab:nftablations}. Update 300 uses two seeds and update 600 four; mean pass@1 (seed SD), \%.}
 \label{tab:nftcontrol32}
 \begin{tabular}{@{}lrr@{}}\toprule
 NFT components & Update 300 & Update 600\\\midrule
