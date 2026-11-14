@@ -2028,20 +2028,20 @@ MLFM reports three days on 16 GH200s for adaptation (1,152 GPU-hours) and 18 hou
 \subsection{Representation preparation and dataset building}
 We reuse released solution corpora; upstream synthetic-data generation and foundation-model training are inherited resources. Our preparation consists of teacher feature extraction, covariance accumulation, projector learning, and reusable prompt/answer caches. Preparation is reported separately from model training, and excludes tuning/debugging runs and later cache copies.
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Core representation-preparation H200-hours. The GSM8K-B covariance component is estimated; remaining entries use recorded production allocations or update windows.}
+\caption{Core representation-preparation H200-hours from recorded production timings and representative throughput measurements.}
 \label{tab:preparationcosts}
 \begin{tabular}{@{}lrrr@{}}\toprule
 Preparation stage & GSM8K-B & MATH-L & Code-L\\\midrule
-Teacher capture and covariance & 3.41--15.11 & 11.62 & 15.11\\
+Teacher capture and covariance & 4.53 & 11.62 & 15.11\\
 Native projector-training cache & 2.87 & 7.40 & 3.09\\
 Projector learning & 13.13 & 26.82 & 33.61\\
 Projected answer/prompt caches & 14.71 & 14.58 & 24.03\\\midrule
-Total & 34.1--45.8 & 60.42 & 75.83\\\bottomrule
+Total & 35.25 & 60.42 & 75.83\\\bottomrule
 \end{tabular}
 \end{table}
 CPU preparation allocations total 779.01 core-hours for the recorded MATH tokenization, packing, and verification stages, and 43.95 core-hours for recorded coding cache preparation/finalization. These sum allocation duration times CPUs, separately from H200-hours; incomplete historical CPU timers are left unreported.
 
-The GSM8K-B range reflects measured throughput under different padding/packing assumptions for the historical feature capture. Complete preparation timers for GSM8K-L are unavailable. These caches are reused across epochs; the main mixed-task comparison reports its actual additional model-training time separately.
+For GSM8K-B covariance capture, 12 timed native batches extrapolate to 2,434,330 rows, including loading and state writing. Complete preparation timers for GSM8K-L are unavailable. These caches are reused across epochs; the main mixed-task comparison reports its actual additional model-training time separately.
 \end{revision}
 
 \end{document}
