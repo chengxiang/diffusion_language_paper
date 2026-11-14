@@ -31,6 +31,10 @@
 \newcommand{\revp}[1]{\par\color{blue}#1\par\color{black}}
 \newenvironment{revision}{\begingroup\color{blue}}{\endgroup}
 \newcommand{\revtodo}[1]{\rev{\textbf{TODO (author):} #1}}
+% Latest agent-review follow-ups: commits 0e82fc6 and 849ab10, relative to 81dbacd.
+% Preserve earlier revisions in blue; only these newer changes are red.
+\newcommand{\reviewrev}[1]{{\color{red}#1}}
+\newcommand{\reviewcolor}{\color{red}}
 \hypersetup{colorlinks=false}
 
 \newcommand{\asyncclock}{(2.5,2,1.5)}
@@ -1494,7 +1498,7 @@ We use the benchmark task text in the native Qwen chat format, without assistant
 HumanEval \citep{humaneval} contains 164 tasks; MBPP \citep{mbpp} uses the 378 tasks retained by EvalPlus \citep{evalplus}. We report base and full extended tests on the same generated programs, requiring both suites to pass for a plus score. Standard scoring applies native EvalPlus sanitization without function-name repair. Execution uses a minimum timeout of 4 seconds, reference-runtime multiplier four, and 4 GiB per program; failures and timeouts count as incorrect. Our separate alias condition changes extraction only: if the expected binding is absent and exactly one top-level function is present, append \texttt{expected\_name = generated\_name} and sanitize again. Existing bindings and ambiguous cases are unchanged. This changes which programs the evaluator accepts without changing generation.
 
 \paragraph{Mapping external reports.}
-Our PlaidQ comparison uses the author-reported results from arXiv version 1, subsequently withdrawn by the authors to address institutional resource-disclosure requirements \citep{plaidq}. PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our comparison values. ELF-REG Table 1 supplies its aliased HumanEval, HumanEval+, and MBPP-378 base results \citep{scalingdlm}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. \rev{The comparisons above and Table~\ref{tab:codingaliascomparison} retain the authors' reported values. Our additional evaluations of released ELF and ELF-REG checkpoints are reported separately in Appendix~\ref{app:baselinefollowups}.}
+Our PlaidQ comparison uses the author-reported results from arXiv version 1, subsequently withdrawn by the authors to address institutional resource-disclosure requirements \citep{plaidq}. PlaidQ Appendix B.7 distinguishes original MBPP-500 from the 378-task subset evaluated using base assertions; its latter column is named ``MBPP+'' \citep{plaidq}. We map only that latter column to our MBPP-378 base metric. PlaidQ uses prefix completion with a 128-token response budget, benchmark-specific extraction, and a 15-second program timeout. Its Table 1 supplies our comparison values. ELF-REG Table 1 supplies its aliased HumanEval, HumanEval+, and MBPP-378 base results \citep{scalingdlm}; its Appendix B.3 documents the alias rule and larger execution limits (20-second minimum, reference multiplier ten, 6 GiB). Our alias rows match the entry-point repair and test-set definitions, while retaining our prompts and execution limits. These comparisons align scoring categories, rather than reproducing each paper's full generation protocol. Full extended MBPP+ values are not reported for either comparison paper. \reviewrev{The comparisons above and Table~\ref{tab:codingaliascomparison} retain the authors' reported values. Our additional evaluations of released ELF and ELF-REG checkpoints are reported separately in Appendix~\ref{app:baselinefollowups}.}
 
 For additional discrete-model context, oDLM-0.6B reports HumanEval/HumanEval+ pass@1 of 17.87\%/16.40\% at 128 sampling steps with a 128-token response budget \citep[Table 1 and Appendix B.7]{odlm}. Edit Flow-1.3B reports 12.8\%/10.4\%, and its localized variant reports 14.0\%/10.4\% \citep[Table 3]{editflow}. Our learned-conditioning results without name repair are 27.97\%/25.30\% before joint training, 29.57\%/26.91\% at epoch 13, and 32.85\%/30.18\% after NFT. These comparisons use the authors' reported accuracies; training data, initialization, and sampling protocols differ. We restrict the additional comparison to HumanEval(+) rather than equating differently defined MBPP columns.
 
@@ -1773,7 +1777,7 @@ Supervised continuation & 8,000 & 5.0381 & 40.03 (0.73) / 37.68 (0.49)\\\bottomr
 
 At 600 NFT updates, the paired differences from no correction, no gold, standard supervised continuation at 8,000 updates, and NFT-like supervised continuation at 8,000 updates are respectively $+2.98$, $+0.82$, $+2.39$, and $+4.74$ points. Their paired 95\% problem-bootstrap intervals are $[1.84,4.15]$, $[-0.08,1.74]$, $[1.25,3.54]$, and $[3.54,5.91]$, using 4,000 replicates and seed 20260918. Gold without correction exceeds neither component by $15.88$ points, interval $[14.35,17.38]$.
 
-\noindent\begin{minipage}{\linewidth}
+\noindent\begin{minipage}{\linewidth}\reviewcolor
 \textbf{EMA selection.} We report EMA $.9999$ for supervised continuation because it consistently outperformed $.99$ in our matched EMA comparisons. For NFT-like continuation, this holds at both 300 and 6,000 updates; using $.99$ would increase NFT's measured advantage.
 
 \begin{center}\small
@@ -1927,15 +1931,15 @@ MATH500 / L & 12.70 (0.14) & 18.70 (0.42) & 21.50 (1.27)\\\bottomrule
 The main comparison retains ELF-REG's stronger author-reported 38.11/55.96/13.39\% results. OpenMathInstruct-2 supplies a common source of natural-language reasoning supervision for our GSM8K and MATH experiments. TinyGSM, used by FMLM+ and $\mathbb S$-FLM, supplies GSM-style Python solutions without a corresponding MATH counterpart. Our additional GSM8K sources remain those in Table~\ref{tab:gsmtrainingmixture}.
 
 \subsection{Native prompts and function-name aliasing}
-Table~\ref{tab:matchedcodebaselines} reports the same two-seed native-prompt generations under two scoring rules. Standard scoring preserves the expected function name. The alias rule additionally permits repairing one generated function name, following the separately labelled comparison in Appendix~\ref{app:codingdetails}. Both supervised LFRM variants exceed ELF-REG on HumanEval(+); the standard MBPP comparison favors ELF-REG over learned conditioning, while alias scoring reverses that ordering. We also include standard-scoring results for the code-trained ELF-L reference released by the ELF-REG authors (\texttt{checkpoint\_64248}). Both released models use EMA $.9999$, the native ODE sampler with early-stop ratio 8, CFG1/SCCFG2, and a 1,024-token canvas.
+Table~\ref{tab:matchedcodebaselines} reports the same two-seed native-prompt generations under two scoring rules. Standard scoring preserves the expected function name. The alias rule additionally permits repairing one generated function name, following the separately labelled comparison in Appendix~\ref{app:codingdetails}. Both supervised LFRM variants exceed ELF-REG on HumanEval(+); the standard MBPP comparison favors ELF-REG over learned conditioning, while alias scoring reverses that ordering. \reviewrev{We also include standard-scoring results for the code-trained ELF-L reference released by the ELF-REG authors (\texttt{checkpoint\_64248}). Both released models use EMA $.9999$, the native ODE sampler with early-stop ratio 8, CFG1/SCCFG2, and a 1,024-token canvas.}
 \begin{table}[htbp]\color{blue}\centering\small
 \setlength{\tabcolsep}{4pt}
-\caption{Native-prompt coding comparisons with identical tests and execution limits: mean pass@1 (seed SD), \%, seeds 42/123. LFRM uses 128 denoising calls and the released ELF/ELF-REG models use 127, each followed by terminal decoding. All models are supervised; ELF-L is shown under standard scoring. LFRM frozen-Qwen is epoch 12; learned conditioning is joint epoch 13, with ELF/prompt EMA $.9999/.9999$.}
+\caption{Native-prompt coding comparisons with identical tests and execution limits: mean pass@1 (seed SD), \%, seeds 42/123. LFRM uses 128 denoising calls and \reviewrev{the released ELF/ELF-REG models use 127}, each followed by terminal decoding. \reviewrev{All models are supervised; ELF-L is shown under standard scoring.} LFRM frozen-Qwen is epoch 12; learned conditioning is joint epoch 13, with ELF/prompt EMA $.9999/.9999$.}
 \label{tab:matchedcodebaselines}
 \begin{tabular}{@{}lrrrr@{}}\toprule
 Model / prompt-encoder & HumanEval & HumanEval+ & MBPP-378 base & MBPP+ extended\\\midrule
 \multicolumn{5}{@{}l}{Standard function names}\\
-ELF-L / Qwen-0.6B & 19.82 (2.16) & 18.60 (1.29) & 20.63 (1.50) & 18.92 (1.68)\\
+\reviewrev{ELF-L / Qwen-0.6B} & \reviewrev{19.82 (2.16)} & \reviewrev{18.60 (1.29)} & \reviewrev{20.63 (1.50)} & \reviewrev{18.92 (1.68)}\\
 ELF-REG-L / Qwen-0.6B & 24.09 (.43) & 23.17 (.00) & 24.60 (1.87) & 21.43 (1.12)\\
 LFRM-L / Qwen-4B & 35.06 (.43) & 32.62 (.43) & 39.81 (.94) & 34.26 (.19)\\
 LFRM-L / learned & 32.01 (3.02) & 28.66 (.86) & 19.58 (1.50) & 17.33 (1.68)\\\addlinespace
@@ -1996,7 +2000,7 @@ ELF-REG-L & 63 / 64 & 1285.9 (7.5) & 1.49\\
 The one-time prompt encoding is a small fraction of total generation latency. At fixed NFE, asynchronous and synchronous clocks use the same backbone calls and terminal decoder. NFE excludes the final decoding call, whose contribution is included in these end-to-end measurements.
 
 
-\noindent\begin{minipage}{\linewidth}
+\noindent\begin{minipage}{\linewidth}\reviewcolor
 \textbf{Measured synchronous/asynchronous overhead.} We separately compare synchronous $(2,2,2)$ and asynchronous $(2.5,2,1.5)$ clocks on the same 32 GSM8K questions, with LFRM-B epoch 18 and LFRM-L epoch 21, learned prompt encoders, and backbone/prompt EMA $.9999/.9999$. Each model uses one H200, ODE32/64, CFG1/SCCFG2, a 1,024-token canvas, and seed 42 noise. Six warmed repeats alternate schedule order. Both paths use the same inference implementation and frozen-inference caches. Timing includes prompt tokenization/transfers, encoding, noise/grid construction, cache lookup, denoising, terminal prediction, and text decoding; loading, initial cache construction, and scoring are excluded.
 \begin{center}\small
 \setlength{\tabcolsep}{4pt}
@@ -2014,20 +2018,20 @@ SD is across the six timing repeats. Mean request-time differences are below $0.
 \end{minipage}
 
 \subsection{Prompt-conditioning memory and latency}
-We hold the coding epoch-12 backbone fixed and replace frozen Qwen with the MSE-trained prompt encoder. Both components reside on one H200 per benchmark, using fixed 32-problem length-stratified panels for HumanEval and MBPP, three warmed repeats, a 1,024-token canvas, ODE128, async $(2.5,2,1.5)$, and CFG1/SCCFG3. Backbone EMA is $.9999$ and the MSE10 prompt EMA is $.999$. The native FP32 weights use BF16 autocast and FP32 matrix-multiplication precision \texttt{high}. Timing includes prompt encoding, denoising, terminal prediction, and text decoding; model loading and correctness scoring are excluded. Qwen executes only the prefix through layer 32; unused later blocks and vocabulary head are removed from GPU residency.
+We hold the coding epoch-12 backbone fixed and replace frozen Qwen with the MSE-trained prompt encoder. \reviewrev{Both components reside on one H200 per benchmark, using fixed 32-problem length-stratified panels for HumanEval and MBPP, three warmed repeats, a 1,024-token canvas, ODE128, async $(2.5,2,1.5)$, and CFG1/SCCFG3. Backbone EMA is $.9999$ and the MSE10 prompt EMA is $.999$. The native FP32 weights use BF16 autocast and FP32 matrix-multiplication precision \texttt{high}. Timing includes prompt encoding, denoising, terminal prediction, and text decoding; model loading and correctness scoring are excluded.} Qwen executes only the prefix through layer 32; unused later blocks and vocabulary head are removed from GPU residency.
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Fixed-backbone prompt substitution on HumanEval and MBPP: batch latency in seconds (timing-repeat SD) and peak allocated GPU memory in GiB. Batch-32 throughput equals 32 divided by its batch latency.}
+\caption{\reviewrev{Fixed-backbone prompt substitution on HumanEval and MBPP: batch latency in seconds (timing-repeat SD) and peak allocated GPU memory in GiB. Batch-32 throughput equals 32 divided by its batch latency.}}
 \label{tab:conditioningefficiency}
 \begin{tabular}{@{}lrrrr@{}}\toprule
 & \multicolumn{2}{c}{Batch 1} & \multicolumn{2}{c}{Batch 32}\\
 Conditioner & Latency & Memory & Latency & Memory\\\midrule
-\multicolumn{5}{@{}l}{HumanEval}\\
-Frozen Qwen & 2.579 (0.001) & 11.02 & 42.061 (0.011) & 47.83\\
-Compact MSE encoder & 2.540 (0.002) & 5.40 & 41.885 (0.055) & 42.22\\
+\multicolumn{5}{@{}l}{\reviewrev{HumanEval}}\\
+Frozen Qwen & 2.579 (\reviewrev{0.001}) & 11.02 & 42.061 (\reviewrev{0.011}) & 47.83\\
+Compact MSE encoder & 2.540 (\reviewrev{0.002}) & 5.40 & 41.885 (\reviewrev{0.055}) & 42.22\\
 \addlinespace
-\multicolumn{5}{@{}l}{MBPP}\\
-Frozen Qwen & 2.982 (0.008) & 11.02 & 42.059 (0.053) & 47.83\\
-Compact MSE encoder & 2.917 (0.004) & 5.40 & 41.994 (0.018) & 42.22\\\bottomrule
+\multicolumn{5}{@{}l}{\reviewrev{MBPP}}\\
+\reviewrev{Frozen Qwen} & \reviewrev{2.982 (0.008)} & \reviewrev{11.02} & \reviewrev{42.059 (0.053)} & \reviewrev{47.83}\\
+\reviewrev{Compact MSE encoder} & \reviewrev{2.917 (0.004)} & \reviewrev{5.40} & \reviewrev{41.994 (0.018)} & \reviewrev{42.22}\\\bottomrule
 \end{tabular}
 \end{table}
 The compact encoder reduces memory substantially while changing total latency modestly. Its scientific purpose is inference without calling the external contextual teacher; the accompanying accuracy comparisons in Appendix~\ref{app:teachertransfer} quantify the cost of that replacement.
@@ -2065,7 +2069,7 @@ PlaidQ & Mixed text/math/code & --- & ---\\\bottomrule
 MLFM reports three days on 16 GH200s for adaptation (1,152 GPU-hours) and 18 hours on 16 GH200s for SFT (288 GPU-hours), excluding inherited SMDM pretraining \citep[Sections 5.1.2--5.1.3]{mlfm}. FMLM+ reports 250,000 updates on four H100s without elapsed time \citep[Appendix B]{posterior}; its FLOPs are reconstructed from its released architecture and training settings. PlaidQ reports 82.14 elapsed hours without GPU count or model \citep[Appendix B.1]{plaidq}, so GPU-hours are unavailable. Hardware types are retained explicitly rather than converting GPU-hours across accelerators.
 
 
-\noindent\begin{minipage}{\linewidth}
+\noindent\begin{minipage}{\linewidth}\reviewcolor
 \textbf{Component training costs for GSM8K/LFRM-B.} The following breakdown estimates matrix-operation FLOPs through NFT update 600, including projector fitting. A multiply-add counts as two operations. For each supervised stage, we multiply its recorded work count by the profiled cost per example, with decoder-CE cost normalized to the corpus-average answer length at decoder probability $.2$. NFT includes all rollout generations, including discarded groups, terminal decoding, current/old/reference computations, prompt updates, and optimizer matrix operations (Appendix~\ref{app:nftcontrols}).
 \begin{center}\small
 \textbf{Training-cost decomposition through NFT600.}\par\smallskip
