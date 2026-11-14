@@ -172,13 +172,13 @@ Linear decoders reconstruct $\widehat h_j^{(\ell)}=\mu_\ell+z_{\mathrm{clean},j}
 \vspace{-\baselineskip}
 \centering
 \includegraphics[width=\linewidth]{figures/representation_shared2_rebuttal.pdf}
-\caption{\rev{\small\textbf{Representation and conditioning affect reasoning.} LFRM-B on GSM8K, ODE32 and $t=\tau^2$. Representation controls retain Qwen conditioning; random joint training learns the prompt encoder from initialization. Curves use two seeds; values and protocols: Appendix~\ref{app:representationclock}--\ref{app:fixedprompt}.}}
+\caption{\rev{\small\textbf{Representation and conditioning affect reasoning.} LFRM-B, GSM8K, ODE32, $t=\tau^2$. Solid: matching prompts; dashed: fixed learned-multilayer prompts. Learned multilayer is shared. Two-seed curves; four-seed endpoints in text. Values/SDs: Appendix~\ref{app:representationclock}--\ref{app:fixedprompt}.}}
 \label{fig:representationcomparison}
 \vspace{-\baselineskip}
 \end{wrapfigure}
 % END inlined figures/representation_comparison.tex
 
-\revp{Figure~\ref{fig:representationcomparison} compares 1,024-dimensional whitened representations under matched six-epoch LFRM-B training; Table~\ref{tab:representationcontrols} gives the four-seed endpoints. \rev{These controls use the same prompt and answer representation. Separate controls fix prompt tensors while varying answer representations} (Appendix~\ref{app:fixedprompt}).}
+\revp{Figure~\ref{fig:representationcomparison} compares 1,024-dimensional whitened representations under matched six-epoch LFRM-B training. We evaluate both matching prompt/answer representations and a fixed learned-multilayer prompt representation, which isolates the answer space. Appendix~\ref{app:fixedprompt} gives the numerical results.}
 
 \leavevmode\rev{\textbf{Accurate decoding alone does not ensure strong reasoning.}}
 \label{sec:representationablations}
@@ -187,10 +187,10 @@ The fixed 1,024-dimensional layer-32 PCA representation supports \textbf{99.24\%
 \leavevmode\rev{\textbf{Combining layers improves reasoning accuracy.}}
 We choose layers 16, 24, and 32 based on centered kernel alignment (CKA; \citealp{cka}) of Qwen activations; Appendix~\ref{app:representationcka} gives the analysis. Holding the projection method and total latent width fixed, multilayer PCA raises accuracy to \textbf{28.43\%} (Figure~\ref{fig:representationcomparison}). \rev{Learning a layer-32 projector gives only $11.54\%$ (SD $0.61$), versus $30.76\%$ ($0.39$) for learned multilayer features. Thus learning alone does not close the single-layer gap. \rev{Layer groups also enable distinct clocks} (Section~\ref{sec:clocks}).}
 
-\leavevmode\rev{\textbf{Learning projections improves over PCA.}}
+\leavevmode\rev{\textbf{Learning multilayer projections improves over PCA.}}
 PCA preserves high-variance directions, which need not preserve the teacher's predictive behavior. Holding layers and latent widths fixed, learning the projectors through teacher cross-entropy raises accuracy from \textbf{28.43\% to 30.76\%} (Figure~\ref{fig:representationcomparison}).
 
-\revp{\textbf{The representation advantage persists with fixed conditioning.} With identical learned-multilayer Qwen prompt features, learned-multilayer answers achieve \textbf{30.76\%}, versus \textbf{28.58\%} for multilayer PCA and \textbf{14.06\%} for layer-32 PCA (Appendix~\ref{app:fixedprompt}). Compared with shared prompt/answer encoding, multilayer PCA remains close to \textbf{28.43\%}, while layer-32 PCA improves from \textbf{11.20\%}. \rev{The ordering persists, showing that answer representations matter beyond prompt conditioning.}}
+\revp{\textbf{The multilayer advantage persists with fixed conditioning.} With identical learned-multilayer Qwen prompt features, learned-multilayer answers achieve \textbf{30.76\%}, versus \textbf{28.58\%} for multilayer PCA, \textbf{14.06\%} for layer-32 PCA, and \textbf{12.57\%} for learned layer 32 (Figure~\ref{fig:representationcomparison}). The learned multilayer representation retains an \textbf{18.20-point} advantage over learned layer 32. Learning improves the multilayer projection, while both single-layer constructions remain substantially weaker.}
 
 \revp{\textbf{Teacher choice.} Replacing Qwen3-4B with Qwen3-0.6B in the matched learned-multilayer recipe yields $25.53\%$ ($0.70$) at epoch six, versus $30.76\%$ ($0.39$). The recipe remains effective with the smaller teacher, while the stronger teacher improves reasoning (Appendix~\ref{app:teachertransfer}).}
 
@@ -918,10 +918,10 @@ Figure~\ref{fig:representationidentity} changes the evaluation clock to $t=\tau$
 \label{fig:representationidentity}
 \end{figure}
 
-All four arms start from the same seed-42 backbone initialization, use 2,434,330 training rows, and preserve effective batch 512. All answer representations are whitened and 1,024-dimensional. The first three arms use frozen Qwen prompt activations; the fourth uses learned multilayer answer latents and a randomly initialized prompt encoder trained jointly from epoch zero. All select backbone EMA $0.999$, and the fourth selects prompt EMA $0.999$. The PCA multilayer run changes from two to four GPUs during training while maintaining that batch size. Each arm has one training run; seed variation in the figures measures sampling randomness only. \rev{The new learned-layer-32 control completes the learned/PCA $\times$ single/multilayer comparison with matching prompt and answer representations. Table~\ref{tab:fixedpromptcontrols} separately holds the prompt representation fixed.} Paired intervals in the main text use 4,000 problem-bootstrap replicates and the four matched epoch-six generation seeds.
+All four arms start from the same seed-42 backbone initialization, use 2,434,330 training rows, and preserve effective batch 512. All answer representations are whitened and 1,024-dimensional. The first three arms use frozen Qwen prompt activations; the fourth uses learned multilayer answer latents and a randomly initialized prompt encoder trained jointly from epoch zero. All select backbone EMA $0.999$, and the fourth selects prompt EMA $0.999$. The PCA multilayer run changes from two to four GPUs during training while maintaining that batch size. Each arm has one training run; seed variation in the figures measures sampling randomness only. \rev{The learned-layer-32 control completes the learned/PCA $\times$ single/multilayer comparison with matching prompt and answer representations. We also evaluate all four answer representations with identical learned-multilayer prompts (Table~\ref{tab:fixedpromptcontrols}).} Paired intervals in the main text use 4,000 problem-bootstrap replicates and the four matched epoch-six generation seeds.
 
 \paragraph{Representation-ablation curves.}
-\rev{Table~\ref{tab:representationcurvevalues} gives the original four curves in Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity},} followed by the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. \rev{Table~\ref{tab:learned32curve} adds the learned-layer-32 curve.} The curves use seeds 42/123; the endpoint summary adds 456/789. Error bars and parenthesized values are sample SDs across their respective generation seeds. Both use 32 steps and backbone EMA $0.999$; The controls above apply to both clocks.
+\rev{Table~\ref{tab:representationcurvevalues} gives the original four curves in Figures~\ref{fig:representationcomparison} and~\ref{fig:representationidentity},} followed by the four-seed epoch-six summary discussed in Sections~\ref{sec:representationablations} and~\ref{sec:conditionalencoding}. \rev{Table~\ref{tab:learned32curve} adds learned layer 32 and the three fixed-prompt learning curves.} The curves use seeds 42/123; the endpoint summary adds 456/789. Error bars and parenthesized values are sample SDs across their respective generation seeds. Both use 32 steps and backbone EMA $0.999$; The controls above apply to both clocks.
 
 \begin{table}[htbp]
 \centering\small
@@ -973,29 +973,32 @@ PCA layer 32 & 11.20 (0.56) & 17.15 & 24.18\\\bottomrule
 \end{table}
 
 \paragraph{Holding prompt tensors fixed.}
-We separately train the PCA answer-representation controls using the original learned-multilayer Qwen prompt encoding in every case. All other matched training and evaluation settings above are retained. Table~\ref{tab:fixedpromptcontrols} reports these controls alongside their matching-prompt counterparts. With fixed prompts, learned multilayer exceeds PCA multilayer by 2.18 points, and PCA multilayer exceeds PCA layer 32 by 14.52 points. The answer-representation ordering therefore persists when prompt conditioning is identical.
+We separately train PCA multilayer, PCA layer-32, and learned layer-32 answer controls with the original learned-multilayer Qwen prompt encoding held fixed. All other training and evaluation settings above are retained; the learned-multilayer reference already uses this prompt representation and is reused. Table~\ref{tab:fixedpromptcontrols} completes the learned/PCA $\times$ single/multilayer comparison under both prompt conventions. With fixed prompts, learned multilayer exceeds PCA multilayer by 2.18 points and learned layer 32 by 18.20 points. The latter reaches 12.57\% (SD 0.81), versus 11.54\% (0.61) with matching layer-32 prompts. It remains 1.50 points below layer-32 PCA; the learned-projector improvement is in the multilayer setting.
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Separate fixed-prompt comparison: epoch-six GSM8K pass@1 (seed SD), \%, under the four-seed ODE32 protocol of Table~\ref{tab:representationcontrols}. The fixed prompt is the learned 16/24/32 representation.}
+\caption{Complete answer-representation comparison under matching or fixed prompt encoding: epoch-six GSM8K pass@1 (seed SD), \%, under the four-seed ODE32 protocol of Table~\ref{tab:representationcontrols}. The fixed prompt uses learned 16/24/32 features; the learned-multilayer row is the same reference in both columns.}
 \label{tab:fixedpromptcontrols}
 \begin{tabular}{@{}lrr@{}}\toprule
 Answer representation & Matching prompt & Fixed learned-multilayer prompt\\\midrule
 Learned 16/24/32 & 30.76 (0.39) & 30.76 (0.39)\\
+Learned layer 32 & 11.54 (0.61) & 12.57 (0.81)\\
 PCA 16/24/32 & 28.43 (0.19) & 28.58 (1.39)\\
 PCA layer 32 & 11.20 (0.56) & 14.06 (0.19)\\\bottomrule
 \end{tabular}
 \end{table}
-The paired 95\% problem-bootstrap intervals for learned-minus-PCA multilayer and PCA-multilayer-minus-single-layer, under fixed prompts, are $[0.76,3.64]$ and $[12.81,16.24]$ points. Bootstrap conventions follow Appendix~\ref{app:uncertainty}.
+The fixed-prompt learned-layer-32 control reaches 19.12\% pass@2 and 26.99\% pass@4. The paired 95\% problem-bootstrap intervals for learned-minus-PCA multilayer and PCA-multilayer-minus-single-layer, under fixed prompts, are $[0.76,3.64]$ and $[12.81,16.24]$ points; learned multilayer minus learned layer 32 gives $[16.41,19.94]$ points. Bootstrap conventions follow Appendix~\ref{app:uncertainty}.
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Learned-layer-32 learning curve in Figure~\ref{fig:representationcomparison}. GSM8K accuracy (\%), frozen question-only Qwen conditioning, backbone EMA $.999$, ODE32, synchronous $t=\tau^2$, CFG1/SCCFG2. The two seeds match the other learning curves; Table~\ref{tab:representationcontrols} gives the separate four-seed endpoint.}
+\caption{Additional learning curves in Figure~\ref{fig:representationcomparison}: mean GSM8K accuracy (generation-seed SD), \%, over seeds 42/123. All use backbone EMA $.999$, ODE32, synchronous $t=\tau^2$, and CFG1/SCCFG2. Matching prompts use the answer representation; fixed prompts use learned 16/24/32 Qwen features. Table~\ref{tab:representationcurvevalues} gives the remaining curves; Tables~\ref{tab:representationcontrols}--\ref{tab:fixedpromptcontrols} give the four-seed endpoints.}
 \label{tab:learned32curve}
-\begin{tabular}{@{}rrrr@{}}\toprule
-Epoch & Seed 42 & Seed 123 & Mean (SD)\\\midrule
-1 & 2.12 & 3.34 & 2.73 (0.86)\\
-2 & 5.31 & 5.99 & 5.65 (0.48)\\
-3 & 7.13 & 7.58 & 7.35 (0.32)\\
-4 & 8.95 & 7.88 & 8.42 (0.75)\\
-5 & 9.33 & 9.55 & 9.44 (0.16)\\
-6 & 12.13 & 11.75 & 11.94 (0.27)\\
+\begin{tabular}{@{}rrrrr@{}}\toprule
+& Matching prompt & \multicolumn{3}{c}{Fixed learned-multilayer prompt}\\
+\cmidrule(lr){2-2}\cmidrule(l){3-5}
+Epoch & Learned layer 32 & PCA 16/24/32 & PCA layer 32 & Learned layer 32\\\midrule
+1 & 2.73 (0.86) & 4.81 (0.38) & 2.96 (0.11) & 3.75 (1.02)\\
+2 & 5.65 (0.48) & 11.94 (0.59) & 5.80 (0.38) & 6.03 (0.48)\\
+3 & 7.35 (0.32) & 18.20 (0.64) & 8.34 (0.32) & 8.15 (0.38)\\
+4 & 8.42 (0.75) & 22.63 (1.55) & 10.54 (0.96) & 10.35 (1.88)\\
+5 & 9.44 (0.16) & 25.32 (0.43) & 11.87 (0.70) & 11.68 (0.54)\\
+6 & 11.94 (0.27) & 29.61 (0.27) & 14.18 (0.21) & 11.98 (0.75)\\
 \bottomrule\end{tabular}
 \end{table}
 \end{revision}
