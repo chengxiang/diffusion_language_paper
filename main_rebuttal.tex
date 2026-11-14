@@ -1885,7 +1885,7 @@ Learned prompt & 39.35 (0.59) & 50.16 & 59.89\\\bottomrule
 The paired teacher-minus-learned difference is 1.71 points, with 95\% interval $[0.02,3.39]$. On coding, the fixed-backbone Qwen-to-MSE-prompt substitution reduces HumanEval+ from 30.87\% to 25.30\% and MBPP+ from 33.99\% to 16.96\%. Joint training and NFT recover HumanEval+ to 30.18\%, while MBPP+ remains at 19.61\%. These eight-seed ODE128 results expose a larger residual conditioning gap on MBPP. The longer average coding prompts (233 tokens, versus 84/89 for GSM8K/MATH) provide a plausible explanation for the greater conditioning demands, without isolating prompt length experimentally.
 
 \subsection{One model for GSM8K and MATH500}
-We initialize from supervised MATH epoch 21, selecting backbone/prompt EMA $.9999/.9999$, and jointly fine-tune both networks with fresh optimizers at LR $.002$. The fixed 400k-row mixture contains 200k GSM8K and 200k MATH training examples. Projectors, whitening, and token embeddings remain frozen; synchronous mixed flow/decoder training uses effective batch 512 and no prompt-MSE loss. Three epochs comprise 2,343 optimizer updates and 9.29 H200-hours. Fine-tuned checkpoints select backbone/prompt EMA $.999/.999$.
+We initialize from supervised MATH epoch 21, selecting backbone/prompt EMA $.9999/.9999$, and jointly fine-tune both networks with fresh optimizers at LR $.002$. The fixed 400k-row mixture contains 200k GSM8K and 200k MATH training examples. Projectors, whitening, and token embeddings remain frozen; synchronous mixed flow/decoder training uses effective batch 512 and no prompt-MSE loss. Three epochs comprise 2,343 optimizer updates and 9.29 H200-hours. Fine-tuned checkpoints select backbone/prompt EMA $.999/.999$. \reviewrev{We use this shorter averaging window to track recent parameter updates more quickly during the brief adaptation run.}
 
 Each checkpoint is evaluated on both full benchmarks at 64 NFE with async $(2.5,2,1.5)$, CFG1, SCCFG2 for GSM8K and SCCFG3 for MATH500, and seeds 42/123/456/789. GSM8K uses numerical-answer scoring and MATH500 uses Math-Verify. Table~\ref{tab:mixedtaskcurve} gives the full curve. The same checkpoint serves both tasks at every epoch.
 \begin{table}[htbp]\color{blue}\centering\small
@@ -1906,6 +1906,8 @@ Epoch & ODE & DMD2 & ODE & DMD2\\\midrule
 \label{fig:mixedtaskrebuttal}
 \end{figure}
 At 32 NFE with the same four seeds and EMA selectors, GSM8K changes from $20.96$ ($.41$) to $31.44$ ($1.09$) under ODE and from $32.03$ ($.92$) to $44.75$ ($.45$) under DMD2. MATH500 changes from $19.65$ ($.85$) to $18.90$ ($1.31$) under ODE and from $26.70$ ($1.89$) to $24.70$ ($1.29$) under DMD2. The retention behavior therefore also depends on inference budget.
+
+\reviewrev{For reverse transfer, we evaluate the supervised GSM8K-trained LFRM-L epoch-21 checkpoint using backbone/prompt EMA $.999/.999$, the same EMA selector used after adaptation. With DMD2 at 64 NFE and the same four seeds, clocks, guidance, and scorers, it achieves 64.95\% (SD 1.04) on GSM8K and 4.20\% (SD 1.07) on MATH500.}
 
 The paired epoch-three minus epoch-zero DMD2 differences are $+13.44$ points on GSM8K (95\% interval $[11.68,15.22]$) and $+0.05$ on MATH500 ($[-2.00,2.10]$). Separate task checkpoints therefore reflect the training setup rather than a requirement of the continuous-diffusion architecture. A single coding checkpoint already serves both HumanEval and MBPP. Extending to a unified math-and-code model and beyond the 1,024-token canvas remains future work.
 \end{revision}
