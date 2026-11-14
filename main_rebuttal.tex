@@ -1773,6 +1773,21 @@ Supervised continuation & 8,000 & 5.0381 & 40.03 (0.73) / 37.68 (0.49)\\\bottomr
 
 At 600 NFT updates, the paired differences from no correction, no gold, standard supervised continuation at 8,000 updates, and NFT-like supervised continuation at 8,000 updates are respectively $+2.98$, $+0.82$, $+2.39$, and $+4.74$ points. Their paired 95\% problem-bootstrap intervals are $[1.84,4.15]$, $[-0.08,1.74]$, $[1.25,3.54]$, and $[3.54,5.91]$, using 4,000 replicates and seed 20260918. Gold without correction exceeds neither component by $15.88$ points, interval $[14.35,17.38]$.
 
+\noindent\begin{minipage}{\linewidth}
+\textbf{EMA selection.} We report EMA $.9999$ for supervised continuation because it consistently outperformed $.99$ in our matched EMA comparisons. For NFT-like continuation, this holds at both 300 and 6,000 updates; using $.99$ would increase NFT's measured advantage.
+
+\begin{center}\small
+\textbf{EMA sensitivity for NFT-like supervised continuation.}\par\smallskip
+\begin{tabular}{@{}lrrr@{}}\toprule
+Updates & Seeds & ELF/prompt $.99/.99$ & ELF/prompt $.9999/.9999$\\\midrule
+300 & 2 & 35.75 (0.16) & \textbf{38.51} (1.29)\\
+6,000 & 4 & 34.10 (0.26) & \textbf{37.76} (0.66)\\\bottomrule
+\end{tabular}
+\par\smallskip
+\parbox{\linewidth}{\footnotesize Full GSM8K test set (1,319 problems), ODE64, async $(2.5,2,1.5)$, CFG1/SCCFG2, batch 32. Values are mean pass@1 (generation-seed SD), \%. Both EMA selectors use identical seeds within each row: 42/123 at update 300 and 42/123/456/789 at update 6,000.}
+\end{center}
+\end{minipage}
+
 \end{revision}
 
 \clearpage
