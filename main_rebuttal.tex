@@ -230,11 +230,11 @@ Thus an encoder preserves the full-prompt score exactly when it preserves the po
 \end{lemma}
 
 % BEGIN inlined figures/prompt_curriculum.tex
-\begin{wrapfigure}{R}{.43\textwidth}
+\begin{wrapfigure}[27]{r}{.43\textwidth}
 \vspace{-\baselineskip}
 \centering
-\includegraphics[width=\linewidth]{figures/prompt_curriculum_training.pdf}
-\caption{\rev{\small\textbf{From teacher conditioning to learned prompts.} Frozen Qwen denotes question encoding by the fixed teacher Transformer; LFRM generates the answer (Section~\ref{sec:conditionalencoding}). The red line marks replacement by the MSE-trained prompt encoder at epoch 12; arrows show the immediate accuracy loss. Subsequent training updates both networks. Top/bottom: GSM8K/MATH500; circles/squares: LFRM-B/L; open/filled: Qwen/learned encoding. Evaluation uses 32-step ODE sampling with async $(2.5,2,1.5)$. Values and settings: Appendix~\ref{app:promptcurves}.}}
+\includegraphics[width=.90\linewidth]{figures/prompt_curriculum_training.pdf}
+\caption{\rev{\footnotesize\textbf{From teacher conditioning to learned prompts.} Frozen Qwen denotes question encoding by the fixed teacher Transformer; LFRM generates the answer (Section~\ref{sec:conditionalencoding}). The red line marks replacement by the MSE-trained prompt encoder at epoch 12; arrows show the immediate accuracy loss. Subsequent training updates both networks. Top/bottom: GSM8K/MATH500; circles/squares: LFRM-B/L; open/filled: Qwen/learned encoding. Evaluation uses 32-step ODE sampling with async $(2.5,2,1.5)$. Values and settings: Appendix~\ref{app:promptcurves}.}}
 \label{fig:promptcurriculum}
 \vspace{-\baselineskip}
 \end{wrapfigure}
