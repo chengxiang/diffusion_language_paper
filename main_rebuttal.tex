@@ -1994,9 +1994,9 @@ Compact MSE encoder & 2.540 (.002) & 5.40 & 41.885 (.055) & 42.22\\\bottomrule
 The compact encoder reduces memory substantially while changing total latency modestly. Its scientific purpose is inference without calling the external contextual teacher; the accompanying accuracy comparisons in Appendix~\ref{app:teachertransfer} quantify the cost of that replacement.
 
 \subsection{Teacher-conditioned and learned-prompt training budgets}
-Table~\ref{tab:trainingbudgets} separates teacher-conditioned epoch 12 from the final supervised checkpoint, including prompt imitation and joint adaptation. LFRM costs are estimated from recorded training windows and measured stage costs; ELF-REG costs are author-reported \citep[Table 7]{scalingdlm}, including its GSM8K initialization for MATH. Epoch 12 provides the teacher-conditioned comparison, while the subsequent LFRM stages pursue the additional objective of replacing the external prompt teacher.
+Table~\ref{tab:trainingbudgets} separates teacher-conditioned epoch 12 from the final supervised checkpoint, including prompt imitation and joint adaptation. LFRM training hours are reconstructed from recorded training logs and allocation records; small missing intervals and unlogged prompt-training stages are estimated from measured throughput. ELF-REG hours are author-reported \citep[Table 7]{scalingdlm}, including its GSM8K initialization for MATH. Epoch 12 provides the teacher-conditioned comparison, while the subsequent LFRM stages pursue the additional objective of replacing the external prompt teacher.
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Model-training GPU-hours on H200, excluding preparation and inherited foundation-model pretraining. LFRM values are approximate; final totals include compact-prompt adaptation and exclude NFT.}
+\caption{Model-training GPU-hours on H200, excluding preparation and inherited foundation-model pretraining. LFRM hours follow the reconstruction described above; final totals include compact-prompt adaptation and exclude NFT.}
 \label{tab:trainingbudgets}
 \begin{tabular}{@{}lrrr@{}}\toprule
 Dataset / model scale & LFRM epoch 12 & LFRM final supervised & ELF-REG reported\\\midrule
@@ -2009,7 +2009,7 @@ Code / L & 404.5 & 478.4 (epoch 13) & 407.9\\\bottomrule
 The teacher-conditioned epoch-12 LFRM evaluations outperform ELF-REG across the mathematical and coding tasks with fewer model-training H200-hours (Appendix~\ref{app:baselinefollowups}). Coding holds under both standard scoring and name aliasing. Final learned-prompt checkpoints additionally remove the external contextual teacher from inference.
 
 \begin{table}[htbp]\color{blue}\centering\small
-\caption{Final supervised LFRM versus other continuous baselines: training scope, reported or estimated GPU-hours, and estimated training EFLOPs where available. Inherited foundation-model pretraining is excluded; FMLM+ Init/Distill include their MDM pretraining.}
+\caption{Final supervised LFRM versus other continuous baselines: training scope, reconstructed or author-reported GPU-hours, and estimated training EFLOPs where available. Inherited foundation-model pretraining is excluded; FMLM+ Init/Distill include their MDM pretraining.}
 \label{tab:othertrainingbudgets}
 \begin{tabular}{@{}llrr@{}}\toprule
 Model & Training scope & GPU-hours & EFLOPs\\\midrule
