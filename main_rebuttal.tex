@@ -32,9 +32,9 @@
 \newenvironment{revision}{\begingroup\color{blue}}{\endgroup}
 \newcommand{\revtodo}[1]{\rev{\textbf{TODO (author):} #1}}
 % Latest agent-review follow-ups: commits 0e82fc6 and 849ab10, relative to 81dbacd.
-% Preserve earlier revisions in blue; only these newer changes are red.
-\newcommand{\reviewrev}[1]{{\color{red}#1}}
-\newcommand{\reviewcolor}{\color{red}}
+% Use the same blue for these follow-ups as for all other rebuttal revisions.
+\newcommand{\reviewrev}[1]{{\color{blue}#1}}
+\newcommand{\reviewcolor}{\color{blue}}
 \hypersetup{colorlinks=false}
 
 \newcommand{\asyncclock}{(2.5,2,1.5)}
