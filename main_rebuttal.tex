@@ -63,25 +63,85 @@
 
 \revp{Autoregressive language models have made substantial progress on mathematical reasoning \citep{minerva,deepseekr1}. Our objective is to understand how continuous latent diffusion performs on challenging reasoning tasks. Its success in image generation \citep{latentdiffusion} motivates this investigation: a suitable representation can make generation easier, but it is unclear a priori whether language representations offer comparable structure for generating complex reasoning solutions.}
 
-\revp{We introduce Latent Flow Reasoning Models (LFRMs), building on Embedded Language Flows (ELF; \citealp{elf}). ELF provides a relatively simple foundation: clean-prediction flow matching with a Transformer, following the approach of JiT \citep{jit}, and a shared backbone for denoising and token decoding. Its self-conditioning guidance builds on earlier self-conditioning and self-guidance ideas \citep{analogbits}, with guidance learned during training. ELF has demonstrated unconditional generation, translation, and summarization. We use this framework to study reasoning, with the additional objective of inference without an external pretrained contextual encoder. This raises two connected challenges.}
+\revp{We introduce Latent Flow Reasoning Models (LFRMs), building on Embedded Language Flows (ELF; \citealp{elf}). ELF is a continuous diffusion language model that achieves strong performance on unconditional OpenWebText generation, machine translation, and summarization. Its denoising setup closely follows established continuous-diffusion methods: a clean-prediction Transformer, following JiT \citep{jit}, trained with a flow-matching loss. This setup is augmented with learned self-conditioning guidance, following Analog Bits \citep{analogbits}.}
+\rev{We investigate the following central questions:}
+\begin{quote}
+\rev{\emph{Can \textbf{continuous latent diffusion models} achieve strong
+performance on challenging \textbf{reasoning tasks}, where representations
+must capture complex semantics and dependencies? Further, can they
+do so \textbf{without executing an external pretrained contextual encoder
+at inference?}}}
+\end{quote}
 
-\revp{First, the answer representation must capture reasoning semantics and dependencies while supporting both decoding and generation. Hidden activations of a strong autoregressive teacher provide a natural starting point, but our controls show that accurate reconstruction from a single layer can coexist with poor generation. We therefore combine multiple Qwen layers and learn compact projections through downstream decoding cross-entropy. Learning improves over multilayer PCA, while both multilayer choices substantially outperform single-layer alternatives (Figure~\ref{fig:representationcomparison}).}
+\revp{Pursuing these objectives raises two connected challenges:
+constructing a latent representation that supports both decoding
+and generation, and learning prompt conditioning that removes the
+inference-time dependence on the external teacher.
+We address these through representation learning and a staged
+training curriculum. The resulting framework also enables two
+further capabilities: asynchronous inference that exploits the
+multilayer representation, and diffusion reinforcement learning
+adapted to ELF's learned self-guidance.}
 
-\revp{Second, teacher-derived targets and prompt conditions impose different inference requirements. Answers start from noise, so their teacher representations are needed only during training; prompts must still be encoded at inference. ELF uses T5 for this contextual encoding, while ELF-REG uses Qwen \citep{elf,scalingdlm}. Their semantic features contribute to the resulting system's capabilities. To investigate reasoning with the diffusion model's own contextual processing, we learn a compact prompt encoder, pursuing the inference-time independence already present in FMLM+, MLFM, and $\mathbb S$-FLM \citep{posterior,mlfm,hyperspherical}. Joint learning from initialization performs poorly, motivating a curriculum that first establishes the flow model with teacher conditioning, then fits and jointly adapts the compact encoder.}
+\paragraph{\rev{Challenge 1: How to choose a good representation?}}
+\rev{A good representation must capture the semantics and dependencies of reasoning solutions while supporting \emph{both decoding and generation}. Hidden activations of a strong autoregressive teacher (Qwen) provide a natural starting point. However, our ablations show that a single late layer can support accurate token reconstruction yet yield poor reasoning generation (Section~\ref{sec:representation}, Figure~\ref{fig:representationcomparison}). We therefore combine features from several stages of the teacher's computation, compressing their hidden activations into a compact denoising representation. We learn this compression through downstream decoding cross-entropy, preserving information relevant to token prediction. Our controlled ablations show that learned multilayer projections outperform PCA multilayer projections, and that both multilayer representations substantially outperform single-layer alternatives, even when the single-layer projection is learned (Figure~\ref{fig:representationcomparison}). These findings support both components of our design: combining information across teacher layers and learning the projection through downstream decoding loss.}
 
-\revp{The resulting construction also enables flexible inference and reward-based improvement. Its layer decomposition supports asynchronous denoising clocks without retraining or extra denoiser calls. Retaining the continuous-flow formulation makes DiffusionNFT \citep{diffusionnft} a natural candidate for post-training, but ELF's learned guidance changes the field being optimized. We retain guided rollouts while correcting the optimization field, and incorporate gold-solution endpoints alongside generated samples. Thus representation design defines the generation task and enables flexible sampling, staged conditioning removes the inference-time teacher dependency, and guidance-compatible NFT further improves the resulting model (Figure~\ref{fig:pipelineoverview}).}
+\paragraph{\rev{Challenge 2: Inference without an external prompt teacher.}}
+\rev{Answer representations start from noise at inference, so their teacher-derived targets are needed only during training. In contrast, \emph{prompt tokens must still be contextually encoded at inference}.
+ELF uses T5 for this encoding, while ELF-REG uses Qwen \citep{elf,scalingdlm}.
+\emph{Reliance on an external pretrained encoder makes it difficult to disentangle the diffusion model's reasoning capabilities from the semantic features supplied by that external encoder.} Several existing continuous-flow language models---FMLM+, MLFM, and $\mathbb S$-FLM \citep{posterior,mlfm,hyperspherical}---do not require external contextual encoders, and we seek the same inference-time independence by \emph{learning a compact prompt encoder within our diffusion model}. Lemma~\ref{lem:conditionalrepresentation} identifies information preservation as sufficient for recovering the text-conditional score, giving the learned encoder flexibility beyond exact matching of teacher prompt features. However, naively training this encoder and the denoising backbone jointly from initialization performs poorly (Figure~\ref{fig:representationcomparison}). We therefore adopt a staged curriculum: first train the flow model with fixed teacher conditioning, then fit the compact encoder to teacher prompt representations, and finally adapt both networks jointly (Section~\ref{sec:conditionalencoding}). This provides a stable conditioning interface while the flow model learns to generate answers, before adapting that interface to support inference without the teacher.}
 
-% BEGIN inlined sections/contributions.tex
-\paragraph{Contributions.}
+\paragraph{\rev{Capability 1: Multilayer representations enable asynchronous inference.}} \rev{An additional advantage of our multilayer representation is that its components naturally support separate denoising clocks. Each layer's representation can therefore be denoised at a different rate within the same denoiser call. We apply this asynchronous schedule to a synchronously trained model, requiring neither additional training nor extra denoiser calls, with essentially unchanged inference cost at a fixed NFE. Our matched 32-NFE comparisons show accuracy gains under both deterministic ODE and stochastic sampling, with more pronounced gains under the stochastic sampler (Section~\ref{sec:clocks}; Appendix~\ref{app:stochasticsampling}).}
+
+\paragraph{\rev{Capability 2: Continuous-flow reasoning enables diffusion reinforcement learning.}}
+\revp{Retaining the continuous-flow formulation makes DiffusionNFT
+\citep{diffusionnft} a natural candidate for improving reasoning
+accuracy through post-training. However, ELF's learned self-guidance
+changes the velocity field exposed by the denoiser, creating a
+mismatch with DiffusionNFT's guidance-free optimization. Directly
+optimizing this guided field can substantially degrade performance,
+as our ablations demonstrate. We address this mismatch by optimizing
+a guidance-corrected field while retaining guided rollouts, and
+incorporate gold-solution endpoints as an additional training anchor,
+whose effect we characterize in Lemma~\ref{lem:goldanchor}
+(Section~\ref{sec:nft}). Our resulting post-training method improves
+accuracy on mathematical reasoning and code generation
+(Tables~\ref{tab:headlinecomparison} and~\ref{tab:codingcomparison}),
+with component ablations demonstrating the benefits of both
+guidance correction and gold-solution endpoints. Supervised-continuation
+controls further show that continued gold supervision alone does not
+explain these gains (Table~\ref{tab:nftablations}).}
+
+\phantomsection
 \label{sec:contributions}
+\revp{Taken together, these adaptations form a coherent pipeline for
+achieving strong reasoning capabilities with continuous latent
+diffusion: \textbf{(I) representation learning} establishes a space
+that supports both decoding and generation;
+\textbf{(II) staged prompt learning} enables the resulting model
+to operate without the external teacher Transformer;
+\textbf{(III) flexible asynchronous inference} exploits the
+multilayer decomposition to improve generation without additional
+training or denoiser calls; and
+\textbf{(IV) guidance-compatible NFT} adapts diffusion reinforcement
+learning to the model's self-guidance, enabling further improvement
+through post-training.}
 
-\begin{enumerate}
-    \item \rev{\textbf{Competitive reasoning with continuous latent diffusion.} LFRM achieves strong mathematical and coding performance without executing an external contextual teacher at inference (Tables~\ref{tab:headlinecomparison}--\ref{tab:codingcomparison}). Controlled experiments test the recipe's components; short mixed-task adaptation enables one checkpoint to serve GSM8K and MATH500 (Appendix~\ref{app:teachertransfer}).}
-    \item \rev{\textbf{Learned multilayer representations and asynchronous generation.} We investigate ease of decoding and generation, and learn multilayer Qwen projections through decoding cross-entropy. This improves reasoning over PCA and single-layer alternatives (Figure~\ref{fig:representationcomparison}). The decomposition enables separate inference clocks, improving accuracy in the demonstrated settings without additional training or denoiser calls (Section~\ref{sec:clocks}).}
-    \item \rev{\textbf{Teacher-free inference through staged prompt learning.} Lemma~\ref{lem:conditionalrepresentation} identifies information preservation as sufficient for recovering the text-conditional score without exact teacher-feature matching. A staged curriculum uses this flexibility to replace the contextual teacher with a compact Transformer, overcoming the poor performance of joint learning from initialization (Figures~\ref{fig:representationcomparison}--\ref{fig:promptcurriculum}).}
-    \item \rev{\textbf{Guidance-compatible diffusion reinforcement learning.} We reconcile DiffusionNFT's CFG-free optimization with ELF's learned guidance using corrected fields and guided rollouts. Gold-solution endpoints supplement generated samples, with their anchoring effect characterized in Lemma~\ref{lem:goldanchor}. Component ablations and supervised-continuation controls demonstrate the benefits of these adaptations (Table~\ref{tab:nftablations}).}
-\end{enumerate}
-% END inlined sections/contributions.tex
+\revp{\textbf{Empirical validation.}
+With stochastic sampling, our supervised models outperform all
+comparable-scale continuous-diffusion baselines in our mathematical
+reasoning and code-generation comparisons
+(Table~\ref{tab:headlinesamplers}).
+Even with the weaker ODE sampler, our supervised models outperform
+these baselines on mathematical reasoning and HumanEval code
+generation, and NFT further improves ODE accuracy on both math
+and code
+(Tables~\ref{tab:headlinecomparison} and~\ref{tab:codingcomparison}).
+Together with our controlled ablations, these results demonstrate
+the effectiveness of the complete pipeline and the importance
+of its individual design choices. Short mixed-task adaptation
+additionally enables one checkpoint to serve both GSM8K and MATH500
+(Appendix~\ref{app:teachertransfer}).}
 
 \section{Related work}
 \label{sec:relatedwork}
