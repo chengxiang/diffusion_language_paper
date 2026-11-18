@@ -73,27 +73,26 @@ do so \textbf{without executing an external pretrained contextual encoder
 at inference?}}}
 \end{quote}
 
-\revp{Pursuing these objectives raises two connected challenges:
-constructing a latent representation that supports both decoding
-and generation, and learning prompt conditioning that removes the
-inference-time dependence on the external teacher.
-We address these through representation learning and a staged
-training curriculum. The resulting framework also enables two
-further capabilities: asynchronous inference that exploits the
-multilayer representation, and diffusion reinforcement learning
-adapted to ELF's learned self-guidance.}
+\revp{Achieving these objectives requires addressing three connected
+challenges: constructing representations that support both decoding
+and generation, replacing the external prompt teacher at inference,
+and devising a post-training RL method compatible with self-guidance.
+Our solutions establish the generation space, enable inference
+without the teacher, and support reward-based improvement of the
+resulting model. The multilayer representation additionally enables
+asynchronous inference without retraining.}
 
 \paragraph{\rev{Challenge 1: How to choose a good representation?}}
 \rev{A good representation must capture the semantics and dependencies of reasoning solutions while supporting \emph{both decoding and generation}. Hidden activations of a strong autoregressive teacher (Qwen) provide a natural starting point. However, our ablations show that a single late layer can support accurate token reconstruction yet yield poor reasoning generation (Section~\ref{sec:representation}, Figure~\ref{fig:representationcomparison}). We therefore combine features from several stages of the teacher's computation, compressing their hidden activations into a compact denoising representation. We learn this compression through downstream decoding cross-entropy, preserving information relevant to token prediction. Our controlled ablations show that learned multilayer projections outperform PCA multilayer projections, and that both multilayer representations substantially outperform single-layer alternatives, even when the single-layer projection is learned (Figure~\ref{fig:representationcomparison}). These findings support both components of our design: combining information across teacher layers and learning the projection through downstream decoding loss.}
+
+\revp{This multilayer construction also enables asynchronous inference: its components naturally support separate denoising clocks. Each layer's representation can therefore be denoised at a different rate within the same denoiser call. We apply this asynchronous schedule to a synchronously trained model, requiring neither additional training nor extra denoiser calls, with essentially unchanged inference cost at a fixed NFE. Our matched 32-NFE comparisons show accuracy gains under both deterministic ODE and stochastic sampling, with more pronounced gains under the stochastic sampler (Section~\ref{sec:clocks}; Appendix~\ref{app:stochasticsampling}).}
 
 \paragraph{\rev{Challenge 2: Inference without an external prompt teacher.}}
 \rev{Answer representations start from noise at inference, so their teacher-derived targets are needed only during training. In contrast, \emph{prompt tokens must still be contextually encoded at inference}.
 ELF uses T5 for this encoding, while ELF-REG uses Qwen \citep{elf,scalingdlm}.
 \emph{Reliance on an external pretrained encoder makes it difficult to disentangle the diffusion model's reasoning capabilities from the semantic features supplied by that external encoder.} Several existing continuous-flow language models---FMLM+, MLFM, and $\mathbb S$-FLM \citep{posterior,mlfm,hyperspherical}---do not require external contextual encoders, and we seek the same inference-time independence by \emph{learning a compact prompt encoder within our diffusion model}. Lemma~\ref{lem:conditionalrepresentation} identifies information preservation as sufficient for recovering the text-conditional score, giving the learned encoder flexibility beyond exact matching of teacher prompt features. However, naively training this encoder and the denoising backbone jointly from initialization performs poorly (Figure~\ref{fig:representationcomparison}). We therefore adopt a staged curriculum: first train the flow model with fixed teacher conditioning, then fit the compact encoder to teacher prompt representations, and finally adapt both networks jointly (Section~\ref{sec:conditionalencoding}). This provides a stable conditioning interface while the flow model learns to generate answers, before adapting that interface to support inference without the teacher.}
 
-\paragraph{\rev{Capability 1: Multilayer representations enable asynchronous inference.}} \rev{An additional advantage of our multilayer representation is that its components naturally support separate denoising clocks. Each layer's representation can therefore be denoised at a different rate within the same denoiser call. We apply this asynchronous schedule to a synchronously trained model, requiring neither additional training nor extra denoiser calls, with essentially unchanged inference cost at a fixed NFE. Our matched 32-NFE comparisons show accuracy gains under both deterministic ODE and stochastic sampling, with more pronounced gains under the stochastic sampler (Section~\ref{sec:clocks}; Appendix~\ref{app:stochasticsampling}).}
-
-\paragraph{\rev{Capability 2: Continuous-flow reasoning enables diffusion reinforcement learning.}}
+\paragraph{\rev{Challenge 3: Devising a post-training RL method compatible with self-guidance.}}
 \revp{Retaining the continuous-flow formulation makes DiffusionNFT
 \citep{diffusionnft} a natural candidate for improving reasoning
 accuracy through post-training. However, ELF's learned self-guidance
